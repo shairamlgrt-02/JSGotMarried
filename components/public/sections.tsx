@@ -4,7 +4,7 @@ import { useState } from "react";
 import { submitRsvp } from "@/lib/db";
 import type { Attire, EntourageMember, Faq, ScheduleItem, WeddingInfo } from "@/lib/types";
 import { fullDate } from "./Envelope";
-import { EASE, Reveal } from "./fx";
+import { EASE, Parallax, Reveal, Tilt } from "./fx";
 import { Corners, Flourish, LaceEdge, OvalFrame, Paisley } from "./ornaments";
 
 const longDate = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Bahrain" });
@@ -45,14 +45,14 @@ export function Story({ info }: { info: WeddingInfo }) {
   return (
     <section id="story" className="relative px-6 md:px-16 py-24 md:py-36">
       <div className="grid md:grid-cols-2 gap-12 md:gap-20 items-center max-w-6xl mx-auto">
-        <Reveal><OvalFrame className="w-full max-w-sm mx-auto">
+        <Reveal><Parallax speed={0.35}><Tilt max={9} className="w-full max-w-sm mx-auto"><OvalFrame className="w-full [filter:drop-shadow(0_20px_25px_rgba(61,47,38,.18))]">
           {photo ? <img src={photo} alt={`${info.groom} and ${info.bride}`} className="w-full h-full object-cover" /> : (
             <div className="w-full h-full bg-oat/70 flex flex-col items-center justify-center text-taupe">
               <Paisley className="w-10 h-16 opacity-60" />
               <span className="font-serif italic mt-3 text-sm">Our photo, coming soon</span>
             </div>
           )}
-        </OvalFrame></Reveal>
+        </OvalFrame></Tilt></Parallax></Reveal>
         <div className="text-center md:text-left">
           <Reveal><p className="label text-taupe">Our Story</p>
             <h2 className="script text-wine text-6xl md:text-7xl mt-3 leading-[1.1]">A wish come true</h2></Reveal>
@@ -69,12 +69,12 @@ export function ElevenEleven({ info }: { info: WeddingInfo }) {
   const d = fullDate(info.date);
   return (
     <section className="relative py-24 md:py-32 overflow-hidden text-center">
-      <LaceEdge className="absolute top-0 opacity-90" color="#F4EEE3" />
-      <div className="bg-lace/60 py-20 md:py-28 border-y border-taupe/15">
+      
+      <div className="relative paper-card py-20 md:py-28 shadow-[0_-10px_30px_-20px_rgba(61,47,38,.35),0_10px_30px_-20px_rgba(61,47,38,.35)]"><Corners className="w-24 h-24 md:w-40 md:h-40" inset="0.5rem" />
         <Reveal>
           <div className="flex items-center justify-center gap-4 md:gap-10">
             <Paisley className="w-8 h-12 md:w-12 md:h-20 text-taupe/70 -scale-x-100" />
-            <p className="font-serif font-light text-wine text-[26vw] md:text-[16rem] leading-none tracking-tight">{d.slice(0, 5)}</p>
+            <p className="font-serif font-light text-wine text-[26vw] md:text-[16rem] leading-none tracking-tight [text-shadow:0_2px_0_rgba(255,255,255,.9),0_-1px_1px_rgba(60,20,30,.3),0_18px_30px_rgba(110,31,46,.18)]">{d.slice(0, 5)}</p>
             <Paisley className="w-8 h-12 md:w-12 md:h-20 text-taupe/70" />
           </div>
           <p className="caps text-taupe text-lg md:text-2xl -mt-2 md:-mt-4 tracking-[0.6em]">{d.slice(6)}</p>
@@ -94,11 +94,18 @@ export function Schedule({ items }: { items: ScheduleItem[] }) {
       <div className="relative max-w-3xl mx-auto mt-16">
         <div className="absolute left-1/2 top-0 bottom-0 w-px bg-taupe/30 hidden md:block" />
         {sorted.map((s, i) => (
-          <Reveal key={s.id} delay={i * 0.05} className={`relative md:w-1/2 mb-14 ${i % 2 ? "md:ml-auto md:pl-14" : "md:pr-14 md:text-right"} text-center`}>
-            <span className={`hidden md:block absolute top-3 w-3 h-3 rotate-45 bg-wine ${i % 2 ? "-left-[6px]" : "-right-[6px]"}`} />
-            <p className="label text-wine">{s.time}</p>
-            <h3 className="font-serif text-4xl md:text-5xl text-mocha mt-2">{s.title}</h3>
-            <p className="font-serif italic text-lg text-taupe mt-3 leading-relaxed">{s.detail}</p>
+          <Reveal key={s.id} delay={i * 0.05} className={`relative md:w-1/2 mb-14 ${i % 2 ? "md:ml-auto md:pl-14" : "md:pr-14"}`}>
+            <span className={`hidden md:block absolute top-1/2 w-3 h-3 rotate-45 bg-wine shadow ${i % 2 ? "-left-[6px]" : "-right-[6px]"}`} />
+            <Tilt max={6}>
+              <div className="[filter:drop-shadow(0_2px_2px_rgba(61,47,38,.15))_drop-shadow(0_18px_22px_rgba(61,47,38,.22))]" style={{ transform: `rotate(${i % 2 ? 1.2 : -1.2}deg)` }}>
+                <div className="paper-card deckle relative px-8 py-9 text-center">
+                  <div className="absolute inset-2 border border-taupe/25 pointer-events-none" />
+                  <p className="label text-wine">{s.time}</p>
+                  <h3 className="font-serif text-4xl md:text-5xl text-mocha mt-2">{s.title}</h3>
+                  <p className="font-serif italic text-lg text-taupe mt-3 leading-relaxed">{s.detail}</p>
+                </div>
+              </div>
+            </Tilt>
           </Reveal>
         ))}
       </div>
@@ -119,12 +126,12 @@ export function Venue({ info }: { info: WeddingInfo }) {
           <a href={info.venue_map_link} target="_blank" rel="noreferrer" className="label inline-block mt-10 text-lace bg-wine rounded-full px-8 py-4 hover:bg-mocha transition-colors">Get Directions</a>
         </Reveal>
         <Reveal delay={0.1}>
-          <div className="relative paper-card p-4 md:p-6 shadow-[0_30px_60px_-35px_rgba(61,47,38,.5)]">
-            <Corners className="w-12 h-12" inset="0.35rem" color="#B9A591" />
+          <Tilt max={5}><div className="relative paper-card p-5 md:p-8 shadow-[0_2px_3px_rgba(61,47,38,.15),0_30px_60px_-30px_rgba(61,47,38,.55)]">
+            <Corners className="w-16 h-16 md:w-20 md:h-20" inset="0" />
             <div className="relative aspect-[4/3] overflow-hidden border border-taupe/30">
               <iframe title="Venue map" src={info.venue_map_embed} className="absolute inset-0 w-full h-full sepia-[.35] saturate-[.7]" loading="lazy" />
             </div>
-          </div>
+          </div></Tilt>
         </Reveal>
       </div>
     </section>
@@ -148,6 +155,8 @@ export function DressCode({ attire }: { attire: Attire[] }) {
             {guests.colors.map((c, i) => (
               <motion.button key={c.name} onClick={() => setPicked(i)} whileHover={{ y: -8 }} transition={{ duration: 0.4, ease: EASE }} className="flex flex-col items-center gap-3 group">
                 <span className={`relative w-24 h-32 md:w-28 md:h-40 rounded-t-full shadow-[0_18px_30px_-18px_rgba(61,47,38,.6)] ring-1 ring-black/5 transition-all ${picked === i ? "ring-2 ring-offset-4 ring-offset-ivory ring-wine" : ""}`} style={{ backgroundColor: c.hex, backgroundImage: "linear-gradient(115deg, rgba(255,255,255,.18), transparent 40%, rgba(0,0,0,.12))" }}>
+                  <span className="absolute inset-0 rounded-t-full overflow-hidden"><span className="absolute -inset-y-4 -left-full w-1/2 bg-gradient-to-r from-transparent via-white/35 to-transparent skew-x-[-18deg] group-hover:left-[150%] transition-all duration-1000 ease-out" /></span>
+                  <span className="absolute inset-2 rounded-t-full border border-white/20" />
                   {picked === i && <span className="absolute inset-x-0 bottom-3 script text-lace text-2xl">lovely</span>}
                 </span>
                 <span className="font-serif text-lg text-mocha">{c.name}</span>
@@ -160,7 +169,7 @@ export function DressCode({ attire }: { attire: Attire[] }) {
         <p className="label text-taupe text-center mb-8">Reserved for the couple, family &amp; entourage — kindly avoid</p>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           {reserved.map((a) => (
-            <div key={a.id} className="paper-card relative p-5 text-center border border-taupe/20">
+            <div key={a.id} className="paper-card relative p-5 text-center border border-taupe/20 shadow-[0_2px_2px_rgba(61,47,38,.1),0_16px_24px_-14px_rgba(61,47,38,.4)] hover:-translate-y-1 transition-transform duration-500">
               <div className="flex justify-center -space-x-2 mb-4">
                 {a.colors.map((c) => <span key={c.name} title={c.name} className="w-9 h-9 rounded-full ring-2 ring-lace" style={{ backgroundColor: c.hex }} />)}
               </div>
@@ -221,15 +230,13 @@ export function Rsvp({ info }: { info: WeddingInfo }) {
       <Reveal className="max-w-2xl mx-auto mt-14">
         <div className="relative">
           <LaceEdge color="#FCFAF5" flip />
-          <div className="paper-card relative px-6 md:px-16 py-14 md:py-16 shadow-[0_40px_80px_-40px_rgba(61,47,38,.5)] min-h-[560px]">
+          <div className="paper-card relative px-6 md:px-16 py-14 md:py-20 shadow-[0_2px_3px_rgba(61,47,38,.15),0_40px_80px_-40px_rgba(61,47,38,.55)] min-h-[560px]">
             <div className="absolute inset-3 border border-taupe/30 pointer-events-none" />
-            <Corners className="w-14 h-14 md:w-20 md:h-20" inset="1rem" color="#B9A591" />
+            <Corners className="w-20 h-20 md:w-28 md:h-28" inset="0.25rem" />
             <AnimatePresence mode="wait">
               {state === "done" ? (
                 <motion.div key="ok" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8, ease: EASE }} className="text-center py-16">
-                  <motion.div initial={{ scale: 0, rotate: -30 }} animate={{ scale: 1, rotate: 0 }} transition={{ delay: 0.2, duration: 0.8, ease: EASE }} className="mx-auto w-24 h-24 rounded-full bg-wine grid place-items-center shadow-[inset_0_-6px_12px_rgba(0,0,0,.35),0_6px_14px_rgba(61,47,38,.4)]">
-                    <span className="script text-[#E8C9CF] text-4xl">J&amp;S</span>
-                  </motion.div>
+                  <motion.img src="/img/seal.png" alt="" initial={{ scale: 2.2, opacity: 0, rotate: -30 }} animate={{ scale: 1, opacity: 1, rotate: -8 }} transition={{ delay: 0.2, duration: 0.7, ease: [0.2, 1.4, 0.4, 1] }} className="mx-auto w-28 h-28 object-contain drop-shadow-[0_8px_10px_rgba(61,47,38,.45)]" />
                   <h3 className="script text-wine text-6xl mt-8">Wish granted</h3>
                   <p className="label text-taupe mt-4">{info.hashtags[0] ?? "#JSWeDo"}</p>
                   <p className="font-serif italic text-xl text-mocha mt-6">{f.attending === "yes" ? `We can't wait to celebrate with you, ${f.name.split(" ")[0]}.` : `You'll be missed, ${f.name.split(" ")[0]}. Thank you for letting us know.`}</p>
@@ -303,7 +310,7 @@ export function Gallery({ info }: { info: WeddingInfo }) {
       <Title kicker="Moments" title="Gallery" />
       <div className="columns-2 md:columns-3 gap-5 [&>*]:mb-5 max-w-6xl mx-auto mt-14">
         {imgs.map((src, i) => (
-          <motion.div key={i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 1, ease: EASE, delay: (i % 3) * 0.08 }} className="paper-card p-3 shadow-[0_20px_40px_-25px_rgba(61,47,38,.5)]">
+          <motion.div key={i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 1, ease: EASE, delay: (i % 3) * 0.08 }} className="paper-card p-3 shadow-[0_2px_3px_rgba(61,47,38,.15),0_20px_40px_-20px_rgba(61,47,38,.5)] hover:-rotate-1 hover:scale-[1.02] transition-transform duration-500">
             <img src={src} alt="" className="w-full" />
           </motion.div>
         ))}

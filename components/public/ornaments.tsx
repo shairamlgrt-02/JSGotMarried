@@ -45,29 +45,16 @@ export function Corner({ className = "", color = "currentColor" }: { className?:
   );
 }
 
-/** Four corners positioned inside a relative parent. */
-export function Corners({ className = "w-16 h-16 md:w-24 md:h-24", color = "#8C7462", inset = "0.75rem" }: { className?: string; color?: string; inset?: string }) {
+/** Four realistic embossed corners positioned inside a relative parent. */
+export function Corners({ className = "w-20 h-20 md:w-28 md:h-28", inset = "0.75rem" }: { className?: string; color?: string; inset?: string }) {
   const pos = [{ top: inset, left: inset }, { top: inset, right: inset, transform: "scaleX(-1)" }, { bottom: inset, left: inset, transform: "scaleY(-1)" }, { bottom: inset, right: inset, transform: "scale(-1,-1)" }];
-  return <>{pos.map((s, i) => <div key={i} className={`absolute pointer-events-none ${className}`} style={s as React.CSSProperties}><Corner className="w-full h-full" color={color} /></div>)}</>;
+  return <>{pos.map((s, i) => <img key={i} src="/img/corner.jpg" alt="" aria-hidden className={`absolute pointer-events-none emboss ${className}`} style={s as React.CSSProperties} />)}</>;
 }
 
-/** Scalloped lace strip (horizontal). Use `flip` for the bottom edge. */
-export function LaceEdge({ className = "", color = "#FCFAF5", stroke = "#C9B8A6", flip = false }: { className?: string; color?: string; stroke?: string; flip?: boolean }) {
-  const id = useId().replace(/:/g, "");
+/** Real lace trim strip (photographic), repeated horizontally. `flip` for a top edge. */
+export function LaceEdge({ className = "", flip = false }: { className?: string; color?: string; stroke?: string; flip?: boolean }) {
   return (
-    <svg className={`w-full block ${className}`} height="34" preserveAspectRatio="none" style={flip ? { transform: "scaleY(-1)" } : undefined}>
-      <defs>
-        <pattern id={`lace${id}`} width="36" height="34" patternUnits="userSpaceOnUse">
-          <path d="M0 0 H36 V14 C36 26 28 32 18 32 C8 32 0 26 0 14 Z" fill={color} stroke={stroke} strokeWidth=".8" />
-          <path d="M4 14 C4 23 10 28 18 28 C26 28 32 23 32 14" fill="none" stroke={stroke} strokeWidth=".6" strokeDasharray="1.5 2" />
-          <circle cx="18" cy="16" r="3.2" fill="none" stroke={stroke} strokeWidth=".7" />
-          <circle cx="18" cy="16" r="1" fill={stroke} />
-          <circle cx="7" cy="8" r="1.4" fill="none" stroke={stroke} strokeWidth=".6" /><circle cx="29" cy="8" r="1.4" fill="none" stroke={stroke} strokeWidth=".6" />
-          <path d="M12 6 L18 2 L24 6" fill="none" stroke={stroke} strokeWidth=".6" />
-        </pattern>
-      </defs>
-      <rect width="100%" height="34" fill={`url(#lace${id})`} />
-    </svg>
+    <div aria-hidden className={`w-full h-10 md:h-14 bg-[url('/img/lacetrim.jpg')] bg-repeat-x bg-[length:auto_100%] mix-blend-multiply drop-shadow-[0_3px_3px_rgba(61,47,38,.25)] ${className}`} style={flip ? { transform: "scaleY(-1)" } : undefined} />
   );
 }
 
@@ -93,38 +80,12 @@ export function LaceMeshDefs({ id, bg = "#F6EFE3", stroke = "#CDBBA7" }: { id: s
   );
 }
 
-/** Ornate Victorian oval frame. Children render inside the oval. */
-export function OvalFrame({ children, className = "", color = "#B9A591" }: { children?: React.ReactNode; className?: string; color?: string }) {
-  const beads = Array.from({ length: 64 }, (_, i) => { const a = (i / 64) * Math.PI * 2; return [150 + Math.cos(a) * 118, 200 + Math.sin(a) * 168]; });
+/** Realistic embossed Victorian oval frame. Children render inside the oval. */
+export function OvalFrame({ children, className = "" }: { children?: React.ReactNode; className?: string; color?: string }) {
   return (
-    <div className={`relative aspect-[3/4] ${className}`}>
-      <div className="absolute overflow-hidden" style={{ left: "17%", right: "17%", top: "16%", bottom: "16%", borderRadius: "50%" }}>{children}</div>
-      <svg viewBox="0 0 300 400" className="absolute inset-0 w-full h-full pointer-events-none" fill="none" stroke={color} strokeLinecap="round">
-        <ellipse cx="150" cy="200" rx="104" ry="138" strokeWidth="3" />
-        <ellipse cx="150" cy="200" rx="110" ry="146" strokeWidth="1" />
-        <ellipse cx="150" cy="200" rx="126" ry="176" strokeWidth="1.2" />
-        {beads.map(([x, y], i) => <circle key={i} cx={x} cy={y} r="2.1" fill="#FCFAF5" strokeWidth=".8" />)}
-        {/* crest top */}
-        <g strokeWidth="1.1">
-          <path d="M150 4 C140 16 140 26 150 34 C160 26 160 16 150 4 Z" />
-          <path d="M150 34 C130 30 112 16 96 26 C86 32 92 44 102 40 M150 34 C170 30 188 16 204 26 C214 32 208 44 198 40" />
-          <path d="M120 30 C110 12 90 10 82 22 M180 30 C190 12 210 10 218 22" />
-          <path d="M150 40 C138 44 128 42 122 36 M150 40 C162 44 172 42 178 36" />
-        </g>
-        {/* crest bottom */}
-        <g strokeWidth="1.1" transform="translate(0 400) scale(1 -1)">
-          <path d="M150 6 C142 16 142 24 150 30 C158 24 158 16 150 6 Z" />
-          <path d="M150 30 C132 28 118 18 104 26 C96 31 100 40 108 37 M150 30 C168 28 182 18 196 26 C204 31 200 40 192 37" />
-        </g>
-        {/* side scrolls */}
-        {[1, -1].map((s) => (
-          <g key={s} transform={s === -1 ? "translate(300 0) scale(-1 1)" : ""} strokeWidth="1">
-            <path d="M22 200 C10 180 14 160 28 156 C38 154 40 166 32 168" />
-            <path d="M22 200 C10 220 14 240 28 244 C38 246 40 234 32 232" />
-            <path d="M30 120 C18 110 20 94 32 92 M30 280 C18 290 20 306 32 308" />
-          </g>
-        ))}
-      </svg>
+    <div className={`relative aspect-[700/985] ${className}`}>
+      <div className="absolute overflow-hidden shadow-[inset_0_4px_14px_rgba(61,47,38,.35)]" style={{ left: "21.5%", right: "20.6%", top: "21.1%", bottom: "21.1%", borderRadius: "50%" }}>{children}</div>
+      <img src="/img/frame.jpg" alt="" aria-hidden className="absolute inset-0 w-full h-full emboss pointer-events-none" />
     </div>
   );
 }

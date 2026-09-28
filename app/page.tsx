@@ -1,4 +1,5 @@
 "use client";
+import Ambience from "@/components/public/Ambience";
 import EnvelopeHero from "@/components/public/Envelope";
 import { ProgressBar, SmoothScroll } from "@/components/public/fx";
 import { DressCode, ElevenEleven, Entourage, FaqSection, Footer, Gallery, Invitation, Rsvp, Schedule, Story, Venue } from "@/components/public/sections";
@@ -12,6 +13,8 @@ export default function Home() {
   const { rows: faq } = useTable("faq");
   const info = infoRows[0];
   return (
+    <>
+    <Ambience />
     <main className="relative z-[1]">
       <SmoothScroll /><ProgressBar />
       <EnvelopeHero info={info} />
@@ -27,5 +30,6 @@ export default function Home() {
       <Gallery info={info} />
       <Footer info={info} />
     </main>
+    </>
   );
 }

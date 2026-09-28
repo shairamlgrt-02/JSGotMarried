@@ -3,7 +3,8 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { useCountdown } from "@/lib/hooks";
 import type { WeddingInfo } from "@/lib/types";
-import { Corners, Flourish, LaceMeshDefs } from "./ornaments";
+import { Tilt } from "./fx";
+import { Corners, Flourish } from "./ornaments";
 
 export const fullDate = (iso: string) => {
   const p = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Asia/Bahrain" }).formatToParts(new Date(iso));
@@ -17,18 +18,20 @@ function Card({ info }: { info: WeddingInfo }) {
   const cd = useCountdown(info.date);
   const [dm, year] = [fullDate(info.date).slice(0, 5), fullDate(info.date).slice(6)];
   return (
-    <div className="paper-card relative w-full h-full shadow-[0_30px_60px_-30px_rgba(61,47,38,.45)] [container-type:inline-size] text-center flex flex-col items-center justify-center px-[6cqw]">
-      <div className="absolute inset-[2.2cqw] border border-taupe/40" />
-      <div className="absolute inset-[3cqw] border border-taupe/25" />
-      <Corners className="w-[11cqw] h-[11cqw]" inset="3.6cqw" color="#B9A591" />
-      <p className="script text-wine text-[7.5cqw] leading-none">Save the Date</p>
+    <div className="relative w-full h-full [filter:drop-shadow(0_2px_2px_rgba(61,47,38,.18))_drop-shadow(0_24px_30px_rgba(61,47,38,.28))]">
+    <div className="paper-card deckle relative w-full h-full [container-type:inline-size] text-center flex flex-col items-center justify-center px-[6cqw] overflow-hidden">
+      <div className="absolute inset-0 bg-[linear-gradient(160deg,rgba(255,255,255,.55),transparent_35%,transparent_70%,rgba(140,116,98,.12))] pointer-events-none" />
+      <div className="absolute inset-[2.4cqw] border border-taupe/35" />
+      <div className="absolute inset-[3.2cqw] border border-taupe/20" />
+      <Corners className="w-[17cqw] h-[17cqw]" inset="1.2cqw" />
+      <p className="script text-wine text-[7.5cqw] leading-none [text-shadow:0_1px_0_rgba(255,255,255,.8),0_-1px_0_rgba(60,20,30,.15)]">Save the Date</p>
       <h1 className="caps text-mocha text-[6.4cqw] mt-[2.4cqw] leading-none whitespace-nowrap">
         {info.groom} <span className="script normal-case tracking-normal text-wine text-[7cqw] mx-[1cqw]">&amp;</span> {info.bride}
       </h1>
       <p className="font-serif italic text-taupe text-[2.6cqw] mt-[1.6cqw]">are getting married</p>
       <Flourish className="w-[34cqw] mt-[1.4cqw] text-taupe/70" />
       <div className="font-serif font-light text-mocha leading-none mt-[1cqw] tracking-[0.08em]">
-        <span className="text-wine text-[13cqw] font-normal">{dm}</span><span className="text-[7cqw] text-taupe">.{year}</span>
+        <span className="text-wine text-[13cqw] font-normal [text-shadow:0_1px_0_rgba(255,255,255,.9),0_-1px_1px_rgba(60,20,30,.25)]">{dm}</span><span className="text-[7cqw] text-taupe">.{year}</span>
       </div>
       <p className="font-serif italic text-mocha text-[2.9cqw] mt-[1.2cqw]">{weekday(info.date)} · {timeWords(info.date)}</p>
       <div className="flex gap-[3.4cqw] mt-[2.2cqw] font-serif text-mocha">
@@ -40,6 +43,7 @@ function Card({ info }: { info: WeddingInfo }) {
         ))}
       </div>
       <p className="caps text-taupe text-[1.9cqw] mt-[2.4cqw]">{info.venue_name} · {info.venue_address.split(",")[0]}</p>
+    </div>
     </div>
   );
 }
@@ -63,8 +67,6 @@ export default function EnvelopeHero({ info }: { info: WeddingInfo }) {
 
   const { scrollYProgress: p } = useScroll({ target: ref, offset: ["start start", "end end"] });
   const hint = useTransform(p, [0, 0.05], [1, 0]);
-  const sealScale = useTransform(p, [0, 0.1], [1, 0.4]);
-  const sealOpacity = useTransform(p, [0.03, 0.1], [1, 0]);
   const flapRot = useTransform(p, [0.08, 0.3], [0, 180]);
   const flapZ = useTransform(flapRot, (v) => (v > 90 ? 1 : 5));
   const cardY = useTransform(p, [0.3, 0.52, 0.62, 0.85], [0, -H * 0.82, -H * 0.82, 0]);
@@ -73,7 +75,19 @@ export default function EnvelopeHero({ info }: { info: WeddingInfo }) {
   const envOpacity = useTransform(p, [0.55, 0.72], [1, 0]);
   const after = useTransform(p, [0.86, 0.95], [0, 1]);
 
+  const sealL = useTransform(p, [0.03, 0.14], [0, -46]);
+  const sealR = useTransform(p, [0.03, 0.14], [0, 46]);
+  const sealRotL = useTransform(p, [0.03, 0.14], [0, -24]);
+  const sealRotR = useTransform(p, [0.03, 0.14], [0, 28]);
+  const sealDrop = useTransform(p, [0.03, 0.14], [0, 70]);
+  const sealFade = useTransform(p, [0.08, 0.15], [1, 0]);
+  const cardShadow = useTransform(p, [0.3, 0.5], [0, 1]);
+
   const lace = "#CDBBA7";
+  const scallops = (n: number, depth: number) => Array.from({ length: n }, (_, i) => {
+    const t = (i + 0.5) / n; const left = t < 0.5; const tt = left ? t * 2 : (1 - t) * 2;
+    return { x: left ? tt * 300 : 600 - tt * 300, y: tt * depth, a: left ? Math.atan2(depth, 300) : -Math.atan2(depth, 300) };
+  });
   return (
     <section ref={ref} className="relative h-[360vh]">
       <div className="sticky top-0 h-[100svh] flex flex-col items-center justify-center overflow-hidden">
@@ -83,50 +97,73 @@ export default function EnvelopeHero({ info }: { info: WeddingInfo }) {
           <a href="#rsvp" className="label text-wine border border-wine/40 rounded-full px-5 py-2 hover:bg-wine hover:text-lace transition-colors">RSVP</a>
         </nav>
 
-        <motion.div style={{ opacity: hint }} className="absolute top-[13%] text-center z-10 px-6">
+        <motion.div style={{ opacity: hint }} className="absolute top-[12%] text-center z-10 px-6">
           <p className="label text-taupe">The Wedding of</p>
-          <p className="script text-wine text-5xl md:text-6xl mt-2">{info.groom} &amp; {info.bride}</p>
+          <p className="script text-wine text-5xl md:text-6xl mt-2 [text-shadow:0_1px_0_rgba(255,255,255,.7)]">{info.groom} &amp; {info.bride}</p>
         </motion.div>
 
-        <div className="relative" style={{ width: W, height: H, perspective: 1800 }}>
-          {/* back of envelope */}
-          <motion.div style={{ y: envY, opacity: envOpacity }} className="absolute inset-0 z-0 rounded-[3px] bg-[#E4D8C4] shadow-[0_40px_80px_-30px_rgba(61,47,38,.5)]" />
+        <Tilt global max={7} glare={false} style={{ width: W, height: H }}>
+          <div className="relative w-full h-full" style={{ perspective: 1800 }}>
+            {/* ground shadow */}
+            <motion.div style={{ opacity: envOpacity, y: envY }} className="absolute -inset-x-[6%] -bottom-[14%] h-[30%] rounded-[50%] bg-[radial-gradient(ellipse,rgba(61,47,38,.35),transparent_70%)] blur-md" />
+            {/* back of envelope + liner */}
+            <motion.div style={{ y: envY, opacity: envOpacity }} className="absolute inset-0 z-0 rounded-[4px] overflow-hidden bg-[#E2D5C0] shadow-[0_2px_3px_rgba(61,47,38,.2),0_40px_70px_-30px_rgba(61,47,38,.55)]">
+              <div className="absolute inset-0 bg-[url('/img/damask.jpg')] bg-[length:140%_auto] bg-center mix-blend-multiply opacity-80" />
+              <div className="absolute inset-0 shadow-[inset_0_10px_30px_rgba(61,47,38,.35)]" />
+            </motion.div>
 
-          {/* the card */}
-          <motion.div style={{ y: cardY, scale: cardScale, left: "4%", top: "4%", width: "92%", height: "92%" }} className="absolute z-[2]">
-            <Card info={info} />
-          </motion.div>
+            {/* the card */}
+            <motion.div style={{ y: cardY, scale: cardScale, left: "4%", top: "4%", width: "92%", height: "92%" }} className="absolute z-[2]">
+              <motion.div style={{ opacity: cardShadow }} className="absolute inset-x-[5%] -bottom-[4%] h-[12%] bg-[radial-gradient(ellipse,rgba(61,47,38,.35),transparent_70%)] blur-sm" />
+              <Card info={info} />
+            </motion.div>
 
-          {/* front pocket (lace) */}
-          <motion.svg style={{ y: envY, opacity: envOpacity }} viewBox="0 0 600 396" preserveAspectRatio="none" className="absolute inset-0 w-full h-full z-[3] drop-shadow-[0_-4px_8px_rgba(61,47,38,.12)]">
-            <LaceMeshDefs id="pocket" stroke={lace} />
-            <path d="M0 0 L300 230 L600 0 V396 H0 Z" fill="url(#pocket-flower)" />
-            <path d="M0 0 L300 230 L600 0" fill="none" stroke={lace} strokeWidth="1.2" />
-            <path d="M0 10 L300 240 L600 10" fill="none" stroke={lace} strokeWidth="1" strokeDasharray="2 4" />
-            {Array.from({ length: 24 }, (_, i) => { const t = (i + 0.5) / 24; const left = t < 0.5; const tt = left ? t * 2 : (1 - t) * 2; const x = left ? tt * 300 : 600 - tt * 300; const y = tt * 230; return <circle key={i} cx={x} cy={y + 6} r="5" fill="#FBF7EF" stroke={lace} strokeWidth=".8" />; })}
-            <rect x="1" y="1" width="598" height="394" fill="none" stroke={lace} strokeWidth="1.5" />
-          </motion.svg>
-
-          {/* top flap */}
-          <motion.div style={{ y: envY, opacity: envOpacity, zIndex: flapZ }} className="absolute inset-x-0 top-0 h-full pointer-events-none">
-            <motion.svg style={{ rotateX: flapRot, transformOrigin: "50% 0%" }} viewBox="0 0 600 396" preserveAspectRatio="none" className="w-full h-full drop-shadow-[0_6px_10px_rgba(61,47,38,.18)]">
-              <LaceMeshDefs id="flap" bg="#F8F2E8" stroke={lace} />
-              <path d="M0 0 H600 L300 250 Z" fill="url(#flap-flower)" />
-              <path d="M0 0 L300 250 L600 0" fill="none" stroke={lace} strokeWidth="1.4" />
-              {Array.from({ length: 26 }, (_, i) => { const t = (i + 0.5) / 26; const left = t < 0.5; const tt = left ? t * 2 : (1 - t) * 2; const x = left ? tt * 300 : 600 - tt * 300; const y = tt * 250; return <path key={i} d={`M${x - 6} ${y} a6 6 0 0 0 12 0`} fill="#FBF7EF" stroke={lace} strokeWidth=".8" />; })}
+            {/* front pocket — real lace */}
+            <motion.svg style={{ y: envY, opacity: envOpacity }} viewBox="0 0 600 396" preserveAspectRatio="none" className="absolute inset-0 w-full h-full z-[3] overflow-visible">
+              <defs>
+                <pattern id="lace-img" patternUnits="userSpaceOnUse" width="600" height="320"><image href="/img/lace.jpg" width="600" height="320" preserveAspectRatio="xMidYMid slice" /></pattern>
+                <linearGradient id="pocket-shade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fff" stopOpacity=".25" /><stop offset="1" stopColor="#5A463A" stopOpacity=".18" /></linearGradient>
+                <filter id="lift" x="-10%" y="-10%" width="120%" height="120%"><feDropShadow dx="0" dy="-3" stdDeviation="4" floodColor="#3D2F26" floodOpacity=".28" /></filter>
+                <clipPath id="pocket-clip"><path d="M0 0 L300 232 L600 0 V396 H0 Z" /></clipPath>
+              </defs>
+              <g filter="url(#lift)">
+                <path d="M0 0 L300 232 L600 0 V396 H0 Z" fill="url(#lace-img)" />
+                <path d="M0 0 L300 232 L600 0 V396 H0 Z" fill="url(#pocket-shade)" />
+                {scallops(22, 232).map((s, i) => <circle key={i} cx={s.x} cy={s.y + 4} r="8" fill="url(#lace-img)" stroke="#D8C8B4" strokeWidth=".6" />)}
+              </g>
+              <path d="M0 6 L300 240 L600 6" fill="none" stroke="#BCA994" strokeWidth=".8" strokeDasharray="1.5 3" />
+              <rect x=".5" y=".5" width="599" height="395" fill="none" stroke="#CDBBA7" strokeWidth="1" rx="4" />
             </motion.svg>
-          </motion.div>
 
-          {/* wax seal */}
-          <motion.div style={{ scale: sealScale, opacity: sealOpacity, left: "50%", top: "61%" }} className="absolute z-[6]">
-            <div className="relative w-20 h-20 md:w-24 md:h-24 -ml-10 -mt-10 md:-ml-12 md:-mt-12 rounded-full bg-wine grid place-items-center shadow-[inset_0_-6px_12px_rgba(0,0,0,.35),inset_0_4px_8px_rgba(255,255,255,.18),0_6px_14px_rgba(61,47,38,.4)]" style={{ borderRadius: "52% 48% 50% 50% / 48% 52% 48% 52%" }}>
-              <div className="absolute inset-2 rounded-full border border-[#8f3446]" />
-              <span className="script text-[#E8C9CF] text-3xl md:text-4xl drop-shadow">J&amp;S</span>
-            </div>
-          </motion.div>
-        </div>
+            {/* top flap — real lace */}
+            <motion.div style={{ y: envY, opacity: envOpacity, zIndex: flapZ }} className="absolute inset-x-0 top-0 h-full pointer-events-none">
+              <motion.svg style={{ rotateX: flapRot, transformOrigin: "50% 0%" }} viewBox="0 0 600 396" preserveAspectRatio="none" className="w-full h-full overflow-visible">
+                <defs>
+                  <pattern id="lace-img2" patternUnits="userSpaceOnUse" width="600" height="320"><image href="/img/lace.jpg" width="600" height="320" preserveAspectRatio="xMidYMid slice" /></pattern>
+                  <linearGradient id="flap-shade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#5A463A" stopOpacity=".08" /><stop offset="1" stopColor="#fff" stopOpacity=".2" /></linearGradient>
+                  <filter id="flap-shadow" x="-10%" y="-10%" width="120%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="6" floodColor="#3D2F26" floodOpacity=".3" /></filter>
+                </defs>
+                <g filter="url(#flap-shadow)">
+                  <path d="M0 0 H600 L300 252 Z" fill="url(#lace-img2)" />
+                  <path d="M0 0 H600 L300 252 Z" fill="url(#flap-shade)" />
+                  {scallops(24, 252).map((s, i) => <circle key={i} cx={s.x} cy={s.y} r="8" fill="url(#lace-img2)" stroke="#D8C8B4" strokeWidth=".6" />)}
+                </g>
+              </motion.svg>
+            </motion.div>
 
-        <motion.div style={{ opacity: hint }} className="absolute bottom-[8%] flex flex-col items-center gap-3 text-taupe">
+            {/* wax seal — cracks in two */}
+            <motion.div style={{ opacity: sealFade, left: "50%", top: "63.6%" }} className="absolute z-[6] w-[22%] max-w-[120px] aspect-square -translate-x-1/2 -translate-y-1/2">
+              {(["l", "r"] as const).map((side) => (
+                <motion.img key={side} src="/img/seal.png" alt="" aria-hidden
+                  style={{ x: side === "l" ? sealL : sealR, y: sealDrop, rotate: side === "l" ? sealRotL : sealRotR,
+                    clipPath: side === "l" ? "polygon(0 0, 52% 0, 46% 22%, 55% 40%, 45% 58%, 54% 78%, 48% 100%, 0 100%)" : "polygon(52% 0, 100% 0, 100% 100%, 48% 100%, 54% 78%, 45% 58%, 55% 40%, 46% 22%)" }}
+                  className="absolute inset-0 w-full h-full object-contain drop-shadow-[0_6px_6px_rgba(61,47,38,.45)]" />
+              ))}
+            </motion.div>
+          </div>
+        </Tilt>
+
+        <motion.div style={{ opacity: hint }} className="absolute bottom-[7%] flex flex-col items-center gap-3 text-taupe">
           <span className="label">Scroll to open</span>
           <motion.span animate={{ y: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 1.8 }} className="text-xl">↓</motion.span>
         </motion.div>
