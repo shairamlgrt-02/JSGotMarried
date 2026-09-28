@@ -19,35 +19,35 @@ export default function Admin() {
 
   return (
     <>
-      <div className="min-h-screen bg-ink text-paper md:flex print:hidden">
+      <div className="relative z-[1] min-h-screen bg-oat text-ink md:flex print:hidden">
         {/* Sidebar */}
-        <aside className={`fixed md:sticky top-0 z-40 h-screen w-72 shrink-0 bg-[#0a0907] border-r border-gold/10 flex flex-col transition-transform duration-500 ease-lux ${menu ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}>
-          <div className="p-6 flex items-center gap-3 border-b border-gold/10">
-            <div className="w-11 h-11 rounded-full border border-gold/60 grid place-items-center"><span className="font-serif italic text-xl gold-foil">JS</span></div>
-            <div><div className="font-serif text-xl leading-none">The Binder</div><div className="label !text-[9px] text-paper/40 mt-1">Wedding OS · 11.11.26</div></div>
+        <aside className={`fixed md:sticky top-0 z-40 h-screen w-72 shrink-0 bg-ivory border-r border-taupe/20 flex flex-col transition-transform duration-500 ease-lux ${menu ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}>
+          <div className="p-6 flex items-center gap-3 border-b border-taupe/20">
+            <div className="w-11 h-11 rounded-full border border-wine/40 grid place-items-center"><span className="script text-2xl text-wine">JS</span></div>
+            <div><div className="font-serif text-xl leading-none">The Binder</div><div className="label !text-[9px] text-taupe mt-1">Wedding OS · 11.11.2026</div></div>
           </div>
           <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
             {TABS.map(([id, label, icon]) => (
-              <button key={id} onClick={() => go(id)} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left transition-colors ${tab === id ? "bg-gold/15 text-gold" : "text-paper/60 hover:bg-paper/5 hover:text-paper"}`}>
+              <button key={id} onClick={() => go(id)} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left transition-colors ${tab === id ? "bg-wine/10 text-wine" : "text-mocha hover:bg-oat hover:text-ink"}`}>
                 <span className="w-5 text-center opacity-80">{icon}</span><span className="text-[15px]">{label}</span>
               </button>
             ))}
           </nav>
-          <div className="p-4 border-t border-gold/10 space-y-2 text-xs text-paper/40">
-            <div className="flex items-center gap-2"><span className={`w-2 h-2 rounded-full ${mode === "supabase" ? "bg-green-400" : "bg-gold"}`} />{mode === "supabase" ? "Synced to Supabase" : "Local mode"}</div>
-            <a href="/" target="_blank" className="block hover:text-gold">View public site ↗</a>
+          <div className="p-4 border-t border-taupe/20 space-y-2 text-xs text-taupe">
+            <div className="flex items-center gap-2"><span className={`w-2 h-2 rounded-full ${mode === "supabase" ? "bg-green-400" : "bg-wine"}`} />{mode === "supabase" ? "Synced to Supabase" : "Local mode"}</div>
+            <a href="/" target="_blank" className="block hover:text-wine">View public site ↗</a>
           </div>
         </aside>
         {menu && <div className="fixed inset-0 bg-black/60 z-30 md:hidden" onClick={() => setMenu(false)} />}
 
         {/* Content */}
         <main className="flex-1 min-w-0 relative">
-          <div className="md:hidden sticky top-0 z-20 bg-ink/90 backdrop-blur flex items-center justify-between px-5 py-4 border-b border-gold/10">
+          <div className="md:hidden sticky top-0 z-20 bg-ivory/90 backdrop-blur flex items-center justify-between px-5 py-4 border-b border-taupe/20">
             <button onClick={() => setMenu(true)} className="text-2xl">☰</button>
             <span className="font-serif text-xl">{TABS.find((t) => t[0] === tab)?.[1]}</span>
-            <span className="font-serif italic text-gold">JS</span>
+            <span className="script text-wine text-xl">JS</span>
           </div>
-          <div className="absolute inset-x-0 top-0 h-80 bg-[radial-gradient(ellipse_at_top_right,rgba(201,168,106,0.10),transparent_60%)] pointer-events-none" />
+          <div className="absolute inset-x-0 top-0 h-80 bg-[radial-gradient(ellipse_at_top_right,rgba(110,31,46,0.06),transparent_60%)] pointer-events-none" />
           <AnimatePresence mode="wait">
             <motion.div key={tab} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.45, ease: [0.76, 0, 0.24, 1] }} className="relative p-5 md:p-10 max-w-7xl">
               {tab === "overview" && <Overview go={go} />}

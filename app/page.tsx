@@ -1,7 +1,7 @@
 "use client";
-import Loader from "@/components/public/Loader";
-import { Cursor, ProgressBar, SmoothScroll, Vines } from "@/components/public/fx";
-import { DressCode, Entourage, FaqSection, Footer, Gallery, Hero, Rsvp, Schedule, Venue, Wish, dotDate } from "@/components/public/sections";
+import EnvelopeHero from "@/components/public/Envelope";
+import { ProgressBar, SmoothScroll } from "@/components/public/fx";
+import { DressCode, ElevenEleven, Entourage, FaqSection, Footer, Gallery, Invitation, Rsvp, Schedule, Story, Venue } from "@/components/public/sections";
 import { useTable } from "@/lib/hooks";
 
 export default function Home() {
@@ -12,12 +12,12 @@ export default function Home() {
   const { rows: faq } = useTable("faq");
   const info = infoRows[0];
   return (
-    <main className="grain cursor-none-desktop relative">
-      <div className="vignette" />
-      <SmoothScroll /><ProgressBar /><Cursor /><Vines />
-      <Loader dateLabel={dotDate(info.date)} />
-      <Hero info={info} />
-      <Wish info={info} />
+    <main className="relative z-[1]">
+      <SmoothScroll /><ProgressBar />
+      <EnvelopeHero info={info} />
+      <Invitation info={info} />
+      <Story info={info} />
+      <ElevenEleven info={info} />
       <Schedule items={schedule} />
       <Venue info={info} />
       <DressCode attire={attire} />

@@ -12,7 +12,7 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     venue_address: "Damistan, Kingdom of Bahrain",
     venue_map_link: "https://maps.google.com/?q=The+Heaven+Damistan+Bahrain",
     venue_map_embed: "https://maps.google.com/maps?q=Damistan%20Bahrain&z=14&output=embed",
-    theme_name: "Midnight Botanical",
+    theme_name: "Vintage Lace",
     story: "Two marketers who spent years telling other people's stories finally wrote their own. One brief, one late-night idea, one wish that came true. On 11.11 we make the wish official — and we want you there when we do.",
     instagram: "@shaiandjeg",
     hashtags: ["#JSWeDo", "#JSWishComeTrue"],

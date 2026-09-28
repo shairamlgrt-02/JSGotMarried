@@ -19,7 +19,7 @@ export function PageHead({ kicker, title, children }: { kicker: string; title: s
   return (
     <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
       <div>
-        <div className="label text-gold">{kicker}</div>
+        <div className="label text-wine">{kicker}</div>
         <h1 className="display text-5xl md:text-6xl mt-2">{title}</h1>
       </div>
       <div className="flex gap-2 flex-wrap">{children}</div>
@@ -29,8 +29,8 @@ export function PageHead({ kicker, title, children }: { kicker: string; title: s
 
 export function Btn({ children, onClick, variant = "gold", className = "", type = "button", disabled }: { children: React.ReactNode; onClick?: () => void; variant?: "gold" | "ghost" | "dark" | "danger"; className?: string; type?: "button" | "submit"; disabled?: boolean }) {
   const v = {
-    gold: "bg-gold text-ink hover:bg-[#d8bb82]",
-    ghost: "border border-current/20 hover:border-gold hover:text-gold",
+    gold: "bg-wine text-lace hover:bg-mocha",
+    ghost: "border border-current/20 hover:border-wine hover:text-wine",
     dark: "bg-ink text-paper hover:bg-espresso",
     danger: "text-burgundy hover:bg-burgundy hover:text-paper",
   }[variant];
@@ -42,7 +42,7 @@ export function EditText({ value, onSave, className = "", placeholder, type = "t
   const [v, setV] = useState(String(value ?? ""));
   useEffect(() => setV(String(value ?? "")), [value]);
   const commit = () => { if (v !== String(value ?? "")) onSave(v); };
-  const cls = `w-full bg-transparent rounded-md px-2 py-1.5 outline-none border border-transparent hover:border-ink/10 focus:border-gold focus:bg-white/60 transition-colors ${className}`;
+  const cls = `w-full bg-transparent rounded-md px-2 py-1.5 outline-none border border-transparent hover:border-ink/10 focus:border-wine focus:bg-white/60 transition-colors ${className}`;
   return multiline ? (
     <textarea className={`${cls} resize-y`} rows={rows} value={v} placeholder={placeholder} onChange={(e) => setV(e.target.value)} onBlur={commit} />
   ) : (
@@ -52,7 +52,7 @@ export function EditText({ value, onSave, className = "", placeholder, type = "t
 
 export function Select<T extends string>({ value, options, onChange, className = "" }: { value: T; options: readonly T[]; onChange: (v: T) => void; className?: string }) {
   return (
-    <select value={value} onChange={(e) => onChange(e.target.value as T)} className={`bg-transparent rounded-md px-2 py-1.5 border border-ink/10 focus:border-gold outline-none capitalize ${className}`}>
+    <select value={value} onChange={(e) => onChange(e.target.value as T)} className={`bg-transparent rounded-md px-2 py-1.5 border border-ink/10 focus:border-wine outline-none capitalize ${className}`}>
       {options.map((o) => <option key={o} value={o}>{o}</option>)}
     </select>
   );
@@ -60,9 +60,9 @@ export function Select<T extends string>({ value, options, onChange, className =
 
 const TAG: Record<string, string> = {
   confirmed: "bg-moss/15 text-moss", booked: "bg-moss/15 text-moss", yes: "bg-moss/15 text-moss",
-  quoted: "bg-gold/25 text-espresso", contacted: "bg-amethyst/15 text-amethyst",
+  quoted: "bg-blush text-mocha", contacted: "bg-amethyst/15 text-amethyst",
   pending: "bg-ink/10 text-ink/60", no: "bg-burgundy/15 text-burgundy",
-  critical: "bg-burgundy text-paper", high: "bg-gold/30 text-espresso", medium: "bg-ink/10 text-ink/60",
+  critical: "bg-burgundy text-paper", high: "bg-blush text-mocha", medium: "bg-ink/10 text-ink/60",
 };
 export function Tag({ children }: { children: string }) {
   return <span className={`label !text-[10px] !tracking-[0.15em] px-2.5 py-1 rounded-full whitespace-nowrap ${TAG[children] ?? "bg-ink/10"}`}>{children}</span>;
@@ -98,7 +98,7 @@ export function Donut({ parts, size = 180, center }: { parts: { value: number; c
   );
 }
 
-export function Progress({ value, color = "#C9A86A" }: { value: number; color?: string }) {
+export function Progress({ value, color = "#6E1F2E" }: { value: number; color?: string }) {
   return <div className="h-2 rounded-full bg-ink/10 overflow-hidden"><div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(100, Math.max(0, value))}%`, background: color }} /></div>;
 }
 

@@ -40,18 +40,18 @@ export function Overview({ go }: { go: (tab: string) => void }) {
     <>
       <PageHead kicker={`${info.bride} & ${info.groom} · ${info.venue_name}`} title="Good day, lovebirds." />
       <div className="grid md:grid-cols-3 gap-5">
-        <Card className="md:col-span-1 !bg-espresso !text-paper">
-          <div className="label text-gold">Countdown</div>
+        <Card className="md:col-span-1 !bg-wine !text-lace">
+          <div className="label text-taupe">Countdown</div>
           <div className="display text-[7rem] leading-none mt-4 tabular-nums">{cd.ready ? cd.days : "--"}</div>
           <div className="label text-paper/60 mt-2">days to go · {cd.hours}h {cd.minutes}m</div>
-          <div className="font-serif italic text-2xl mt-8 text-gold">{new Date(info.date).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</div>
+          <div className="font-serif italic text-2xl mt-8 text-wine">{new Date(info.date).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</div>
         </Card>
         <Card title="Budget" action={<Btn variant="ghost" onClick={() => go("budget")}>Open →</Btn>}>
           <div className="flex items-center gap-6">
-            <Donut size={150} parts={[{ value: paid, color: "#4A5D23" }, { value: allocated - paid, color: "#C9A86A" }, { value: Math.max(0, left), color: "rgba(15,13,10,.08)" }]}
+            <Donut size={150} parts={[{ value: paid, color: "#4A5D23" }, { value: allocated - paid, color: "#6E1F2E" }, { value: Math.max(0, left), color: "rgba(15,13,10,.08)" }]}
               center={<div><div className="display text-3xl">{Math.round((allocated / info.total_budget) * 100)}%</div><div className="label !text-[9px] text-ink/50">allocated</div></div>} />
             <div className="space-y-3 text-sm">
-              <div><span className="inline-block w-2 h-2 rounded-full bg-gold mr-2" />Allocated <b>{money(allocated, info.currency)}</b></div>
+              <div><span className="inline-block w-2 h-2 rounded-full bg-wine mr-2" />Allocated <b>{money(allocated, info.currency)}</b></div>
               <div><span className="inline-block w-2 h-2 rounded-full bg-moss mr-2" />Paid <b>{money(paid, info.currency)}</b></div>
               <div className={left < 0 ? "text-burgundy font-semibold" : ""}><span className="inline-block w-2 h-2 rounded-full bg-ink/20 mr-2" />{left < 0 ? "Over by" : "Left"} <b>{money(Math.abs(left), info.currency)}</b></div>
               <div className="text-ink/50">of {money(info.total_budget, info.currency)}</div>
@@ -112,7 +112,7 @@ export function Details() {
               <F label="Groom"><EditText value={info.groom} onSave={(v) => saveInfo({ groom: v })} className="font-serif text-2xl" /></F>
             </div>
             <F label="Date & ceremony time (Bahrain time)">
-              <input type="datetime-local" defaultValue={localDate} key={localDate} onBlur={(e) => e.target.value && saveInfo({ date: `${e.target.value}:00+03:00` })} className="w-full bg-transparent border border-ink/10 rounded-md px-2 py-1.5 focus:border-gold outline-none" />
+              <input type="datetime-local" defaultValue={localDate} key={localDate} onBlur={(e) => e.target.value && saveInfo({ date: `${e.target.value}:00+03:00` })} className="w-full bg-transparent border border-ink/10 rounded-md px-2 py-1.5 focus:border-wine outline-none" />
             </F>
             <F label="Theme name"><EditText value={info.theme_name} onSave={(v) => saveInfo({ theme_name: v })} /></F>
             <div className="grid grid-cols-2 gap-4">
@@ -148,7 +148,7 @@ function ScheduleRow({ s, onSave, onDel }: { s: ScheduleItem; onSave: (s: Schedu
   const controls = useDragControls();
   return (
     <Reorder.Item value={s} dragListener={false} dragControls={controls} className="bg-paper text-ink rounded-2xl p-4 md:p-5 flex gap-4 items-start shadow-lg list-none">
-      <button onPointerDown={(e) => controls.start(e)} className="cursor-grab active:cursor-grabbing text-ink/30 hover:text-gold text-xl pt-1 touch-none select-none" aria-label="Drag">⋮⋮</button>
+      <button onPointerDown={(e) => controls.start(e)} className="cursor-grab active:cursor-grabbing text-ink/30 hover:text-wine text-xl pt-1 touch-none select-none" aria-label="Drag">⋮⋮</button>
       <div className="grid md:grid-cols-[180px_1fr] gap-2 flex-1">
         <EditText value={s.time} onSave={(v) => onSave({ ...s, time: v })} className="label !tracking-[0.15em] text-espresso" />
         <div>
@@ -198,13 +198,13 @@ export function Checklist() {
       <Card>
         <Progress value={rows.length ? (done / rows.length) * 100 : 0} color="#4A5D23" />
         <form onSubmit={add} className="flex gap-2 mt-6">
-          <input value={newTask} onChange={(e) => setNewTask(e.target.value)} placeholder="Add a task and press Enter…" className="flex-1 bg-white/60 rounded-full px-5 py-3 outline-none border border-ink/10 focus:border-gold" />
+          <input value={newTask} onChange={(e) => setNewTask(e.target.value)} placeholder="Add a task and press Enter…" className="flex-1 bg-white/60 rounded-full px-5 py-3 outline-none border border-ink/10 focus:border-wine" />
           <Btn type="submit" variant="dark">Add</Btn>
         </form>
         <ul className="mt-4 divide-y divide-ink/10">
           {shown.map((t: ChecklistItem) => (
             <li key={t.id} className="py-2 flex flex-wrap md:flex-nowrap items-center gap-3 group">
-              <button onClick={() => save({ ...t, completed: !t.completed })} className={`w-6 h-6 shrink-0 rounded-md border-2 grid place-items-center transition-colors ${t.completed ? "bg-moss border-moss text-paper" : "border-ink/25 hover:border-gold"}`}>{t.completed && "✓"}</button>
+              <button onClick={() => save({ ...t, completed: !t.completed })} className={`w-6 h-6 shrink-0 rounded-md border-2 grid place-items-center transition-colors ${t.completed ? "bg-moss border-moss text-paper" : "border-ink/25 hover:border-wine"}`}>{t.completed && "✓"}</button>
               <div className={`flex-1 min-w-[200px] ${t.completed ? "line-through text-ink/40" : ""}`}><EditText value={t.task} onSave={(v) => save({ ...t, task: v })} /></div>
               <Select value={t.category} options={PRIORITY} onChange={(v) => save({ ...t, category: v })} className="text-sm" />
               <input type="date" value={t.due_date} onChange={(e) => save({ ...t, due_date: e.target.value })} className={`bg-transparent text-sm border border-ink/10 rounded-md px-2 py-1.5 ${!t.completed && t.due_date < today ? "text-burgundy font-semibold border-burgundy/40" : ""}`} />
@@ -294,7 +294,7 @@ export function Guests() {
       </div>
       <Card>
         <div className="flex flex-wrap gap-2 mb-4">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or number…" className="flex-1 min-w-[200px] bg-white/60 rounded-full px-5 py-2.5 outline-none border border-ink/10 focus:border-gold" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or number…" className="flex-1 min-w-[200px] bg-white/60 rounded-full px-5 py-2.5 outline-none border border-ink/10 focus:border-wine" />
           {(["all", ...ATT] as const).map((f) => <Btn key={f} variant={filter === f ? "dark" : "ghost"} onClick={() => setFilter(f)}>{f}</Btn>)}
         </div>
         <div className="overflow-x-auto">
@@ -334,7 +334,7 @@ export function Vendors() {
   return (
     <>
       <PageHead kicker="Side-by-side quotes" title="The vendors.">
-        <input value={newType} onChange={(e) => setNewType(e.target.value)} placeholder="New category (hmua, band…)" className="bg-transparent border border-paper/20 rounded-full px-4 py-2 text-sm outline-none focus:border-gold" />
+        <input value={newType} onChange={(e) => setNewType(e.target.value)} placeholder="New category (hmua, band…)" className="bg-transparent border border-taupe/40 rounded-full px-4 py-2 text-sm outline-none focus:border-wine" />
         <Btn onClick={() => { save({ id: uid(), type: (newType || "other").toLowerCase(), name: "New vendor", quote: 0, contact: "", status: "pending", notes: "" }); setNewType(""); }}>+ Add vendor</Btn>
       </PageHead>
       <div className="space-y-8">
@@ -344,7 +344,7 @@ export function Vendors() {
           const cheapest = quoted.length ? Math.min(...quoted.map((v) => v.quote)) : null;
           return (
             <div key={type}>
-              <div className="label text-gold mb-3">{type}</div>
+              <div className="label text-taupe mb-3">{type}</div>
               <div className="grid md:grid-cols-3 gap-4">
                 {list.map((v: Vendor) => (
                   <Card key={v.id} className={v.status === "booked" ? "ring-2 ring-moss" : ""}>
@@ -358,7 +358,7 @@ export function Vendors() {
                       {cheapest !== null && v.quote === cheapest && quoted.length > 1 && <span className="label !text-[9px] bg-moss/15 text-moss px-2 py-1 rounded-full">Lowest</span>}
                     </div>
                     <div className="flex gap-1 flex-wrap mt-3">
-                      {VSTATUS.map((s) => <button key={s} onClick={() => save({ ...v, status: s })} className={`label !text-[9px] !tracking-[0.12em] px-2.5 py-1 rounded-full border ${v.status === s ? "bg-ink text-paper border-ink" : "border-ink/15 text-ink/50 hover:border-gold"}`}>{s}</button>)}
+                      {VSTATUS.map((s) => <button key={s} onClick={() => save({ ...v, status: s })} className={`label !text-[9px] !tracking-[0.12em] px-2.5 py-1 rounded-full border ${v.status === s ? "bg-ink text-paper border-ink" : "border-ink/15 text-ink/50 hover:border-wine"}`}>{s}</button>)}
                     </div>
                     <EditText value={v.contact} placeholder="Contact / phone" onSave={(x) => save({ ...v, contact: x })} className="mt-3 text-sm" />
                     <EditText value={v.notes} placeholder="Notes" multiline rows={2} onSave={(x) => save({ ...v, notes: x })} className="text-sm text-ink/70" />
@@ -402,12 +402,12 @@ export function AttireEditor() {
                   <button onClick={() => save({ ...a, colors: a.colors.filter((_, j) => j !== i) })} className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-ink text-paper text-[10px] opacity-0 group-hover:opacity-100">✕</button>
                 </div>
               ))}
-              <button onClick={() => save({ ...a, colors: [...a.colors, { name: "New", hex: "#C9A86A" }] })} className="w-14 h-14 rounded-full border-2 border-dashed border-ink/20 text-ink/40 hover:border-gold hover:text-gold text-2xl">+</button>
+              <button onClick={() => save({ ...a, colors: [...a.colors, { name: "New", hex: "#6E1F2E" }] })} className="w-14 h-14 rounded-full border-2 border-dashed border-ink/20 text-ink/40 hover:border-wine hover:text-wine text-2xl">+</button>
             </div>
             <EditText value={a.notes} placeholder="Notes for family / guests" multiline rows={2} onSave={(v) => save({ ...a, notes: v })} className="mt-4 text-sm" />
             <div className="mt-3 flex items-center gap-3">
               {a.swatch_url && <img src={a.swatch_url} alt="fabric" className="w-16 h-16 rounded-lg object-cover" />}
-              <label className="label !text-[10px] cursor-pointer border border-ink/15 rounded-full px-3 py-2 hover:border-gold">
+              <label className="label !text-[10px] cursor-pointer border border-ink/15 rounded-full px-3 py-2 hover:border-wine">
                 {a.swatch_url ? "Replace fabric swatch" : "Upload fabric swatch"}
                 <input type="file" accept="image/*" hidden onChange={async (e) => { const f = e.target.files?.[0]; if (f) save({ ...a, swatch_url: await fileToDataUrl(f, 500) }); }} />
               </label>
@@ -434,7 +434,7 @@ export function Content() {
         <Card title="Save the Date">
           {info.save_the_date_url ? <img src={info.save_the_date_url} alt="" className="rounded-xl w-full max-h-80 object-contain bg-ink/5" /> : <div className="h-40 rounded-xl border-2 border-dashed border-ink/15 grid place-items-center text-ink/40">No graphic yet</div>}
           <div className="flex gap-2 mt-4">
-            <label className="label !text-[10px] cursor-pointer bg-gold rounded-full px-4 py-2.5">Upload<input type="file" accept="image/*" hidden onChange={async (e) => { const f = e.target.files?.[0]; if (f) saveInfo({ save_the_date_url: await fileToDataUrl(f) }); }} /></label>
+            <label className="label !text-[10px] cursor-pointer bg-wine text-lace rounded-full px-4 py-2.5">Upload<input type="file" accept="image/*" hidden onChange={async (e) => { const f = e.target.files?.[0]; if (f) saveInfo({ save_the_date_url: await fileToDataUrl(f) }); }} /></label>
             {info.save_the_date_url && <Btn variant="danger" onClick={() => saveInfo({ save_the_date_url: "" })}>Remove</Btn>}
           </div>
         </Card>
@@ -448,10 +448,10 @@ export function Content() {
             ))}
           </div>
           <div className="flex flex-wrap gap-2 mt-4">
-            <label className="label !text-[10px] cursor-pointer bg-gold rounded-full px-4 py-2.5">Upload photos
+            <label className="label !text-[10px] cursor-pointer bg-wine text-lace rounded-full px-4 py-2.5">Upload photos
               <input type="file" accept="image/*" multiple hidden onChange={async (e) => { const files = Array.from(e.target.files ?? []); const urls = await Promise.all(files.map((f) => fileToDataUrl(f, 1200))); saveInfo({ gallery: [...info.gallery, ...urls] }); }} />
             </label>
-            <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="…or paste an image URL" className="flex-1 min-w-[160px] bg-white/60 rounded-full px-4 text-sm border border-ink/10 outline-none focus:border-gold" />
+            <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="…or paste an image URL" className="flex-1 min-w-[160px] bg-white/60 rounded-full px-4 text-sm border border-ink/10 outline-none focus:border-wine" />
             <Btn variant="dark" onClick={() => { if (url) { saveInfo({ gallery: [...info.gallery, url] }); setUrl(""); } }}>Add</Btn>
           </div>
           <p className="text-xs text-ink/50 mt-3">Tip: photos are compressed automatically. For many large photos, host them (e.g. Supabase Storage / Cloudinary) and paste URLs.</p>
