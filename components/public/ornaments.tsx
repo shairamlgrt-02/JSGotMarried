@@ -48,13 +48,13 @@ export function Corner({ className = "", color = "currentColor" }: { className?:
 /** Four realistic embossed corners positioned inside a relative parent. */
 export function Corners({ className = "w-20 h-20 md:w-28 md:h-28", inset = "0.75rem" }: { className?: string; color?: string; inset?: string }) {
   const pos = [{ top: inset, left: inset }, { top: inset, right: inset, transform: "scaleX(-1)" }, { bottom: inset, left: inset, transform: "scaleY(-1)" }, { bottom: inset, right: inset, transform: "scale(-1,-1)" }];
-  return <>{pos.map((s, i) => <img key={i} src="/img/corner.jpg" alt="" aria-hidden className={`absolute pointer-events-none emboss ${className}`} style={s as React.CSSProperties} />)}</>;
+  return <>{pos.map((s, i) => <img key={i} src="/img/corner.webp" alt="" aria-hidden loading="lazy" className={`absolute pointer-events-none object-contain drop-shadow-[1px_3px_2px_rgba(61,47,38,.28)] ${className}`} style={s as React.CSSProperties} />)}</>;
 }
 
 /** Real lace trim strip (photographic), repeated horizontally. `flip` for a top edge. */
 export function LaceEdge({ className = "", flip = false }: { className?: string; color?: string; stroke?: string; flip?: boolean }) {
   return (
-    <div aria-hidden className={`w-full h-10 md:h-14 bg-[url('/img/lacetrim.jpg')] bg-repeat-x bg-[length:auto_100%] mix-blend-multiply drop-shadow-[0_3px_3px_rgba(61,47,38,.25)] ${className}`} style={flip ? { transform: "scaleY(-1)" } : undefined} />
+    <div aria-hidden className={`w-full h-10 md:h-14 bg-[url('/img/lacetrim.webp')] bg-repeat-x bg-[length:auto_100%] drop-shadow-[0_3px_2px_rgba(61,47,38,.25)] ${className}`} style={flip ? { transform: "scaleY(-1)" } : undefined} />
   );
 }
 
@@ -80,12 +80,15 @@ export function LaceMeshDefs({ id, bg = "#F6EFE3", stroke = "#CDBBA7" }: { id: s
   );
 }
 
-/** Realistic embossed Victorian oval frame. Children render inside the oval. */
+/** Carved 3D Victorian oval frame (transparent cut-out). Children render inside the opening. */
 export function OvalFrame({ children, className = "" }: { children?: React.ReactNode; className?: string; color?: string }) {
   return (
-    <div className={`relative aspect-[700/985] ${className}`}>
-      <div className="absolute overflow-hidden shadow-[inset_0_4px_14px_rgba(61,47,38,.35)]" style={{ left: "21.5%", right: "20.6%", top: "21.1%", bottom: "21.1%", borderRadius: "50%" }}>{children}</div>
-      <img src="/img/frame.jpg" alt="" aria-hidden className="absolute inset-0 w-full h-full emboss pointer-events-none" />
+    <div className={`relative aspect-[700/1072] ${className}`}>
+      <div className="absolute overflow-hidden" style={{ left: "18.5%", right: "18.8%", top: "23.3%", bottom: "18.8%", borderRadius: "50%" }}>
+        {children}
+        <div className="absolute inset-0 rounded-[50%] shadow-[inset_0_6px_18px_rgba(40,28,20,.45)] pointer-events-none" />
+      </div>
+      <img src="/img/frame.webp" alt="" aria-hidden className="absolute inset-0 w-full h-full object-contain pointer-events-none drop-shadow-[4px_14px_12px_rgba(61,47,38,.35)]" />
     </div>
   );
 }

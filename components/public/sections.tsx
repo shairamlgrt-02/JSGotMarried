@@ -45,7 +45,7 @@ export function Story({ info }: { info: WeddingInfo }) {
   return (
     <section id="story" className="relative px-6 md:px-16 py-24 md:py-36">
       <div className="grid md:grid-cols-2 gap-12 md:gap-20 items-center max-w-6xl mx-auto">
-        <Reveal><Parallax speed={0.35}><Tilt max={9} className="w-full max-w-sm mx-auto"><OvalFrame className="w-full [filter:drop-shadow(0_20px_25px_rgba(61,47,38,.18))]">
+        <Reveal><Parallax speed={0.35}><Tilt max={9} className="w-full max-w-sm mx-auto"><OvalFrame className="w-full">
           {photo ? <img src={photo} alt={`${info.groom} and ${info.bride}`} className="w-full h-full object-cover" /> : (
             <div className="w-full h-full bg-oat/70 flex flex-col items-center justify-center text-taupe">
               <Paisley className="w-10 h-16 opacity-60" />
@@ -97,7 +97,7 @@ export function Schedule({ items }: { items: ScheduleItem[] }) {
           <Reveal key={s.id} delay={i * 0.05} className={`relative md:w-1/2 mb-14 ${i % 2 ? "md:ml-auto md:pl-14" : "md:pr-14"}`}>
             <span className={`hidden md:block absolute top-1/2 w-3 h-3 rotate-45 bg-wine shadow ${i % 2 ? "-left-[6px]" : "-right-[6px]"}`} />
             <Tilt max={6}>
-              <div className="[filter:drop-shadow(0_2px_2px_rgba(61,47,38,.15))_drop-shadow(0_18px_22px_rgba(61,47,38,.22))]" style={{ transform: `rotate(${i % 2 ? 1.2 : -1.2}deg)` }}>
+              <div className="[filter:drop-shadow(0_14px_14px_rgba(61,47,38,.22))]" style={{ transform: `rotate(${i % 2 ? 1.2 : -1.2}deg)` }}>
                 <div className="paper-card deckle relative px-8 py-9 text-center">
                   <div className="absolute inset-2 border border-taupe/25 pointer-events-none" />
                   <p className="label text-wine">{s.time}</p>
@@ -236,7 +236,7 @@ export function Rsvp({ info }: { info: WeddingInfo }) {
             <AnimatePresence mode="wait">
               {state === "done" ? (
                 <motion.div key="ok" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8, ease: EASE }} className="text-center py-16">
-                  <motion.img src="/img/seal.png" alt="" initial={{ scale: 2.2, opacity: 0, rotate: -30 }} animate={{ scale: 1, opacity: 1, rotate: -8 }} transition={{ delay: 0.2, duration: 0.7, ease: [0.2, 1.4, 0.4, 1] }} className="mx-auto w-28 h-28 object-contain drop-shadow-[0_8px_10px_rgba(61,47,38,.45)]" />
+                  <motion.img src="/img/seal.webp" alt="" initial={{ scale: 2.2, opacity: 0, rotate: -30 }} animate={{ scale: 1, opacity: 1, rotate: -8 }} transition={{ delay: 0.2, duration: 0.7, ease: [0.2, 1.4, 0.4, 1] }} className="mx-auto w-28 h-28 object-contain drop-shadow-[0_8px_10px_rgba(61,47,38,.45)]" />
                   <h3 className="script text-wine text-6xl mt-8">Wish granted</h3>
                   <p className="label text-taupe mt-4">{info.hashtags[0] ?? "#JSWeDo"}</p>
                   <p className="font-serif italic text-xl text-mocha mt-6">{f.attending === "yes" ? `We can't wait to celebrate with you, ${f.name.split(" ")[0]}.` : `You'll be missed, ${f.name.split(" ")[0]}. Thank you for letting us know.`}</p>

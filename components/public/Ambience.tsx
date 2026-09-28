@@ -19,6 +19,7 @@ export default function Ambience() {
     const ctx = c.getContext("2d")!;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let W = 0, H = 0, dpr = 1, raf = 0;
+    const mobile = window.matchMedia("(pointer: coarse)").matches;
     let petals: Petal[] = [], motes: Mote[] = [];
     let wind = 0, lastScroll = window.scrollY;
 
@@ -32,13 +33,13 @@ export default function Ambience() {
       };
     };
     const resize = () => {
-      dpr = Math.min(2, window.devicePixelRatio || 1);
+      dpr = Math.min(window.innerWidth < 700 ? 1.25 : 2, window.devicePixelRatio || 1);
       W = window.innerWidth; H = window.innerHeight;
       c.width = W * dpr; c.height = H * dpr; c.style.width = W + "px"; c.style.height = H + "px";
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const n = W < 700 ? 14 : 26;
+      const n = W < 700 ? 10 : 24;
       petals = Array.from({ length: n }, () => newPetal(true));
-      motes = Array.from({ length: W < 700 ? 30 : 60 }, () => ({ x: Math.random() * W, y: Math.random() * H, r: 0.6 + Math.random() * 1.6, vx: (Math.random() - 0.5) * 0.15, vy: -0.05 - Math.random() * 0.15, tw: Math.random() * 6 }));
+      motes = Array.from({ length: W < 700 ? 18 : 50 }, () => ({ x: Math.random() * W, y: Math.random() * H, r: 0.6 + Math.random() * 1.6, vx: (Math.random() - 0.5) * 0.15, vy: -0.05 - Math.random() * 0.15, tw: Math.random() * 6 }));
     };
 
     const drawPetal = (p: Petal) => {
@@ -53,7 +54,7 @@ export default function Ambience() {
       g.addColorStop(0.6, warm ? "rgba(246,236,222,0.95)" : "rgba(250,244,236,0.95)");
       g.addColorStop(1, warm ? "rgba(226,208,190,0.9)" : "rgba(232,220,206,0.9)");
       ctx.fillStyle = g;
-      ctx.shadowColor = "rgba(90,70,58,0.18)"; ctx.shadowBlur = 6 * p.z; ctx.shadowOffsetY = 3 * p.z;
+      if (!mobile) { ctx.shadowColor = "rgba(90,70,58,0.18)"; ctx.shadowBlur = 6 * p.z; ctx.shadowOffsetY = 3 * p.z; }
       ctx.beginPath();
       ctx.moveTo(0, -s);
       ctx.bezierCurveTo(s * 0.95, -s * 0.9, s * 0.9, s * 0.45, 0, s);
@@ -97,10 +98,10 @@ export default function Ambience() {
   return (
     <div aria-hidden className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
       {/* damask wallpaper */}
-      <motion.div style={{ y: damaskY }} className="absolute inset-x-0 -top-[5%] h-[130%] opacity-[0.55] mix-blend-multiply bg-[url('/img/damask.jpg')] bg-[length:900px_auto] md:bg-[length:1200px_auto] bg-repeat" />
+      <motion.div style={{ y: damaskY }} className="absolute inset-x-0 -top-[5%] h-[130%] opacity-[0.45] bg-[url('/img/damask.webp')] will-change-transform bg-[length:900px_auto] md:bg-[length:1200px_auto] bg-repeat" />
       {/* candlelight glow */}
-      <div className="absolute -top-[20%] -left-[15%] w-[70vw] h-[70vw] rounded-full bg-[radial-gradient(circle,rgba(255,214,160,0.35),transparent_60%)] animate-[flicker_6s_ease-in-out_infinite]" />
-      <div className="absolute -bottom-[25%] -right-[15%] w-[70vw] h-[70vw] rounded-full bg-[radial-gradient(circle,rgba(255,206,150,0.28),transparent_60%)] animate-[flicker_7.5s_ease-in-out_infinite_reverse]" />
+      <div className="absolute -top-[20%] -left-[15%] w-[70vw] h-[70vw] rounded-full bg-[radial-gradient(circle,rgba(255,214,160,0.35),transparent_60%)] animate-[flicker_6s_ease-in-out_infinite] will-change-[opacity,transform]" />
+      <div className="absolute -bottom-[25%] -right-[15%] w-[70vw] h-[70vw] rounded-full bg-[radial-gradient(circle,rgba(255,206,150,0.28),transparent_60%)] animate-[flicker_7.5s_ease-in-out_infinite_reverse] will-change-[opacity,transform]" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_50%,rgba(110,85,65,.22)_100%)]" />
       <canvas ref={canvas} className="absolute inset-0" />
     </div>

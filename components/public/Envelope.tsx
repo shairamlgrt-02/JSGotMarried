@@ -108,7 +108,7 @@ export default function EnvelopeHero({ info }: { info: WeddingInfo }) {
             <motion.div style={{ opacity: envOpacity, y: envY }} className="absolute -inset-x-[6%] -bottom-[14%] h-[30%] rounded-[50%] bg-[radial-gradient(ellipse,rgba(61,47,38,.35),transparent_70%)] blur-md" />
             {/* back of envelope + liner */}
             <motion.div style={{ y: envY, opacity: envOpacity }} className="absolute inset-0 z-0 rounded-[4px] overflow-hidden bg-[#E2D5C0] shadow-[0_2px_3px_rgba(61,47,38,.2),0_40px_70px_-30px_rgba(61,47,38,.55)]">
-              <div className="absolute inset-0 bg-[url('/img/damask.jpg')] bg-[length:140%_auto] bg-center mix-blend-multiply opacity-80" />
+              <div className="absolute inset-0 bg-[url('/img/damask.webp')] bg-[length:140%_auto] bg-center opacity-50" />
               <div className="absolute inset-0 shadow-[inset_0_10px_30px_rgba(61,47,38,.35)]" />
             </motion.div>
 
@@ -121,15 +121,13 @@ export default function EnvelopeHero({ info }: { info: WeddingInfo }) {
             {/* front pocket — real lace */}
             <motion.svg style={{ y: envY, opacity: envOpacity }} viewBox="0 0 600 396" preserveAspectRatio="none" className="absolute inset-0 w-full h-full z-[3] overflow-visible">
               <defs>
-                <pattern id="lace-img" patternUnits="userSpaceOnUse" width="600" height="320"><image href="/img/lace.jpg" width="600" height="320" preserveAspectRatio="xMidYMid slice" /></pattern>
                 <linearGradient id="pocket-shade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fff" stopOpacity=".25" /><stop offset="1" stopColor="#5A463A" stopOpacity=".18" /></linearGradient>
-                <filter id="lift" x="-10%" y="-10%" width="120%" height="120%"><feDropShadow dx="0" dy="-3" stdDeviation="4" floodColor="#3D2F26" floodOpacity=".28" /></filter>
-                <clipPath id="pocket-clip"><path d="M0 0 L300 232 L600 0 V396 H0 Z" /></clipPath>
               </defs>
-              <g filter="url(#lift)">
-                <path d="M0 0 L300 232 L600 0 V396 H0 Z" fill="url(#lace-img)" />
-                <path d="M0 0 L300 232 L600 0 V396 H0 Z" fill="url(#pocket-shade)" />
-                {scallops(22, 232).map((s, i) => <circle key={i} cx={s.x} cy={s.y + 4} r="8" fill="url(#lace-img)" stroke="#D8C8B4" strokeWidth=".6" />)}
+              <path d="M0 -3 L300 229 L600 -3" fill="none" stroke="rgba(61,47,38,.18)" strokeWidth="10" strokeLinejoin="round" />
+              <clipPath id="pocket-shape"><path d="M0 0 L300 232 L600 0 V396 H0 Z" />{scallops(22, 232).map((s, i) => <circle key={i} cx={s.x} cy={s.y + 4} r="8" />)}</clipPath>
+              <g clipPath="url(#pocket-shape)">
+                <image href="/img/lace.webp" x="0" y="0" width="600" height="396" preserveAspectRatio="xMidYMid slice" />
+                <rect width="600" height="396" fill="url(#pocket-shade)" />
               </g>
               <path d="M0 6 L300 240 L600 6" fill="none" stroke="#BCA994" strokeWidth=".8" strokeDasharray="1.5 3" />
               <rect x=".5" y=".5" width="599" height="395" fill="none" stroke="#CDBBA7" strokeWidth="1" rx="4" />
@@ -139,14 +137,13 @@ export default function EnvelopeHero({ info }: { info: WeddingInfo }) {
             <motion.div style={{ y: envY, opacity: envOpacity, zIndex: flapZ }} className="absolute inset-x-0 top-0 h-full pointer-events-none">
               <motion.svg style={{ rotateX: flapRot, transformOrigin: "50% 0%" }} viewBox="0 0 600 396" preserveAspectRatio="none" className="w-full h-full overflow-visible">
                 <defs>
-                  <pattern id="lace-img2" patternUnits="userSpaceOnUse" width="600" height="320"><image href="/img/lace.jpg" width="600" height="320" preserveAspectRatio="xMidYMid slice" /></pattern>
                   <linearGradient id="flap-shade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#5A463A" stopOpacity=".08" /><stop offset="1" stopColor="#fff" stopOpacity=".2" /></linearGradient>
-                  <filter id="flap-shadow" x="-10%" y="-10%" width="120%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="6" floodColor="#3D2F26" floodOpacity=".3" /></filter>
                 </defs>
-                <g filter="url(#flap-shadow)">
-                  <path d="M0 0 H600 L300 252 Z" fill="url(#lace-img2)" />
-                  <path d="M0 0 H600 L300 252 Z" fill="url(#flap-shade)" />
-                  {scallops(24, 252).map((s, i) => <circle key={i} cx={s.x} cy={s.y} r="8" fill="url(#lace-img2)" stroke="#D8C8B4" strokeWidth=".6" />)}
+                <path d="M0 4 L300 258 L600 4" fill="none" stroke="rgba(61,47,38,.16)" strokeWidth="12" strokeLinejoin="round" />
+                <clipPath id="flap-shape"><path d="M0 0 H600 L300 252 Z" />{scallops(24, 252).map((s, i) => <circle key={i} cx={s.x} cy={s.y} r="8" />)}</clipPath>
+                <g clipPath="url(#flap-shape)">
+                  <image href="/img/lace.webp" x="0" y="0" width="600" height="396" preserveAspectRatio="xMidYMid slice" />
+                  <rect width="600" height="396" fill="url(#flap-shade)" />
                 </g>
               </motion.svg>
             </motion.div>
@@ -154,7 +151,7 @@ export default function EnvelopeHero({ info }: { info: WeddingInfo }) {
             {/* wax seal — cracks in two */}
             <motion.div style={{ opacity: sealFade, left: "50%", top: "63.6%" }} className="absolute z-[6] w-[22%] max-w-[120px] aspect-square -translate-x-1/2 -translate-y-1/2">
               {(["l", "r"] as const).map((side) => (
-                <motion.img key={side} src="/img/seal.png" alt="" aria-hidden
+                <motion.img key={side} src="/img/seal.webp" alt="" aria-hidden
                   style={{ x: side === "l" ? sealL : sealR, y: sealDrop, rotate: side === "l" ? sealRotL : sealRotR,
                     clipPath: side === "l" ? "polygon(0 0, 52% 0, 46% 22%, 55% 40%, 45% 58%, 54% 78%, 48% 100%, 0 100%)" : "polygon(52% 0, 100% 0, 100% 100%, 48% 100%, 54% 78%, 45% 58%, 55% 40%, 46% 22%)" }}
                   className="absolute inset-0 w-full h-full object-contain drop-shadow-[0_6px_6px_rgba(61,47,38,.45)]" />

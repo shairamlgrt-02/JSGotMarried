@@ -46,7 +46,7 @@ export function Tilt({ children, className = "", max = 8, global = false, glare 
   const ref = useRef<HTMLDivElement>(null);
   const rx = useSpring(0, { stiffness: 90, damping: 16 }), ry = useSpring(0, { stiffness: 90, damping: 16 });
   const gx = useSpring(50, { stiffness: 90, damping: 16 }), gy = useSpring(30, { stiffness: 90, damping: 16 });
-  const glareBg = useTransform([gx, gy] as never, ([x, y]: number[]) => `radial-gradient(circle at ${x}% ${y}%, rgba(255,250,240,.55), transparent 55%)`);
+  const glareBg = useTransform([gx, gy] as never, ([x, y]: number[]) => `radial-gradient(circle at ${x}% ${y}%, rgba(255,250,240,.35), transparent 55%)`);
   useEffect(() => {
     const el = ref.current!;
     const set = (nx: number, ny: number) => { ry.set(nx * max); rx.set(-ny * max); gx.set(50 + nx * 50); gy.set(50 + ny * 50); };
@@ -70,7 +70,7 @@ export function Tilt({ children, className = "", max = 8, global = false, glare 
     <div ref={ref} className={className} style={{ perspective: 1400, ...style }}>
       <motion.div style={{ rotateX: rx, rotateY: ry, transformStyle: "preserve-3d" }} className="relative w-full h-full">
         {children}
-        {glare && <motion.div style={{ background: glareBg }} className="absolute inset-0 pointer-events-none mix-blend-soft-light z-[50]" />}
+        {glare && <motion.div style={{ background: glareBg }} className="absolute inset-0 pointer-events-none z-[50]" />}
       </motion.div>
     </div>
   );
