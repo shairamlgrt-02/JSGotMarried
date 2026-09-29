@@ -43,7 +43,7 @@ export function Invitation({ info }: { info: WeddingInfo }) {
 export function Story({ info }: { info: WeddingInfo }) {
   const photo = info.gallery[0] || "";
   return (
-    <section id="story" className="relative px-6 md:px-16 py-24 md:py-36">
+    <section id="story" className="relative px-6 md:px-16 py-20 md:py-28">
       <div className="grid md:grid-cols-2 gap-12 md:gap-20 items-center max-w-6xl mx-auto">
         <Reveal><Parallax speed={0.35}><Tilt max={9} className="w-full max-w-sm mx-auto"><OvalFrame className="w-full">
           {photo ? <img src={photo} alt={`${info.groom} and ${info.bride}`} className="w-full h-full object-cover" /> : (
@@ -70,7 +70,7 @@ export function ElevenEleven({ info }: { info: WeddingInfo }) {
   return (
     <section className="relative py-24 md:py-32 overflow-hidden text-center">
       
-      <div className="relative paper-card py-20 md:py-28 shadow-[0_-10px_30px_-20px_rgba(61,47,38,.35),0_10px_30px_-20px_rgba(61,47,38,.35)]"><Corners className="w-24 h-24 md:w-40 md:h-40" inset="0.5rem" />
+      <div className="relative py-16 md:py-24 mx-4 md:mx-12 border-y border-taupe/25">
         <Reveal>
           <div className="flex items-center justify-center gap-4 md:gap-10">
             <Paisley className="w-8 h-12 md:w-12 md:h-20 text-taupe/70 -scale-x-100" />
@@ -89,7 +89,7 @@ export function ElevenEleven({ info }: { info: WeddingInfo }) {
 export function Schedule({ items }: { items: ScheduleItem[] }) {
   const sorted = [...items].sort((a, b) => a.order - b.order);
   return (
-    <section id="day" className="relative px-6 md:px-16 py-24 md:py-36">
+    <section id="day" className="relative px-6 md:px-16 py-20 md:py-28">
       <Title kicker="Order of the Day" title="The Day" />
       <div className="relative max-w-3xl mx-auto mt-16">
         <div className="absolute left-1/2 top-0 bottom-0 w-px bg-taupe/30 hidden md:block" />
@@ -116,7 +116,7 @@ export function Schedule({ items }: { items: ScheduleItem[] }) {
 /* ─────────── VENUE ─────────── */
 export function Venue({ info }: { info: WeddingInfo }) {
   return (
-    <section id="venue" className="relative px-6 md:px-16 py-24 md:py-36">
+    <section id="venue" className="relative px-6 md:px-16 py-20 md:py-28">
       <Title kicker="Where" title="The Venue" />
       <div className="grid md:grid-cols-[1fr_1.3fr] gap-10 md:gap-16 max-w-6xl mx-auto mt-16 items-center">
         <Reveal className="text-center md:text-left">
@@ -145,7 +145,7 @@ export function DressCode({ attire }: { attire: Attire[] }) {
   const reserved = sorted.filter((a) => a.reserved);
   const [picked, setPicked] = useState<number | null>(null);
   return (
-    <section id="dress" className="relative px-6 md:px-16 py-24 md:py-36">
+    <section id="dress" className="relative px-6 md:px-16 py-20 md:py-28">
       <Title kicker="What to Wear" title="Attire" />
       {guests && (
         <div className="max-w-5xl mx-auto mt-14 text-center">
@@ -188,7 +188,7 @@ export function Entourage({ people }: { people: EntourageMember[] }) {
   const groups: [EntourageMember["role"], string][] = [["sponsor", "Principal Sponsors"], ["bridesmaid", "Bridesmaids"], ["groomsman", "Groomsmen"], ["other", "With Love"]];
   const sorted = [...people].sort((a, b) => a.order - b.order);
   return (
-    <section className="relative px-6 md:px-16 py-24 md:py-36">
+    <section className="relative px-6 md:px-16 py-20 md:py-28">
       <Title kicker="Standing With Us" title="The Entourage" />
       <div className="flex flex-wrap justify-center gap-x-20 gap-y-14 mt-16 max-w-5xl mx-auto text-center">
         {groups.map(([role, title]) => {
@@ -275,10 +275,23 @@ export function Rsvp({ info }: { info: WeddingInfo }) {
 }
 
 /* ─────────── FAQ ─────────── */
+/** Handwritten closing of the love letter. */
+export function SignOff({ info }: { info: WeddingInfo }) {
+  return (
+    <section className="relative px-6 md:px-16 pt-6 pb-24 md:pb-32 text-center md:text-right md:pr-24">
+      <Reveal>
+        <p className="font-serif italic text-2xl text-mocha">With all our love,</p>
+        <p className="script text-wine text-6xl md:text-7xl mt-2 -rotate-2">{info.groom} &amp; {info.bride}</p>
+        <p className="label text-taupe mt-6">{info.hashtags.join("  ")}</p>
+      </Reveal>
+    </section>
+  );
+}
+
 export function FaqSection({ faqs }: { faqs: Faq[] }) {
   const [open, setOpen] = useState<string | null>(null);
   return (
-    <section id="faq" className="relative px-6 md:px-16 py-24 md:py-36">
+    <section id="faq" className="relative px-6 md:px-16 py-20 md:py-28">
       <Title kicker="Good to Know" title="Questions" />
       <div className="max-w-3xl mx-auto mt-14 border-t border-taupe/30">
         {[...faqs].sort((a, b) => a.order - b.order).map((q) => (

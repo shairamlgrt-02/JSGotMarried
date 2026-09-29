@@ -13,14 +13,14 @@ html.lenis, html.lenis body { height: auto; }
 ::selection { background: #6E1F2E; color: #FCFAF5; }
 
 /* Rough ivory paper */
-.paper-bg { background-color: #F4EEE3; }
+.paper-bg { background-color: #F7F4EE; }
 .paper-bg::before {
   content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
   background-image:
-    radial-gradient(ellipse at center, transparent 55%, rgba(140,116,98,.16) 100%),
+    radial-gradient(ellipse at center, transparent 60%, rgba(120,100,85,.10) 100%),
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .35  0 0 0 0 .27  0 0 0 0 .2  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='600'><filter id='f'><feTurbulence type='fractalNoise' baseFrequency='.012 .09' numOctaves='2'/><feColorMatrix values='0 0 0 0 .5  0 0 0 0 .42  0 0 0 0 .33  0 0 0 .22 0'/></filter><rect width='100%' height='100%' filter='url(%23f)'/></svg>");
-  opacity: .5;
+  opacity: .3;
 }
 .paper-card {
   background-color: #FCFAF5;
@@ -48,3 +48,20 @@ html.lenis, html.lenis body { height: auto; }
 }
 .emboss { mix-blend-mode: multiply; filter: contrast(1.35) brightness(1.02); }
 .deckle { clip-path: polygon(0% 1%, 3% 0%, 7% .8%, 12% .2%, 18% .9%, 25% .1%, 31% .7%, 38% 0%, 45% .8%, 52% .2%, 60% .9%, 67% .1%, 74% .7%, 81% 0%, 88% .8%, 94% .2%, 100% .9%, 99.3% 6%, 100% 13%, 99.2% 21%, 100% 29%, 99.4% 38%, 100% 47%, 99.2% 56%, 100% 65%, 99.4% 74%, 100% 83%, 99.3% 92%, 100% 99%, 95% 100%, 88% 99.2%, 81% 100%, 73% 99.3%, 66% 100%, 58% 99.2%, 50% 100%, 42% 99.3%, 34% 100%, 26% 99.2%, 18% 100%, 10% 99.3%, 4% 100%, 0% 99%, .7% 91%, 0% 83%, .8% 74%, 0% 65%, .6% 56%, 0% 47%, .8% 38%, 0% 29%, .6% 20%, 0% 12%, .7% 5%); }
+/* torn edges for tall sheets: fixed-size jaggies via mask so they don't stretch with height */
+.deckle-long {
+  -webkit-mask-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='60' preserveAspectRatio='none'><path d='M0 0 L14 0 L14 60 L0 60 L3 54 L1 47 L4 40 L2 33 L5 26 L2 19 L4 12 L1 6 Z' fill='black'/></svg>"),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='60' preserveAspectRatio='none'><path d='M0 0 L14 0 L11 6 L13 12 L10 19 L12 26 L9 33 L12 40 L10 47 L13 54 L14 60 L0 60 Z' fill='black'/></svg>"),
+    linear-gradient(black, black);
+  -webkit-mask-size: 14px 60px, 14px 60px, calc(100% - 26px) 100%;
+  -webkit-mask-repeat: repeat-y, repeat-y, no-repeat;
+  -webkit-mask-position: left top, right top, center;
+  mask-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='60' preserveAspectRatio='none'><path d='M0 0 L14 0 L14 60 L0 60 L3 54 L1 47 L4 40 L2 33 L5 26 L2 19 L4 12 L1 6 Z' fill='black'/></svg>"),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='60' preserveAspectRatio='none'><path d='M0 0 L14 0 L11 6 L13 12 L10 19 L12 26 L9 33 L12 40 L10 47 L13 54 L14 60 L0 60 Z' fill='black'/></svg>"),
+    linear-gradient(black, black);
+  mask-size: 14px 60px, 14px 60px, calc(100% - 26px) 100%;
+  mask-repeat: repeat-y, repeat-y, no-repeat;
+  mask-position: left top, right top, center;
+}

@@ -5,15 +5,15 @@ const config: Config = {
     extend: {
       colors: {
         // Vintage ivory palette
-        ivory: "#F4EEE3",
+        ivory: "#F7F4EE",
         oat: "#E9DFCE",
         lace: "#FCFAF5",
-        taupe: "#8C7462",
-        mocha: "#5A463A",
+        taupe: "#6F5B4C",
+        mocha: "#46362C",
         wine: "#6E1F2E",
         blush: "#E3CFC6",
         // text + surfaces (kept as tokens used across the app)
-        ink: "#3D2F26",
+        ink: "#33271F",
         paper: "#FCFAF5",
         // dress-code / status colors
         espresso: "#3C2415",

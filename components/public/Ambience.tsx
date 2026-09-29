@@ -98,11 +98,11 @@ export default function Ambience() {
   return (
     <div aria-hidden className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
       {/* damask wallpaper */}
-      <motion.div style={{ y: damaskY }} className="absolute inset-x-0 -top-[5%] h-[130%] opacity-[0.45] bg-[url('/img/damask.webp')] will-change-transform bg-[length:900px_auto] md:bg-[length:1200px_auto] bg-repeat" />
+      <motion.div style={{ y: damaskY }} className="absolute inset-x-0 -top-[5%] h-[130%] opacity-[0.16] bg-[url('/img/damask.webp')] will-change-transform bg-[length:900px_auto] md:bg-[length:1200px_auto] bg-repeat" />
       {/* candlelight glow */}
-      <div className="absolute -top-[20%] -left-[15%] w-[70vw] h-[70vw] rounded-full bg-[radial-gradient(circle,rgba(255,214,160,0.35),transparent_60%)] animate-[flicker_6s_ease-in-out_infinite] will-change-[opacity,transform]" />
-      <div className="absolute -bottom-[25%] -right-[15%] w-[70vw] h-[70vw] rounded-full bg-[radial-gradient(circle,rgba(255,206,150,0.28),transparent_60%)] animate-[flicker_7.5s_ease-in-out_infinite_reverse] will-change-[opacity,transform]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_50%,rgba(110,85,65,.22)_100%)]" />
+      <div className="absolute -top-[20%] -left-[15%] w-[70vw] h-[70vw] rounded-full bg-[radial-gradient(circle,rgba(255,236,210,0.22),transparent_60%)] animate-[flicker_6s_ease-in-out_infinite] will-change-[opacity,transform]" />
+      <div className="absolute -bottom-[25%] -right-[15%] w-[70vw] h-[70vw] rounded-full bg-[radial-gradient(circle,rgba(255,232,205,0.18),transparent_60%)] animate-[flicker_7.5s_ease-in-out_infinite_reverse] will-change-[opacity,transform]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_50%,rgba(110,90,75,.10)_100%)]" />
       <canvas ref={canvas} className="absolute inset-0" />
     </div>
   );
