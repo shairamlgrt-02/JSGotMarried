@@ -18,19 +18,19 @@ const stainBg = {
   fox: "radial-gradient(circle, rgba(140,95,55,.12), rgba(140,95,55,.045) 35%, transparent 60%)",
 };
 
+/** Fine, even paper grain (tiny noise – no visible repeat) and very soft fibre mottling. */
+const GRAIN = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .36 0 0 0 0 .27 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`;
+const FIBRE = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.012 .02' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .55 0 0 0 0 .44 0 0 0 0 .32 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E")`;
+
 /** One long, continuous vintage love letter that everything below the envelope is written on. */
 export default function Letter({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative mx-auto w-[92%] md:w-[84%] max-w-5xl mt-10 mb-24">
       <LaceEdge flip className="relative z-[6] -mb-4 md:-mb-6 scale-x-[1.02]" />
       <div aria-hidden className="absolute z-[4] inset-x-2 top-12 bottom-6 bg-[#5A463A]/25 blur-2xl rounded-[30px] translate-y-3" />
-      <div className="relative z-[5] deckle-long overflow-hidden" style={{ backgroundColor: "#F6F0E4", backgroundImage: "url(/img/letter-tile.webp)", backgroundSize: "clamp(280px,34vw,440px) auto" }}>
+      <div className="relative z-[5] deckle-long overflow-hidden" style={{ backgroundColor: "#F6F0E4", backgroundImage: `${GRAIN}, ${FIBRE}`, backgroundSize: "220px 220px, 600px 600px" }}>
         {/* soft light across the sheet */}
         <div aria-hidden className="absolute inset-0 pointer-events-none bg-[linear-gradient(165deg,rgba(255,255,255,.35),transparent_18%,transparent_82%,rgba(120,95,75,.06))]" />
-        {/* fold creases (letter folded in thirds) */}
-        {[33.3, 66.6].map((t) => (
-          <div key={t} aria-hidden className="absolute inset-x-0 h-6 pointer-events-none" style={{ top: `${t}%`, background: "linear-gradient(180deg, transparent, rgba(120,95,75,.07) 45%, rgba(255,255,255,.55) 52%, transparent)" }} />
-        ))}
         {STAINS.map((st, i) => (
           <div key={i} aria-hidden className="absolute rounded-full pointer-events-none" style={{ top: st.top, left: st.left, width: st.size, height: st.size, background: stainBg[st.kind], transform: `rotate(${i * 37}deg) scaleX(${1 + (i % 3) * 0.12})` }} />
         ))}
