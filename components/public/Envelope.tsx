@@ -56,44 +56,53 @@ const RATIO = 1.32; // portrait
 
 export default function EnvelopeHero({ info }: { info: WeddingInfo }) {
   const ref = useRef<HTMLElement>(null);
-  const [dims, setDims] = useState({ W: 560, vh: 800, S: 1.2 });
+  const [dims, setDims] = useState({ W: 400, vh: 800, S: 1.2 });
   useEffect(() => {
     const calc = () => {
       const vw = window.innerWidth, vh = window.innerHeight;
-      const W = Math.min(vw * 0.8, 440, (vh * 0.6) / RATIO);
+      const W = Math.min(vw * 0.84, 460, (vh * 0.66) / RATIO);
       const cardW = W * 0.92, cardH = W * RATIO * 0.92;
-      const S = Math.min(1.6, (vw * 0.94) / cardW, (vh * 0.88) / cardH);
+      const S = Math.min(1.45, (vw * 0.94) / cardW, (vh * 0.88) / cardH);
       setDims({ W, vh, S: Math.max(1, S) });
     };
     calc(); window.addEventListener("resize", calc);
     return () => window.removeEventListener("resize", calc);
   }, []);
-  const { W, vh, S } = dims;
+  const { W, S } = dims;
   const H = W * RATIO;
 
   const { scrollYProgress: p } = useScroll({ target: ref, offset: ["start start", "end end"] });
   const hint = useTransform(p, [0, 0.05], [1, 0]);
-  const flapRot = useTransform(p, [0.08, 0.3], [0, 180]);
-  const flapZ = useTransform(flapRot, (v) => (v > 90 ? 1 : 5));
-  const cardY = useTransform(p, [0.3, 0.52, 0.62, 0.85], [0, -H * 0.3, -H * 0.3, 0]);
-  const cardScale = useTransform(p, [0.62, 0.85], [1, S]);
-  const envY = useTransform(p, [0.3, 0.52, 0.56, 0.74], [0, H * 0.32, H * 0.32, vh]);
-  const envOpacity = useTransform(p, [0.55, 0.72], [1, 0]);
-  const after = useTransform(p, [0.86, 0.95], [0, 1]);
-
-  const sealL = useTransform(p, [0.03, 0.14], [0, -46]);
-  const sealR = useTransform(p, [0.03, 0.14], [0, 46]);
+  // wax seal cracks, then the two panels swing open like doors
+  const sealL = useTransform(p, [0.03, 0.14], [0, -40]);
+  const sealR = useTransform(p, [0.03, 0.14], [0, 40]);
   const sealRotL = useTransform(p, [0.03, 0.14], [0, -24]);
   const sealRotR = useTransform(p, [0.03, 0.14], [0, 28]);
   const sealDrop = useTransform(p, [0.03, 0.14], [0, 70]);
   const sealFade = useTransform(p, [0.08, 0.15], [1, 0]);
+  const doorL = useTransform(p, [0.12, 0.42], [0, -158]);
+  const doorR = useTransform(p, [0.12, 0.42], [0, 158]);
+  const doorShade = useTransform(p, [0.12, 0.27, 0.42], [0, 0.35, 0.12]);
+  const shell = useTransform(p, [0.48, 0.66], [1, 0]);
+  const shellY = useTransform(p, [0.48, 0.7], [0, 60]);
+  const cardScale = useTransform(p, [0.46, 0.76], [1, S]);
   const cardShadow = useTransform(p, [0.3, 0.5], [0, 1]);
+  const after = useTransform(p, [0.86, 0.95], [0, 1]);
 
-  const lace = "#CDBBA7";
-  const scallops = (n: number, depth: number) => Array.from({ length: n }, (_, i) => {
-    const t = (i + 0.5) / n; const left = t < 0.5; const tt = left ? t * 2 : (1 - t) * 2;
-    return { x: left ? tt * 300 : 600 - tt * 300, y: tt * depth, a: left ? Math.atan2(depth, 300) : -Math.atan2(depth, 300) };
-  });
+  const Door = ({ side }: { side: "l" | "r" }) => (
+    <motion.div style={{ rotateY: side === "l" ? doorL : doorR, transformOrigin: side === "l" ? "0% 50%" : "100% 50%", opacity: shell }}
+      className={`absolute top-0 bottom-0 w-1/2 z-[4] ${side === "l" ? "left-0" : "right-0"}`}>
+      <div className={`absolute inset-0 overflow-hidden bg-[#EDE3D4] ${side === "l" ? "rounded-l-[4px]" : "rounded-r-[4px]"} shadow-[0_2px_3px_rgba(61,47,38,.2),0_30px_50px_-25px_rgba(61,47,38,.55)]`}>
+        <div className="absolute inset-0 bg-[url('/img/lace.webp')] bg-cover" style={{ backgroundPosition: side === "l" ? "left center" : "right center" }} />
+        <div className={`absolute inset-0 ${side === "l" ? "bg-[linear-gradient(90deg,rgba(255,255,255,.18),transparent_60%,rgba(90,70,58,.14))]" : "bg-[linear-gradient(270deg,rgba(255,255,255,.18),transparent_60%,rgba(90,70,58,.14))]"}`} />
+        <div className={`absolute inset-y-[4%] ${side === "l" ? "left-[7%] right-[4%]" : "right-[7%] left-[4%]"} border border-[#BCA994]/70`} />
+        <motion.div style={{ opacity: doorShade }} className="absolute inset-0 bg-[#3D2F26]" />
+      </div>
+      {/* seam edge */}
+      <div className={`absolute inset-y-0 w-px bg-[#A8927C]/60 ${side === "l" ? "right-0" : "left-0"}`} />
+    </motion.div>
+  );
+
   return (
     <section ref={ref} className="relative h-[360vh]">
       <div className="sticky top-0 h-[100svh] flex flex-col items-center justify-center overflow-hidden">
@@ -103,59 +112,31 @@ export default function EnvelopeHero({ info }: { info: WeddingInfo }) {
           <a href="#rsvp" className="label text-wine border border-wine/40 rounded-full px-5 py-2 hover:bg-wine hover:text-lace transition-colors">RSVP</a>
         </nav>
 
-        <motion.div style={{ opacity: hint }} className="absolute top-[11%] text-center z-10 px-6">
+        <motion.div style={{ opacity: hint }} className="absolute top-[10%] text-center z-10 px-6">
           <p className="label text-taupe">The Wedding of</p>
-          <p className="script text-wine text-4xl md:text-6xl mt-1 [text-shadow:0_1px_0_rgba(255,255,255,.7)]">{info.groom} &amp; {info.bride}</p>
+          <p className="script text-wine text-3xl md:text-6xl mt-1 [text-shadow:0_1px_0_rgba(255,255,255,.7)]">{info.groom} &amp; {info.bride}</p>
         </motion.div>
 
-        <Tilt global max={7} glare={false} style={{ width: W, height: H }}>
-          <div className="relative w-full h-full" style={{ perspective: 1800 }}>
-            {/* ground shadow */}
-            <motion.div style={{ opacity: envOpacity, y: envY }} className="absolute -inset-x-[6%] -bottom-[14%] h-[30%] rounded-[50%] bg-[radial-gradient(ellipse,rgba(61,47,38,.35),transparent_70%)] blur-md" />
-            {/* back of envelope + liner */}
-            <motion.div style={{ y: envY, opacity: envOpacity }} className="absolute inset-0 z-0 rounded-[4px] overflow-hidden bg-[#E2D5C0] shadow-[0_2px_3px_rgba(61,47,38,.2),0_40px_70px_-30px_rgba(61,47,38,.55)]">
-              <div className="absolute inset-0 bg-[url('/img/damask.webp')] bg-[length:140%_auto] bg-center opacity-50" />
-              <div className="absolute inset-0 shadow-[inset_0_10px_30px_rgba(61,47,38,.35)]" />
+        <Tilt global max={6} glare={false} style={{ width: W, height: H }} className="mt-8 md:mt-10">
+          <div className="relative w-full h-full" style={{ perspective: 1600 }}>
+            {/* ground shadow + inside of the folder */}
+            <motion.div style={{ opacity: shell, y: shellY }} className="absolute -inset-x-[8%] -bottom-[10%] h-[22%] rounded-[50%] bg-[radial-gradient(ellipse,rgba(61,47,38,.32),transparent_70%)] blur-md" />
+            <motion.div style={{ opacity: shell, y: shellY }} className="absolute inset-0 z-0 rounded-[4px] overflow-hidden bg-[#E2D5C0] shadow-[0_2px_3px_rgba(61,47,38,.2)]">
+              <div className="absolute inset-0 bg-[url('/img/damask.webp')] bg-[length:160%_auto] bg-center opacity-45" />
+              <div className="absolute inset-0 shadow-[inset_0_0_30px_rgba(61,47,38,.3)]" />
             </motion.div>
 
             {/* the card */}
-            <motion.div style={{ y: cardY, scale: cardScale, left: "4%", top: "4%", width: "92%", height: "92%" }} className="absolute z-[2]">
-              <motion.div style={{ opacity: cardShadow }} className="absolute inset-x-[5%] -bottom-[4%] h-[12%] bg-[radial-gradient(ellipse,rgba(61,47,38,.35),transparent_70%)] blur-sm" />
+            <motion.div style={{ scale: cardScale, left: "4%", top: "4%", width: "92%", height: "92%" }} className="absolute z-[2]">
+              <motion.div style={{ opacity: cardShadow }} className="absolute inset-x-[5%] -bottom-[4%] h-[10%] bg-[radial-gradient(ellipse,rgba(61,47,38,.3),transparent_70%)] blur-sm" />
               <Card info={info} />
             </motion.div>
 
-            {/* front pocket — real lace */}
-            <motion.svg style={{ y: envY, opacity: envOpacity }} viewBox="0 0 600 792" preserveAspectRatio="none" className="absolute inset-0 w-full h-full z-[3] overflow-visible">
-              <defs>
-                <linearGradient id="pocket-shade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fff" stopOpacity=".25" /><stop offset="1" stopColor="#5A463A" stopOpacity=".18" /></linearGradient>
-              </defs>
-              <path d="M0 -3 L300 437 L600 -3" fill="none" stroke="rgba(61,47,38,.18)" strokeWidth="10" strokeLinejoin="round" />
-              <clipPath id="pocket-shape"><path d="M0 0 L300 440 L600 0 V792 H0 Z" />{scallops(26, 440).map((s, i) => <circle key={i} cx={s.x} cy={s.y + 4} r="8" />)}</clipPath>
-              <g clipPath="url(#pocket-shape)">
-                <image href="/img/lace.webp" x="0" y="0" width="600" height="792" preserveAspectRatio="xMidYMid slice" />
-                <rect width="600" height="792" fill="url(#pocket-shade)" />
-              </g>
-              <path d="M0 6 L300 448 L600 6" fill="none" stroke="#BCA994" strokeWidth=".8" strokeDasharray="1.5 3" />
-              <rect x=".5" y=".5" width="599" height="791" fill="none" stroke="#CDBBA7" strokeWidth="1" rx="4" />
-            </motion.svg>
+            <Door side="l" />
+            <Door side="r" />
 
-            {/* top flap — real lace */}
-            <motion.div style={{ y: envY, opacity: envOpacity, zIndex: flapZ }} className="absolute inset-x-0 top-0 h-full pointer-events-none">
-              <motion.svg style={{ rotateX: flapRot, transformOrigin: "50% 0%" }} viewBox="0 0 600 792" preserveAspectRatio="none" className="w-full h-full overflow-visible">
-                <defs>
-                  <linearGradient id="flap-shade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#5A463A" stopOpacity=".08" /><stop offset="1" stopColor="#fff" stopOpacity=".2" /></linearGradient>
-                </defs>
-                <path d="M0 4 L300 486 L600 4" fill="none" stroke="rgba(61,47,38,.16)" strokeWidth="12" strokeLinejoin="round" />
-                <clipPath id="flap-shape"><path d="M0 0 H600 L300 480 Z" />{scallops(28, 480).map((s, i) => <circle key={i} cx={s.x} cy={s.y} r="8" />)}</clipPath>
-                <g clipPath="url(#flap-shape)">
-                  <image href="/img/lace.webp" x="0" y="0" width="600" height="792" preserveAspectRatio="xMidYMid slice" />
-                  <rect width="600" height="792" fill="url(#flap-shade)" />
-                </g>
-              </motion.svg>
-            </motion.div>
-
-            {/* wax seal — cracks in two */}
-            <motion.div style={{ opacity: sealFade, left: "50%", top: "60.6%" }} className="absolute z-[6] w-[22%] max-w-[120px] aspect-square -translate-x-1/2 -translate-y-1/2">
+            {/* wax seal across the seam — cracks in two */}
+            <motion.div style={{ opacity: sealFade, left: "50%", top: "50%" }} className="absolute z-[6] w-[24%] max-w-[120px] aspect-square -translate-x-1/2 -translate-y-1/2">
               {(["l", "r"] as const).map((side) => (
                 <motion.img key={side} src="/img/seal.webp" alt="" aria-hidden
                   style={{ x: side === "l" ? sealL : sealR, y: sealDrop, rotate: side === "l" ? sealRotL : sealRotR,
@@ -166,7 +147,7 @@ export default function EnvelopeHero({ info }: { info: WeddingInfo }) {
           </div>
         </Tilt>
 
-        <motion.div style={{ opacity: hint }} className="absolute bottom-[7%] flex flex-col items-center gap-3 text-taupe">
+        <motion.div style={{ opacity: hint }} className="absolute bottom-[5%] flex flex-col items-center gap-2 text-taupe">
           <span className="label">Scroll to open</span>
           <motion.span animate={{ y: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 1.8 }} className="text-xl">↓</motion.span>
         </motion.div>
