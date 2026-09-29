@@ -5,7 +5,8 @@ import { submitRsvp } from "@/lib/db";
 import type { Attire, EntourageMember, Faq, ScheduleItem, WeddingInfo } from "@/lib/types";
 import { fullDate } from "./Envelope";
 import { EASE, Parallax, Reveal, Tilt } from "./fx";
-import { Corners, Flourish, LaceEdge, OvalFrame, Paisley } from "./ornaments";
+import { Corners, Flourish, LaceEdge, Paisley } from "./ornaments";
+import { PhotoStrip, Polaroid, slots } from "./photos";
 
 const longDate = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Bahrain" });
 
@@ -41,18 +42,13 @@ export function Invitation({ info }: { info: WeddingInfo }) {
 
 /* ─────────── OUR STORY ─────────── */
 export function Story({ info }: { info: WeddingInfo }) {
-  const photo = info.gallery[0] || "";
   return (
     <section id="story" className="relative px-6 md:px-16 py-20 md:py-28">
       <div className="grid md:grid-cols-2 gap-12 md:gap-20 items-center max-w-6xl mx-auto">
-        <Reveal><Parallax speed={0.35}><Tilt max={9} className="w-full max-w-sm mx-auto"><OvalFrame className="w-full">
-          {photo ? <img src={photo} alt={`${info.groom} and ${info.bride}`} className="w-full h-full object-cover" /> : (
-            <div className="w-full h-full bg-oat/70 flex flex-col items-center justify-center text-taupe">
-              <Paisley className="w-10 h-16 opacity-60" />
-              <span className="font-serif italic mt-3 text-sm">Our photo, coming soon</span>
-            </div>
-          )}
-        </OvalFrame></Tilt></Parallax></Reveal>
+        <div className="flex justify-center gap-5 md:gap-8">
+          <PhotoStrip photos={slots(info, 0, 4)} caption={`J & S · ${fullDate(info.date)}`} rotate={-4} className="w-[42%] max-w-[190px]" />
+          <PhotoStrip photos={slots(info, 0, 4).slice(2).concat(slots(info, 0, 2))} caption="#JSWeDo" rotate={3} className="w-[42%] max-w-[190px] mt-10" />
+        </div>
         <div className="text-center md:text-left">
           <Reveal><p className="label text-taupe">Our Story</p>
             <h2 className="script text-wine text-6xl md:text-7xl mt-3 leading-[1.1]">A wish come true</h2></Reveal>
@@ -77,7 +73,7 @@ export function ElevenEleven({ info }: { info: WeddingInfo }) {
             <p className="font-serif font-light text-wine text-[26vw] md:text-[16rem] leading-none tracking-tight [text-shadow:0_2px_0_rgba(255,255,255,.9),0_-1px_1px_rgba(60,20,30,.3),0_18px_30px_rgba(110,31,46,.18)]">{d.slice(0, 5)}</p>
             <Paisley className="w-8 h-12 md:w-12 md:h-20 text-taupe/70" />
           </div>
-          <p className="caps text-taupe text-lg md:text-2xl -mt-2 md:-mt-4 tracking-[0.6em]">{d.slice(6)}</p>
+          <p className="font-serif font-light text-wine text-[13vw] md:text-[7.5rem] leading-none tracking-[0.18em] -mt-1 md:-mt-3 pl-[0.18em] [text-shadow:0_2px_0_rgba(255,255,255,.9),0_-1px_1px_rgba(60,20,30,.3)]">{d.slice(6)}</p>
           <p className="font-serif italic text-mocha text-xl mt-6">Make a wish — ours comes true.</p>
         </Reveal>
       </div>
@@ -315,20 +311,23 @@ export function FaqSection({ faqs }: { faqs: Faq[] }) {
 }
 
 /* ─────────── GALLERY + FOOTER ─────────── */
+/** Horizontal photobooth strip between sections — part of the letter design. */
 export function Gallery({ info }: { info: WeddingInfo }) {
-  const imgs = [info.save_the_date_url, ...info.gallery.slice(1)].filter(Boolean);
-  if (!imgs.length) return null;
   return (
-    <section className="px-6 md:px-16 py-20">
-      <Title kicker="Moments" title="Gallery" />
-      <div className="columns-2 md:columns-3 gap-5 [&>*]:mb-5 max-w-6xl mx-auto mt-14">
-        {imgs.map((src, i) => (
-          <motion.div key={i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 1, ease: EASE, delay: (i % 3) * 0.08 }} className="paper-card p-3 shadow-[0_2px_3px_rgba(61,47,38,.15),0_20px_40px_-20px_rgba(61,47,38,.5)] hover:-rotate-1 hover:scale-[1.02] transition-transform duration-500">
-            <img src={src} alt="" className="w-full" />
-          </motion.div>
-        ))}
-      </div>
+    <section className="px-4 md:px-16 py-10 md:py-14">
+      <PhotoStrip horizontal photos={slots(info, 4, 4)} caption={`${info.groom.toUpperCase()} & ${info.bride.toUpperCase()} · ${fullDate(info.date)}`} rotate={-1.5} className="max-w-3xl mx-auto" />
     </section>
+  );
+}
+
+/** A pair of polaroids tucked between sections on phones/tablets (on wide screens they sit on the letter's sides). */
+export function PolaroidPair({ info, from, caps }: { info: WeddingInfo; from: number; caps: [string, string] }) {
+  const [a, b] = slots(info, from, 2);
+  return (
+    <div className="xl:hidden flex justify-center gap-6 px-6 py-6">
+      <Polaroid src={a} caption={caps[0]} rotate={-6} className="w-[38%] max-w-[180px]" />
+      <Polaroid src={b} caption={caps[1]} rotate={5} className="w-[38%] max-w-[180px] mt-8" />
+    </div>
   );
 }
 

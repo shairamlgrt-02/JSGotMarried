@@ -431,6 +431,18 @@ export function Content() {
     <>
       <PageHead kicker="Images, entourage & FAQ" title="Content." />
       <div className="grid md:grid-cols-2 gap-5">
+        <Card title="Cover photo (on the invitation card)">
+          {info.cover_photo ? <img src={info.cover_photo} alt="" className="rounded-xl w-full max-h-80 object-contain bg-ink/5" /> : <div className="h-40 rounded-xl border-2 border-dashed border-ink/15 grid place-items-center text-ink/40">No cover photo yet — shows inside the carved oval frame</div>}
+          <div className="flex gap-2 mt-4">
+            <label className="label !text-[10px] cursor-pointer bg-wine text-lace rounded-full px-4 py-2.5">Upload<input type="file" accept="image/*" hidden onChange={async (e) => { const f = e.target.files?.[0]; if (f) saveInfo({ cover_photo: await fileToDataUrl(f, 1000) }); }} /></label>
+            {info.cover_photo && <Btn variant="danger" onClick={() => saveInfo({ cover_photo: "" })}>Remove</Btn>}
+          </div>
+        </Card>
+        <Card title="Background music">
+          <p className="text-sm text-ink/60">Paste a direct link to an .mp3 (e.g. Supabase Storage, Dropbox “?raw=1”). A small play button appears on the site; guests tap it to play.</p>
+          <EditText value={info.music_url ?? ""} placeholder="https://…/our-song.mp3" onSave={(v) => saveInfo({ music_url: v.trim() })} className="mt-3 text-sm break-all" />
+          {info.music_url && <audio src={info.music_url} controls className="w-full mt-3" />}
+        </Card>
         <Card title="Save the Date">
           {info.save_the_date_url ? <img src={info.save_the_date_url} alt="" className="rounded-xl w-full max-h-80 object-contain bg-ink/5" /> : <div className="h-40 rounded-xl border-2 border-dashed border-ink/15 grid place-items-center text-ink/40">No graphic yet</div>}
           <div className="flex gap-2 mt-4">
@@ -438,7 +450,7 @@ export function Content() {
             {info.save_the_date_url && <Btn variant="danger" onClick={() => saveInfo({ save_the_date_url: "" })}>Remove</Btn>}
           </div>
         </Card>
-        <Card title="Gallery">
+        <Card title="Photos (strips & polaroids)">
           <div className="grid grid-cols-3 gap-2">
             {info.gallery.map((src, i) => (
               <div key={i} className="relative group aspect-square">
@@ -454,7 +466,8 @@ export function Content() {
             <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="…or paste an image URL" className="flex-1 min-w-[160px] bg-white/60 rounded-full px-4 text-sm border border-ink/10 outline-none focus:border-wine" />
             <Btn variant="dark" onClick={() => { if (url) { saveInfo({ gallery: [...info.gallery, url] }); setUrl(""); } }}>Add</Btn>
           </div>
-          <p className="text-xs text-ink/50 mt-3">Tip: photos are compressed automatically. For many large photos, host them (e.g. Supabase Storage / Cloudinary) and paste URLs.</p>
+          <p className="text-xs text-ink/60 mt-3"><b>Order matters:</b> 1–4 = photo strips in Our Story · 5–8 = long photo strip · 9–12 = polaroids · 13+ = extra polaroids near the end.</p>
+          <p className="text-xs text-ink/50 mt-1">Tip: photos are compressed automatically. For many large photos, host them (e.g. Supabase Storage / Cloudinary) and paste URLs.</p>
         </Card>
         <Card title="Entourage" action={<Btn onClick={() => ent.save({ id: uid(), role: "bridesmaid", name: "Name", title: "", order: ent.rows.length + 1 })}>+ Add</Btn>}>
           <ul className="divide-y divide-ink/10">

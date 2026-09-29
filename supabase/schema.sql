@@ -10,8 +10,11 @@ create table if not exists wedding_info (
   theme_name text, story text, instagram text,
   hashtags text[] default '{}',
   total_budget numeric default 2500, currency text default 'BHD',
-  save_the_date_url text default '', gallery text[] default '{}'
+  save_the_date_url text default '', gallery text[] default '{}',
+  cover_photo text default '', music_url text default ''
 );
+alter table wedding_info add column if not exists cover_photo text default '';
+alter table wedding_info add column if not exists music_url text default '';
 create table if not exists schedule (id text primary key default gen_random_uuid()::text, time text, title text, detail text, "order" int default 0);
 create table if not exists budget (id text primary key default gen_random_uuid()::text, category text, item text, quoted_cost numeric default 0, paid_cost numeric default 0, status text default 'pending');
 create table if not exists guests (

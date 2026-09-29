@@ -23,7 +23,7 @@ const GRAIN = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'
 const FIBRE = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.012 .02' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .55 0 0 0 0 .44 0 0 0 0 .32 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E")`;
 
 /** One long, continuous vintage love letter that everything below the envelope is written on. */
-export default function Letter({ children }: { children: React.ReactNode }) {
+export default function Letter({ children, aside }: { children: React.ReactNode; aside?: React.ReactNode }) {
   return (
     <div className="relative mx-auto w-[92%] md:w-[84%] max-w-5xl mt-10 mb-24">
       <LaceEdge flip className="relative z-[6] -mb-4 md:-mb-6 scale-x-[1.02]" />
@@ -38,6 +38,7 @@ export default function Letter({ children }: { children: React.ReactNode }) {
         <div aria-hidden className="absolute inset-0 pointer-events-none shadow-[inset_0_0_60px_rgba(150,115,80,.16),inset_0_0_8px_rgba(150,115,80,.22)]" />
         <div className="relative z-[1] py-10 md:py-16">{children}</div>
       </div>
+      {aside}
       <LaceEdge className="relative z-[6] -mt-4 md:-mt-6 scale-x-[1.02]" />
     </div>
   );
