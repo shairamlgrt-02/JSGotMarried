@@ -167,7 +167,7 @@ export function ScheduleBuilder() {
   const commitOrder = () => save(sorted.map((s, i) => ({ ...s, order: i + 1 })));
   return (
     <>
-      <PageHead kicker="Drag ⋮⋮ to reorder" title="The day, hour by hour.">
+      <PageHead kicker="Drag ⋮⋮ to reorder · wrap words in *asterisks* to highlight them" title="The day, hour by hour.">
         <Btn onClick={() => save({ id: uid(), time: "Time", title: "New moment", detail: "", order: sorted.length + 1 })}>+ Add moment</Btn>
       </PageHead>
       <Reorder.Group axis="y" values={sorted} onReorder={(next) => setRows(next.map((s, i) => ({ ...s, order: i + 1 })))} className="space-y-3" onPointerUp={commitOrder}>

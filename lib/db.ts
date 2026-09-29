@@ -19,8 +19,8 @@ const KEY = (t: TableName) => `jsos:${t}`;
 const EVT = "jsos:change";
 
 /** Bump when the default program/entourage/FAQ change so browsers pick up the new defaults once. */
-const SEED_VERSION = "2";
-const REFRESH: TableName[] = ["schedule", "entourage", "faq"];
+const SEED_VERSION = "3";
+const REFRESH: TableName[] = ["schedule", "entourage", "faq", "attire"];
 function localRead<T extends TableName>(t: T): TableMap[T][] {
   if (localStorage.getItem("jsos:seedv") !== SEED_VERSION) {
     REFRESH.forEach((r) => localStorage.removeItem(KEY(r)));

@@ -34,7 +34,7 @@ export default function Home() {
             <PolaroidPair info={info} from={8} caps={["us", "11.11"]} />
             <D deco={<Deco at="tr" rotate={5}><Sticker kind="wedo" className="text-sm" /></Deco>}><Schedule items={schedule} /></D>
             <D deco={<Deco at="tl" rotate={-4}><Postmark className="w-28 md:w-48" /></Deco>}><Venue info={info} /></D>
-            <Postcard from={`${info.groom} & ${info.bride}`} venue={info.venue_name} date="11.11.2026" />
+            <Postcard from={`${info.groom} & ${info.bride}`} venue={info.venue_name} date="11.11.2026" photo={info.cover_photo || info.gallery[0]} />
             <Gallery info={info} />
             <D deco={<Deco at="tr" rotate={-10}><Sticker kind="ido" className="block scale-[.62] md:scale-100 origin-top-right" /></Deco>}><DressCode attire={attire} /></D>
             <PolaroidPair info={info} from={10} caps={["always", "forever"]} />

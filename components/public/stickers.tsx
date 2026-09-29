@@ -118,42 +118,72 @@ export function Sticker({ kind, className = "" }: { kind: StickerKind; className
   }
 }
 
-/** A vintage postcard you can flip (tap) — front: "Greetings from Bahrain", back: a handwritten note. */
-export function Postcard({ from, venue, date }: { from: string; venue: string; date: string }) {
+/** Animated "tap to flip" hint: a wine pill with a spinning arrow + a pointing hand. */
+export function FlipHint({ label = "Tap to flip", className = "" }: { label?: string; className?: string }) {
+  return (
+    <motion.span animate={{ scale: [1, 1.07, 1] }} transition={{ repeat: Infinity, duration: 1.6, ease: "easeInOut" }}
+      className={`inline-flex items-center gap-2 bg-wine text-lace rounded-full pl-3 pr-4 py-1.5 shadow-[0_6px_14px_-4px_rgba(110,31,46,.6)] ${className}`}>
+      <motion.svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2.2, ease: "linear" }}>
+        <path d="M20 12a8 8 0 11-2.3-5.6M20 4v4h-4" />
+      </motion.svg>
+      <span className="label font-semibold !text-[11px]">{label}</span>
+      <motion.span animate={{ x: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 0.9 }} className="text-base leading-none">👆</motion.span>
+    </motion.span>
+  );
+}
+
+/** Wraps a two-sided card: peeks (little wiggle) every few seconds until it has been flipped once. */
+export function useFlip() {
   const [flip, setFlip] = useState(false);
+  const [used, setUsed] = useState(false);
+  const toggle = () => { setFlip((f) => !f); setUsed(true); };
+  const peek = used ? {} : { rotateY: [0, -16, 0, -8, 0] };
+  return { flip, toggle, peek, used };
+}
+
+/** A personal vintage postcard you can flip — front: your photo + "Wish you were here", back: a handwritten note. */
+export function Postcard({ from, venue, date, photo }: { from: string; venue: string; date: string; photo?: string }) {
+  const { flip, toggle, peek } = useFlip();
   return (
     <section className="relative px-5 md:px-16 py-14 md:py-20">
       <motion.div initial={{ opacity: 0, y: 50, rotate: -6 }} whileInView={{ opacity: 1, y: 0, rotate: -2 }} viewport={{ once: true, margin: "-10%" }} transition={{ duration: 1.1, ease: EASE }}
         className="max-w-2xl mx-auto [perspective:1600px]">
-        <button type="button" onClick={() => setFlip((f) => !f)} aria-label="Flip the postcard" className="relative block w-full aspect-[3/2] text-left">
-          <motion.div animate={{ rotateY: flip ? 180 : 0 }} transition={{ duration: 1.1, ease: EASE }} className="absolute inset-0 [transform-style:preserve-3d]">
+        <button type="button" onClick={toggle} aria-label="Flip the postcard" className="relative block w-full aspect-[3/2] text-left">
+          <motion.div animate={flip ? { rotateY: 180 } : { rotateY: 0, ...peek }} transition={flip ? { duration: 1.1, ease: EASE } : { duration: 1.4, repeat: Infinity, repeatDelay: 2.6, ease: "easeInOut" }} className="absolute inset-0 [transform-style:preserve-3d]">
             {/* FRONT */}
-            <div className="absolute inset-0 [backface-visibility:hidden] bg-[#F3E7D5] shadow-[0_2px_3px_rgba(61,47,38,.2),0_24px_40px_-18px_rgba(61,47,38,.5)] p-[3%]">
-              <div className="relative w-full h-full border-[3px] border-wine/80 overflow-hidden bg-[radial-gradient(ellipse_at_50%_120%,#E9C8BE,transparent_60%),linear-gradient(180deg,#F7EDE0,#EAD9C3)] flex flex-col items-center justify-center text-center">
-                <div className="absolute inset-0 bg-[url('/img/damask.webp')] bg-cover opacity-20" />
-                <p className="relative script text-wine text-[9vw] md:text-6xl leading-none">Greetings from</p>
-                <p className="relative font-serif font-semibold text-wine text-[13vw] md:text-8xl leading-[0.9] tracking-[0.08em] [text-shadow:3px_3px_0_#F6EBDD,5px_5px_0_rgba(110,31,46,.35)]">BAHRAIN</p>
-                <p className="relative label text-mocha mt-3 font-semibold">{venue} · {date}</p>
-                <div className="absolute bottom-2 right-3 label !text-[9px] text-mocha/70">tap to turn over ↻</div>
+            <div className="absolute inset-0 [backface-visibility:hidden] bg-[#FBF7EF] shadow-[0_2px_3px_rgba(61,47,38,.2),0_24px_40px_-18px_rgba(61,47,38,.5)] p-[3.5%] grid grid-cols-[1fr_1.1fr] gap-[4%]">
+              <div className="relative bg-[#EDE3D4] p-[5%] shadow-[inset_0_0_0_1px_rgba(61,47,38,.1)] -rotate-2">
+                <div className="w-full h-full overflow-hidden">
+                  {photo ? <img src={photo} alt="" className="w-full h-full object-cover [filter:sepia(.25)_contrast(1.02)]" /> : (
+                    <div className="w-full h-full bg-[linear-gradient(160deg,#EFE7DB,#DDD0BE)] grid place-items-center"><Rings className="w-10 h-14 text-taupe/50" /></div>
+                  )}
+                </div>
+                <span className="absolute -top-2 left-1/2 -translate-x-1/2 h-5 w-16 bg-[#EFE4D2]/80 shadow-sm rotate-3" />
+              </div>
+              <div className="relative flex flex-col justify-center text-center">
+                <p className="script text-wine text-[9vw] md:text-6xl leading-[0.95]">Wish you<br />were here</p>
+                <p className="font-serif italic text-mocha text-[3.2vw] md:text-lg mt-3">…and you will be.</p>
+                <p className="label text-taupe mt-3 !text-[10px] md:!text-xs">with love, {from} · {date}</p>
               </div>
             </div>
             {/* BACK */}
             <div className="absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)] bg-[#FBF7EF] shadow-[0_2px_3px_rgba(61,47,38,.2),0_24px_40px_-18px_rgba(61,47,38,.5)] p-[4%] grid grid-cols-[1.25fr_1fr] gap-[4%]">
               <div className="border-r border-taupe/40 pr-[5%] flex flex-col justify-center">
                 <p className="script text-wine text-3xl md:text-5xl leading-none">Dear you,</p>
-                <p className="font-serif italic text-mocha text-[3.4vw] md:text-xl leading-snug mt-3">We can&apos;t wait to celebrate with you at {venue}. Come early, stay late, hug us often. Wish you were here — and you will be!</p>
+                <p className="font-serif italic text-mocha text-[3.4vw] md:text-xl leading-snug mt-3">We can&apos;t wait to celebrate with you at {venue}. Come early, stay late, hug us often. Save us a dance — and a seat by the snacks.</p>
                 <p className="script text-wine text-2xl md:text-4xl mt-3">— {from}</p>
               </div>
               <div className="relative flex flex-col justify-end pb-[8%]">
-                <div className="absolute top-0 right-0 w-[34%]"><Stamp kind="bahrain" className="w-full" /></div>
-                <Postmark className="absolute top-[4%] right-[18%] w-[70%]" />
-                {["To: our favourite people", "The Heaven, Damistan", "Kingdom of Bahrain"].map((l) => (
+                <div className="absolute top-0 right-0 w-[34%]"><Stamp kind="initials" className="w-full" /></div>
+                <Postmark className="absolute top-[4%] right-[18%] w-[70%]" top="WITH LOVE · J & S" />
+                {["To: our favourite people", "wherever you are", "see you on 11.11"].map((l) => (
                   <p key={l} className="font-serif italic text-mocha text-[3vw] md:text-lg border-b border-taupe/50 pb-1 mt-[6%]">{l}</p>
                 ))}
               </div>
             </div>
           </motion.div>
         </button>
+        <div className="text-center mt-6"><button type="button" onClick={toggle}><FlipHint label={flip ? "Flip back" : "Tap to turn over"} /></button></div>
       </motion.div>
     </section>
   );

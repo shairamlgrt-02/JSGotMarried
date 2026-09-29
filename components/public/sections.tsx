@@ -1,5 +1,5 @@
 "use client";
-import { AnimatePresence, motion, useInView } from "framer-motion";
+import { AnimatePresence, motion, useInView, useScroll, useSpring } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { submitRsvp } from "@/lib/db";
 import type { Attire, EntourageMember, Faq, ScheduleItem, WeddingInfo } from "@/lib/types";
@@ -7,6 +7,7 @@ import { fullDate } from "./Envelope";
 import { EASE, Parallax, Reveal, Tilt } from "./fx";
 import { Corners, Flourish, LaceEdge, Paisley } from "./ornaments";
 import { PhotoStrip, Polaroid, slots } from "./photos";
+import { AttireGuide } from "./attire";
 
 const longDate = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Bahrain" });
 
@@ -82,26 +83,75 @@ export function ElevenEleven({ info }: { info: WeddingInfo }) {
 }
 
 /* ─────────── THE DAY ─────────── */
-/** One program card: opens up to show its details while it's in the middle of the screen, folds back once you scroll past. */
-function ProgramCard({ s, i }: { s: ScheduleItem; i: number }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const open = useInView(ref, { margin: "-38% 0px -38% 0px" });
+/** Line-art medallion icon chosen from the program title. */
+function ProgramIcon({ title }: { title: string }) {
+  const t = title.toLowerCase();
+  const common = { fill: "none", stroke: "currentColor", strokeWidth: 1.4, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  if (t.includes("ceremony")) return <Paisley className="w-10 h-14" />;
+  if (t.includes("cocktail") || t.includes("mingl")) return (
+    <svg viewBox="0 0 48 48" className="w-12 h-12" {...common}><path d="M10 8h12l-1.5 12a4.5 4.5 0 01-9 0zM16 25v13M11 38h10M38 8H26l1.5 12a4.5 4.5 0 009 0zM32 25v13M27 38h10M22 4l2-3M26 5l3-2M24 12h0" /><circle cx="15" cy="15" r="1" fill="currentColor" /><circle cx="33" cy="14" r="1" fill="currentColor" /></svg>
+  );
+  if (t.includes("reception") || t.includes("dinner") || t.includes("party")) return (
+    <svg viewBox="0 0 48 48" className="w-12 h-12" {...common}><circle cx="24" cy="22" r="11" /><path d="M13 22h22M24 11v22M16 14c4 3 12 3 16 0M16 30c4-3 12-3 16 0M24 5v6" /><path d="M8 40l3-3M40 40l-3-3M6 30h3M39 30h3M24 38v4" strokeWidth="1" /></svg>
+  );
+  return <svg viewBox="0 0 24 24" className="w-10 h-10" fill="currentColor"><path d="M12 2l2.6 6.6L21 9.3l-5 4.4 1.6 6.8L12 16.8 6.4 20.5 8 13.7 3 9.3l6.4-.7z" /></svg>;
+}
+
+/** Renders *highlighted phrases* with an animated highlighter-pen sweep when `on`. */
+function Highlighted({ text, on }: { text: string; on: boolean }) {
+  const parts = text.split(/(\*[^*]+\*)/g);
+  let k = 0;
   return (
-    <div ref={ref} className={`relative md:w-1/2 mb-10 md:mb-14 ${i % 2 ? "md:ml-auto md:pl-14" : "md:pr-14"}`}>
-      <motion.span animate={{ scale: open ? 1.5 : 1 }} className={`hidden md:block absolute top-10 w-3 h-3 rotate-45 bg-wine shadow ${i % 2 ? "-left-[6px]" : "-right-[6px]"}`} />
-      <motion.div animate={{ scale: open ? 1.04 : 0.94, rotate: open ? 0 : i % 2 ? 1.5 : -1.5, opacity: open ? 1 : 0.82 }} transition={{ duration: 0.7, ease: EASE }}
-        className="[filter:drop-shadow(0_14px_14px_rgba(61,47,38,.22))]">
-        <div className="paper-card deckle relative px-7 md:px-9 py-8 md:py-9 text-center">
-          <div className="absolute inset-2 border border-taupe/25 pointer-events-none" />
-          <motion.div aria-hidden animate={{ opacity: open ? 1 : 0 }} className="absolute inset-2 border-2 border-wine/40 pointer-events-none" />
-          <p className="label text-wine font-semibold">{s.time}</p>
-          <h3 className="font-serif text-4xl md:text-5xl text-ink mt-2">{s.title}</h3>
-          <motion.div initial={false} animate={{ height: open ? "auto" : 0, opacity: open ? 1 : 0 }} transition={{ duration: 0.7, ease: EASE }} className="overflow-hidden">
-            <Flourish className="w-32 mx-auto mt-4 text-taupe/70" />
-            <p className="font-serif italic text-lg md:text-xl text-mocha mt-3 leading-relaxed">{s.detail}</p>
-          </motion.div>
-          <motion.p animate={{ opacity: open ? 0 : 0.7 }} className="label !text-[10px] text-taupe mt-3">details ↓</motion.p>
-        </div>
+    <>
+      {parts.map((p, idx) => {
+        if (!p.startsWith("*")) return <span key={idx}>{p}</span>;
+        const d = 0.35 + k++ * 0.25;
+        return (
+          <span key={idx} className="relative inline-block not-italic font-medium text-ink px-0.5">
+            <motion.span aria-hidden initial={false} animate={{ scaleX: on ? 1 : 0 }} transition={{ delay: on ? d : 0, duration: 0.6, ease: EASE }}
+              className="absolute left-0 right-0 bottom-[0.08em] h-[0.55em] bg-[#E8C3BC]/80 -rotate-1 origin-left rounded-sm" />
+            <span className="relative">{p.slice(1, -1)}</span>
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
+/** One stop on the journey map: medallion + angled card; details unfold while it's centred on screen. */
+function ProgramStop({ s, i }: { s: ScheduleItem; i: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const open = useInView(ref, { margin: "-35% 0px -35% 0px" });
+  const right = i % 2 === 1;
+  const tilt = right ? 2.5 : -2.5;
+  return (
+    <div ref={ref} className={`relative flex items-start gap-4 md:gap-0 mb-16 md:mb-24 ${right ? "md:flex-row-reverse" : ""}`}>
+      {/* medallion on the path */}
+      <motion.div animate={{ scale: open ? 1.12 : 1, rotate: open ? 0 : right ? 8 : -8 }} transition={{ duration: 0.7, ease: EASE }}
+        className="relative z-[2] shrink-0 w-[72px] h-[72px] md:w-24 md:h-24 md:absolute md:left-1/2 md:-translate-x-1/2 md:top-2 rounded-full bg-[#FBF7EF] border-2 border-wine/60 grid place-items-center text-wine shadow-[0_8px_18px_-8px_rgba(61,47,38,.55)]">
+        <div className="absolute inset-1.5 rounded-full border border-wine/25" />
+        <ProgramIcon title={s.title} />
+        <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-wine text-lace rounded-full w-7 h-7 grid place-items-center font-serif text-sm font-semibold">{i + 1}</span>
+      </motion.div>
+
+      {/* the card */}
+      <motion.div initial={{ opacity: 0, x: right ? 60 : -60, rotate: tilt * 2 }} whileInView={{ opacity: 1, x: 0, rotate: tilt }} viewport={{ once: true, margin: "-10%" }} transition={{ duration: 0.9, ease: EASE }}
+        className="relative flex-1 md:flex-none md:w-[calc(50%-4.5rem)]">
+        <motion.div animate={{ scale: open ? 1.03 : 0.97 }} transition={{ duration: 0.6, ease: EASE }} className="[filter:drop-shadow(0_16px_16px_rgba(61,47,38,.22))]">
+          <div className="paper-card deckle relative px-6 md:px-8 pt-10 pb-7 md:pt-11 md:pb-8">
+            <div className="absolute inset-2 border border-taupe/25 pointer-events-none" />
+            <motion.div aria-hidden animate={{ opacity: open ? 1 : 0 }} className="absolute inset-2 border-2 border-wine/35 pointer-events-none" />
+            {/* time tag like a luggage label */}
+            <div className="absolute -top-4 left-5 md:left-7 bg-wine text-lace pl-4 pr-5 py-1.5 [clip-path:polygon(0_0,92%_0,100%_50%,92%_100%,0_100%)] shadow-md">
+              <span className="label font-semibold !text-[11px] md:!text-xs">{s.time}</span>
+            </div>
+            <h3 className="font-serif text-[2.1rem] md:text-5xl text-ink leading-[1.05]">{s.title}</h3>
+            <motion.div initial={false} animate={{ height: open ? "auto" : 0, opacity: open ? 1 : 0 }} transition={{ duration: 0.7, ease: EASE }} className="overflow-hidden">
+              <p className="font-serif italic text-[1.12rem] md:text-xl text-mocha mt-4 leading-relaxed"><Highlighted text={s.detail} on={open} /></p>
+            </motion.div>
+            <motion.p animate={{ opacity: open ? 0 : 0.8, y: open ? -4 : [0, 3, 0] }} transition={open ? {} : { repeat: Infinity, duration: 1.4 }} className="label !text-[10px] text-wine mt-3">keep scrolling to read ↓</motion.p>
+          </div>
+        </motion.div>
       </motion.div>
     </div>
   );
@@ -109,17 +159,32 @@ function ProgramCard({ s, i }: { s: ScheduleItem; i: number }) {
 
 export function Schedule({ items }: { items: ScheduleItem[] }) {
   const sorted = [...items].sort((a, b) => a.order - b.order);
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start 75%", "end 60%"] });
+  const draw = useSpring(scrollYProgress, { stiffness: 80, damping: 20 });
   return (
-    <section id="day" className="relative px-6 md:px-16 py-20 md:py-28">
+    <section id="day" className="relative px-5 md:px-16 py-20 md:py-28">
       <Title kicker="Order of the Day" title="The Day" />
       <Reveal className="text-center mt-8">
         <p className="inline-block font-serif text-lg md:text-xl text-ink bg-[#FBF6EE] border border-wine/30 rounded-full px-6 py-2 shadow-sm">
           Everyone is welcome from <b className="text-wine">5:00 PM</b> until the last dance
         </p>
       </Reveal>
-      <div className="relative max-w-3xl mx-auto mt-14">
-        <div className="absolute left-1/2 top-0 bottom-0 w-px bg-taupe/30 hidden md:block" />
-        {sorted.map((s, i) => <ProgramCard key={s.id} s={s} i={i} />)}
+      <div ref={ref} className="relative max-w-4xl mx-auto mt-16">
+        {/* the journey path — draws itself as you scroll */}
+        <svg aria-hidden className="absolute left-[16px] md:left-1/2 md:-translate-x-1/2 top-0 h-full w-10 md:w-40 overflow-visible" viewBox="0 0 100 1000" preserveAspectRatio="none">
+          <defs>
+            <mask id="journey-mask" maskUnits="userSpaceOnUse" x="-50" y="0" width="200" height="1000">
+              <motion.path d="M50 0 C95 120 5 220 50 333 C95 450 5 550 50 666 C95 780 5 880 50 1000" stroke="#fff" strokeWidth="30" fill="none" style={{ pathLength: draw }} />
+            </mask>
+          </defs>
+          <path d="M50 0 C95 120 5 220 50 333 C95 450 5 550 50 666 C95 780 5 880 50 1000" stroke="#6E1F2E" strokeOpacity=".12" strokeWidth="2" fill="none" vectorEffect="non-scaling-stroke" strokeDasharray="2 7" />
+          <path d="M50 0 C95 120 5 220 50 333 C95 450 5 550 50 666 C95 780 5 880 50 1000" stroke="#6E1F2E" strokeOpacity=".7" strokeWidth="2.2" fill="none" vectorEffect="non-scaling-stroke" strokeDasharray="3 8" strokeLinecap="round" mask="url(#journey-mask)" />
+        </svg>
+        {sorted.map((s, i) => <ProgramStop key={s.id} s={s} i={i} />)}
+        <Reveal className="relative text-center pt-2">
+          <span className="script text-wine text-4xl md:text-5xl">…and happily ever after</span>
+        </Reveal>
       </div>
     </section>
   );
@@ -155,28 +220,10 @@ export function DressCode({ attire }: { attire: Attire[] }) {
   const sorted = [...attire].sort((a, b) => a.order - b.order);
   const guests = sorted.find((a) => a.group === "guests");
   const reserved = sorted.filter((a) => a.reserved);
-  const [picked, setPicked] = useState<number | null>(null);
   return (
     <section id="dress" className="relative px-6 md:px-16 py-20 md:py-28">
       <Title kicker="What to Wear" title="Attire" />
-      {guests && (
-        <div className="max-w-5xl mx-auto mt-14 text-center">
-          <p className="font-serif italic text-xl md:text-2xl text-mocha max-w-2xl mx-auto">{guests.notes}</p>
-          <p className="label text-taupe mt-10 mb-8">For our guests — tap a color</p>
-          <div className="flex flex-wrap justify-center gap-5 md:gap-8">
-            {guests.colors.map((c, i) => (
-              <motion.button key={c.name} onClick={() => setPicked(i)} whileHover={{ y: -8 }} transition={{ duration: 0.4, ease: EASE }} className="flex flex-col items-center gap-3 group">
-                <span className={`relative w-24 h-32 md:w-28 md:h-40 rounded-t-full shadow-[0_18px_30px_-18px_rgba(61,47,38,.6)] ring-1 ring-black/5 transition-all ${picked === i ? "ring-2 ring-offset-4 ring-offset-ivory ring-wine" : ""}`} style={{ backgroundColor: c.hex, backgroundImage: "linear-gradient(115deg, rgba(255,255,255,.18), transparent 40%, rgba(0,0,0,.12))" }}>
-                  <span className="absolute inset-0 rounded-t-full overflow-hidden"><span className="absolute -inset-y-4 -left-full w-1/2 bg-gradient-to-r from-transparent via-white/35 to-transparent skew-x-[-18deg] group-hover:left-[150%] transition-all duration-1000 ease-out" /></span>
-                  <span className="absolute inset-2 rounded-t-full border border-white/20" />
-                  {picked === i && <span className="absolute inset-x-0 bottom-3 script text-lace text-2xl">lovely</span>}
-                </span>
-                <span className="font-serif text-lg text-mocha">{c.name}</span>
-              </motion.button>
-            ))}
-          </div>
-        </div>
-      )}
+      <AttireGuide guests={guests} />
       <div className="max-w-5xl mx-auto mt-20">
         <p className="label text-taupe text-center mb-8">Reserved for the couple, family &amp; entourage — kindly avoid</p>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">

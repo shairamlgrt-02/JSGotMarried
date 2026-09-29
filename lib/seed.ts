@@ -25,9 +25,9 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     rsvp_deadline: "2026-10-25",
   }],
   schedule: [
-    { id: "s1", time: "4:00 – 5:00 PM", title: "The Ceremony", detail: "An intimate ceremony, shared with our families, entourage and a few honoured guests. If your heart wants to witness us say “I do”, you are warmly welcome to join — open seating is available around our reserved rows.", order: 1 },
-    { id: "s2", time: "5:00 – 6:30 PM", title: "Cocktail & Mingling Hour", detail: "Everyone is welcome from 5 PM! Snacks, refreshments, photo moments and little activities at the majlis, just outside the hall. This is where we’ll come find you — to hug, laugh and take pictures together.", order: 2 },
-    { id: "s3", time: "7:00 PM onwards", title: "The Reception", detail: "Doors open for the celebration — dinner, our film on the big screen, games and giveaways, and dancing until the very end.", order: 3 },
+    { id: "s1", time: "4:00 – 5:00 PM", title: "The Ceremony", detail: "An *intimate ceremony*, shared with our families, entourage and a few honoured guests. If your heart wants to witness us say “I do”, you are *warmly welcome to join* — open seating is available around our reserved rows.", order: 1 },
+    { id: "s2", time: "5:00 – 6:30 PM", title: "Cocktail & Mingling Hour", detail: "*Everyone is welcome from 5 PM!* Snacks, refreshments, *photo moments* and little activities at the *majlis*, just outside the hall. This is where we’ll come find you — to hug, laugh and take pictures together.", order: 2 },
+    { id: "s3", time: "7:00 PM onwards", title: "The Reception", detail: "Doors open for the celebration — *dinner*, our *film on the big screen*, *games and giveaways*, and dancing until the very end.", order: 3 },
   ],
 
   budget: [
@@ -81,7 +81,7 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     { id: "a3", group: "shai_family", label: "Shai's Family", colors: [c("Burgundy", "#6B1D2A")], reserved: true, notes: "", swatch_url: "", order: 3 },
     { id: "a4", group: "jeg_family", label: "Jeg's Family", colors: [c("Teal", "#1F5C5C")], reserved: true, notes: "", swatch_url: "", order: 4 },
     { id: "a5", group: "bridesmaids", label: "Bridesmaids", colors: [c("Amethyst", "#5D3A6B"), c("Magenta", "#8B1E5A"), c("Garnet", "#7A1F2B"), c("Antique Gold", "#B08D4A"), c("Copper", "#A0522D")], reserved: true, notes: "Mixed jewel-tone satin", swatch_url: "", order: 5 },
-    { id: "a6", group: "guests", label: "Our Guests", colors: [c("Olive", "#5B5B2E"), c("Moss", "#4A5D23"), c("Forest", "#2F4A2B"), c("Espresso", "#3C2415"), c("Chocolate", "#4E2E1E"), c("Chestnut", "#7B3F26")], reserved: false, notes: "Earth tones please — kindly avoid white, black, burgundy and teal.", swatch_url: "", order: 6 },
+    { id: "a6", group: "guests", label: "Our Guests", colors: [c("Olive", "#5B5B2E"), c("Moss", "#4A5D23"), c("Forest", "#2F4A2B"), c("Espresso", "#3C2415"), c("Chocolate", "#4E2E1E"), c("Chestnut", "#7B3F26")], reserved: false, notes: "Black tie, in earth tones — kindly avoid black, white, burgundy and teal.", swatch_url: "", order: 6 },
   ],
   entourage: [
     { id: "p1", role: "bride_family", name: "Mr. ——", title: "Father of the Bride", order: 1 },
