@@ -17,7 +17,7 @@ const timeWords = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { h
 function Card({ info }: { info: WeddingInfo }) {
   const cd = useCountdown(info.date);
   const photo = info.cover_photo || info.gallery[0] || "";
-  const lace = "absolute z-[2] inset-x-0 h-[8cqw] bg-[url('/img/lacetrim.webp')] bg-repeat-x bg-[length:auto_100%] [filter:sepia(.3)_brightness(1.1)_saturate(.75)_drop-shadow(0_1px_1px_rgba(61,47,38,.3))] pointer-events-none";
+  const lace = "absolute z-[2] inset-x-0 h-[8cqw] bg-[url('/img/lacetrim.webp')] bg-repeat-x bg-[length:auto_100%] [filter:brightness(1.04)_sepia(.08)_drop-shadow(0_-1px_.5px_rgba(61,47,38,.35))_drop-shadow(0_-2px_3px_rgba(61,47,38,.12))] bg-center pointer-events-none";
   return (
     <div className="relative w-full h-full [filter:drop-shadow(0_2px_2px_rgba(61,47,38,.18))_drop-shadow(0_20px_26px_rgba(61,47,38,.24))]">
       <div className="paper-card deckle relative w-full h-full [container-type:inline-size] text-center flex flex-col items-center justify-center px-[6cqw] overflow-hidden">

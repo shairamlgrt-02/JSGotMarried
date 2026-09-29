@@ -34,11 +34,11 @@ export default function Letter({ children, aside }: { children: React.ReactNode;
         ))}
         {/* aged edges */}
         <div aria-hidden className="absolute inset-0 pointer-events-none shadow-[inset_0_0_60px_rgba(150,115,80,.16),inset_0_0_8px_rgba(150,115,80,.22)]" />
-        {/* lace lying ON the paper, top and bottom */}
-        <div aria-hidden className="absolute z-[2] top-0 inset-x-0 h-12 md:h-16 bg-[url('/img/lacetrim.webp')] bg-repeat-x bg-[length:auto_100%] [filter:sepia(.3)_brightness(1.1)_saturate(.75)_drop-shadow(0_2px_1.5px_rgba(61,47,38,.3))]" style={{ transform: "scaleY(-1)" }} />
-        <div aria-hidden className="absolute z-[2] bottom-0 inset-x-0 h-12 md:h-16 bg-[url('/img/lacetrim.webp')] bg-repeat-x bg-[length:auto_100%] [filter:sepia(.3)_brightness(1.1)_saturate(.75)_drop-shadow(0_-2px_1.5px_rgba(61,47,38,.3))]" />
         <div className="relative z-[1] pt-16 md:pt-24 pb-16 md:pb-24">{children}</div>
       </div>
+      {/* real lace trim sewn across the top and bottom edges of the letter */}
+      <div aria-hidden className="lace-trim absolute z-[7] -top-3 md:-top-4 -inset-x-1" style={{ transform: "scaleY(-1)" }} />
+      <div aria-hidden className="lace-trim lace-trim-bottom absolute z-[7] -bottom-3 md:-bottom-4 -inset-x-1" />
       {aside}
     </div>
   );

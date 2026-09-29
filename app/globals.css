@@ -68,3 +68,12 @@ html.lenis, html.lenis body { height: auto; }
 
 .peek { transform: translateX(var(--em)); }
 @media (min-width: 768px) { .peek { transform: translateX(var(--e)); } }
+
+/* Lace trim: transparent lace photo, ivory, with a tight contact shadow + soft lift so it reads as fabric lying on paper */
+.lace-trim {
+  height: clamp(44px, 7vw, 76px);
+  background: url('/img/lacetrim.webp') center top / auto 100% repeat-x;
+  filter: brightness(1.04) sepia(.08) drop-shadow(0 -1px .6px rgba(61,47,38,.35)) drop-shadow(0 -3px 4px rgba(61,47,38,.14));
+  pointer-events: none;
+}
+.lace-trim-bottom { filter: brightness(1.04) sepia(.08) drop-shadow(0 1px .6px rgba(61,47,38,.35)) drop-shadow(0 3px 4px rgba(61,47,38,.14)); }

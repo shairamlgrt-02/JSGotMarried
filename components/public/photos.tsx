@@ -59,9 +59,11 @@ export function Polaroid({ src, caption, rotate = 0, className = "" }: { src: st
     <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-5%" }} transition={{ duration: 1, ease: EASE }}
       whileHover={{ rotate: 0, scale: 1.05, zIndex: 30 }} style={{ rotate }} className={`relative ${className}`}>
       <Tape className="-top-3 left-1/2 -translate-x-1/2" rotate={-rotate * 1.5} />
-      <div className="bg-[#FCFAF6] p-[7%] pb-[22%] shadow-[0_1px_2px_rgba(61,47,38,.2),0_14px_24px_-10px_rgba(61,47,38,.45)]">
+      <div className="bg-[#FCFAF6] p-[7%] pb-0 shadow-[0_1px_2px_rgba(61,47,38,.2),0_14px_24px_-10px_rgba(61,47,38,.45)]">
         <div className="aspect-square overflow-hidden"><Slot src={src} /></div>
-        {caption && <p className="absolute bottom-[4%] inset-x-0 text-center script text-wine text-xl md:text-2xl leading-none">{caption}</p>}
+        <div className="h-12 md:h-14 flex items-center justify-center">
+          {caption && <p className="script text-wine text-2xl md:text-3xl leading-none translate-y-[2px]">{caption}</p>}
+        </div>
       </div>
     </motion.div>
   );
