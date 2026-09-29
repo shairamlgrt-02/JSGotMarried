@@ -13,23 +13,24 @@ export default function Home() {
   const { rows: entourage } = useTable("entourage");
   const { rows: faq } = useTable("faq");
   const info = infoRows[0];
-  // Real-world relative scale: veil (huge) > shoes > garter > bowtie > rings. Sizes in vw so proportions hold on phones.
-  const under = (
-    <>
-      <Peek src="/img/veil.webp" side="right" top="1%" width="78vw" rotate={-18} edge={0.3} />
-      <Peek src="/img/shoes.webp" side="right" top="19%" width="44vw" rotate={96} edge={0.46} />
-      <Peek src="/img/garter.webp" side="right" top="41%" width="30vw" rotate={18} edge={0.42} />
-      <Peek src="/img/veil.webp" side="left" top="50%" width="74vw" rotate={164} edge={0.32} flip />
-      <Peek src="/img/shoes.webp" side="left" top="67%" width="42vw" rotate={-84} edge={0.46} flip />
-      <Peek src="/img/garter.webp" side="left" top="87%" width="28vw" rotate={196} edge={0.42} mobile={false} />
-    </>
-  );
+  // Everything lies flat ON the letter, fixed per section. Real-world relative scale:
+  // veil (huge) > shoe ≈ envelope ≈ garter ≈ pen > bowtie > rings > wax seal. vw-based so proportions hold on phones.
   const over = (
     <>
-      <Peek src="/img/rings.webp" side="left" top="8%" width="clamp(70px, 10vw, 150px)" rotate={24} edge={0.72} layer="over" speed={0.12} />
-      <Peek src="/img/bowtie.webp" side="left" top="30%" width="22vw" rotate={-28} edge={0.62} layer="over" />
-      <Peek src="/img/rings.webp" side="right" top="76%" width="clamp(64px, 9vw, 140px)" rotate={-32} edge={0.7} layer="over" speed={0.12} />
-      <Peek src="/img/bowtie.webp" side="right" top="94%" width="20vw" rotate={34} edge={0.6} layer="over" mobile={false} />
+      <Peek src="/img/veil.webp" side="right" top="0.5%" width="117vw" rotate={-14} edge={0.9} edgeMobile={0.93} />
+      <Peek src="/img/rings_flat.webp" side="left" top="6%" width="clamp(140px, 20vw, 300px)" rotate={-22} edge={0.55} edgeMobile={0.62} />
+      <Peek src="/img/pen.webp" side="right" top="15%" width="40vw" rotate={28} edge={0.62} edgeMobile={0.72} />
+      <Peek src="/img/seal.webp" side="left" top="22%" width="clamp(80px, 10vw, 140px)" rotate={-18} edge={0.45} edgeMobile={0.6} />
+      <Peek src="/img/bowtie.webp" side="right" top="28%" width="22vw" rotate={-24} edge={0.6} mobile={false} />
+      <Peek src="/img/shoe_flat.webp" side="left" top="34%" width="40vw" rotate={72} edge={0.6} edgeMobile={0.72} />
+      <Peek src="/img/garter.webp" side="right" top="43%" width="45vw" rotate={16} edge={0.7} edgeMobile={0.78} />
+      <Peek src="/img/veil.webp" side="left" top="51%" width="110vw" rotate={166} edge={0.92} edgeMobile={0.94} flip />
+      <Peek src="/img/envelope_flat.webp" side="right" top="60%" width="42vw" rotate={-10} edge={0.7} edgeMobile={0.8} />
+      <Peek src="/img/seal.webp" side="right" top="69%" width="clamp(70px, 9vw, 130px)" rotate={22} edge={0.4} mobile={false} />
+      <Peek src="/img/shoe_flat.webp" side="right" top="76%" width="38vw" rotate={-104} edge={0.6} edgeMobile={0.72} flip />
+      <Peek src="/img/pen.webp" side="left" top="85%" width="38vw" rotate={-150} edge={0.62} mobile={false} />
+      <Peek src="/img/garter.webp" side="left" top="92%" width="42vw" rotate={196} edge={0.7} edgeMobile={0.8} />
+      <Peek src="/img/rings_flat.webp" side="right" top="96%" width="clamp(120px, 17vw, 260px)" rotate={30} edge={0.5} mobile={false} />
     </>
   );
   return (
@@ -38,7 +39,7 @@ export default function Home() {
       <main className="relative z-[1] overflow-x-clip">
         <SmoothScroll /><ProgressBar />
         <EnvelopeHero info={info} />
-        <Letter under={under} over={over}>
+        <Letter over={over}>
           <Invitation info={info} />
           <Story info={info} />
           <ElevenEleven info={info} />

@@ -1,7 +1,4 @@
 "use client";
-import { motion, useScroll, useTransform } from "framer-motion";
-import { useRef } from "react";
-import { Tilt } from "./fx";
 import { LaceEdge } from "./ornaments";
 
 /** Faint real-looking stains & fold lines scattered over the letter. */
@@ -51,26 +48,21 @@ export default function Letter({ children, under, over }: { children: React.Reac
 }
 
 /**
- * A realistic wedding object lying flat beside the letter.
- * - `edge`: fraction of the object's width that sits OUTSIDE the letter edge (the rest is under/over the letter or off-screen).
- * - `layer`: "under" = tucked beneath the letter, "over" = resting on top of the letter margin.
- * Subtle parallax + tiny rotation drift so it feels like it's lying on a table; tilts on hover / device tilt.
+ * A realistic wedding object lying flat ON the letter, fixed to its spot (no floating / drifting).
+ * - `edge` / `edgeMobile`: fraction of the object's width that sits OUTSIDE the letter edge
+ *   (large values = only the tip rests on the paper; the rest is off to the side / off-screen).
+ * - Tight contact shadow so it reads as lying on the paper, not hovering.
  */
-export function Peek({ src, alt = "", side, top, width, rotate = 0, edge = 0.5, layer = "under", speed = 0.08, flip = false, mobile = true }: {
-  src: string; alt?: string; side: "left" | "right"; top: string; width: string; rotate?: number; edge?: number; layer?: "under" | "over"; speed?: number; flip?: boolean; mobile?: boolean;
+export function Peek({ src, alt = "", side, top, width, rotate = 0, edge = 0.5, edgeMobile, flip = false, mobile = true }: {
+  src: string; alt?: string; side: "left" | "right"; top: string; width: string; rotate?: number; edge?: number; edgeMobile?: number; flip?: boolean; mobile?: boolean;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
-  const y = useTransform(scrollYProgress, [0, 1], [speed * 300, -speed * 300]);
-  const r = useTransform(scrollYProgress, [0, 1], [rotate - 3, rotate + 3]);
-  const shift = `${(side === "left" ? -edge : edge) * 100}%`;
+  const dir = side === "left" ? -1 : 1;
+  const vars = { "--e": `${dir * edge * 100}%`, "--em": `${dir * (edgeMobile ?? Math.min(0.9, edge + 0.15)) * 100}%` } as React.CSSProperties;
   return (
-    <motion.div ref={ref} aria-hidden style={{ y, x: shift, top, [side]: 0, width }}
-      className={`absolute ${layer === "under" ? "z-[1]" : "z-[20]"} ${mobile ? "" : "hidden md:block"}`}>
-      <Tilt max={6} glare={false}>
-        <motion.img src={src} alt={alt} loading="lazy" style={{ rotate: r, scaleX: flip ? -1 : 1 }}
-          className={`w-full h-auto select-none ${layer === "under" ? "drop-shadow-[4px_10px_10px_rgba(51,39,31,.30)]" : "drop-shadow-[5px_14px_10px_rgba(51,39,31,.38)]"}`} draggable={false} />
-      </Tilt>
-    </motion.div>
+    <div aria-hidden style={{ top, [side]: 0, width, ...vars }} className={`peek absolute z-[20] pointer-events-none ${mobile ? "" : "hidden md:block"}`}>
+      <img src={src} alt={alt} loading="lazy" draggable={false}
+        style={{ transform: `rotate(${rotate}deg) scaleX(${flip ? -1 : 1})` }}
+        className="w-full h-auto select-none [filter:drop-shadow(1px_2px_1.5px_rgba(51,39,31,.45))_drop-shadow(3px_8px_8px_rgba(51,39,31,.18))]" />
+    </div>
   );
 }

@@ -65,3 +65,6 @@ html.lenis, html.lenis body { height: auto; }
   mask-repeat: repeat-y, repeat-y, no-repeat;
   mask-position: left top, right top, center;
 }
+
+.peek { transform: translateX(var(--em)); }
+@media (min-width: 768px) { .peek { transform: translateX(var(--e)); } }
