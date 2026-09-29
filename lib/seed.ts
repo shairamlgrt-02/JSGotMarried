@@ -22,6 +22,7 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     gallery: [],
     cover_photo: "",
     music_url: "",
+    rsvp_deadline: "2026-10-25",
   }],
   schedule: [
     { id: "s1", time: "4:00 – 6:00 PM", title: "The Ceremony", detail: "We say I do. Please be seated by 3:45 PM.", order: 1 },

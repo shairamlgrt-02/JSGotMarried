@@ -3,7 +3,7 @@ import Ambience from "@/components/public/Ambience";
 import EnvelopeHero from "@/components/public/Envelope";
 import Letter from "@/components/public/Letter";
 import { ProgressBar, SmoothScroll } from "@/components/public/fx";
-import { DressCode, ElevenEleven, Entourage, FaqSection, Footer, Gallery, Invitation, PolaroidPair, SignOff, Rsvp, Schedule, Story, Venue } from "@/components/public/sections";
+import { DressCode, ElevenEleven, Entourage, FaqSection, Footer, Gallery, Invitation, PolaroidPair, RsvpNudge, SignOff, Rsvp, Schedule, Story, Venue } from "@/components/public/sections";
 import { Moments, MusicButton, SidePolaroids } from "@/components/public/photos";
 import { useTable } from "@/lib/hooks";
 
@@ -38,6 +38,7 @@ export default function Home() {
         </Letter>
         <Footer info={info} />
         <MusicButton src={info.music_url} />
+        <RsvpNudge info={info} />
       </main>
     </>
   );

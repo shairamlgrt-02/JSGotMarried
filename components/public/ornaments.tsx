@@ -16,20 +16,30 @@ export function Flourish({ className = "", color = "currentColor" }: { className
 }
 
 /** A single paisley (boteh) with inner line work. */
+/** Vintage wedding rings — interlocked bands, the engagement ring with a solitaire diamond. (Kept the old name so every spot updates.) */
 export function Paisley({ className = "", color = "currentColor" }: { className?: string; color?: string }) {
   return (
-    <svg viewBox="0 0 60 92" className={className} fill="none" stroke={color} strokeWidth="1" strokeLinecap="round">
-      <path d="M30 88 C8 80 2 56 12 38 C22 20 44 16 46 4 C52 18 58 34 54 54 C50 76 42 86 30 88 Z" />
-      <path d="M30 78 C17 72 14 57 21 46 C28 35 40 33 43 24 C47 36 49 49 45 60 C41 71 37 76 30 78 Z" />
-      <path d="M30 68 C23 64 22 55 27 49 C31 44 37 42 39 37 C41 46 41 54 38 60 C36 64 34 67 30 68 Z" />
-      <path d="M46 4 C40 6 36 3 38 0" />
-      {[[30, 58], [24, 70], [37, 72], [18, 56], [42, 48]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="1.1" fill={color} />)}
-      {Array.from({ length: 11 }, (_, i) => { const t = i / 10; const x = 30 - 26 * Math.sin(t * Math.PI) * (1 - t * 0.3) - 3; const y = 90 - t * 60; return <circle key={`b${i}`} cx={x} cy={y} r="0.9" fill={color} />; })}
+    <svg viewBox="0 0 60 92" className={className} fill="none" stroke={color} strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+      {/* engagement ring */}
+      <ellipse cx="24" cy="58" rx="16" ry="17" />
+      <ellipse cx="24" cy="58" rx="13" ry="14" strokeWidth=".6" />
+      {/* wedding band, interlocked */}
+      <ellipse cx="38" cy="64" rx="15" ry="16" />
+      <ellipse cx="38" cy="64" rx="12.2" ry="13.2" strokeWidth=".6" />
+      {/* setting + diamond */}
+      <path d="M19 42 L21 37 H27 L29 42" />
+      <path d="M17 37 H31 L27 31 H21 Z" />
+      <path d="M17 37 L24 47 L31 37 M21 31 L24 37 L27 31" strokeWidth=".6" />
+      {/* sparkle */}
+      <path d="M24 18 V25 M20.5 21.5 H27.5 M36 24 V28 M34 26 H38 M12 26 V29 M10.5 27.5 H13.5" strokeWidth=".8" />
+      {/* milgrain dots on the band */}
+      {Array.from({ length: 9 }, (_, k) => { const a = Math.PI * (0.15 + k * 0.085); return <circle key={k} cx={38 + 13.6 * Math.cos(a)} cy={64 + 14.6 * Math.sin(a)} r=".6" fill={color} stroke="none" />; })}
     </svg>
   );
 }
+export const Rings = Paisley;
 
-/** Corner ornament: paisley + curling filigree. Rotate for other corners. */
+/** Corner ornament: tiny rings + curling filigree. Rotate for other corners. */
 export function Corner({ className = "", color = "currentColor" }: { className?: string; color?: string }) {
   return (
     <svg viewBox="0 0 140 140" className={className} fill="none" stroke={color} strokeWidth="1" strokeLinecap="round">
@@ -39,7 +49,7 @@ export function Corner({ className = "", color = "currentColor" }: { className?:
       <path d="M40 82 C30 70 34 52 50 48 C62 45 68 56 60 60" />
       <path d="M82 40 C70 30 52 34 48 50" />
       <path d="M26 100 C34 96 36 88 32 82 M100 26 C96 34 88 36 82 32" />
-      <g transform="translate(30 30) rotate(-45 20 30) scale(.55)"><path d="M30 88 C8 80 2 56 12 38 C22 20 44 16 46 4 C52 18 58 34 54 54 C50 76 42 86 30 88 Z" /><path d="M30 76 C18 70 16 56 22 46 C28 36 40 34 42 26 C46 38 48 50 44 60 C40 70 36 74 30 76 Z" /></g>
+      <g transform="translate(28 26) rotate(-45 16 24) scale(.5)"><ellipse cx="24" cy="58" rx="16" ry="17" /><ellipse cx="38" cy="64" rx="15" ry="16" /><path d="M19 42 L21 37 H27 L29 42 M17 37 H31 L27 31 H21 Z M17 37 L24 47 L31 37" /></g>
       {[[26, 120], [120, 26], [30, 110], [110, 30]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="1.4" fill={color} />)}
     </svg>
   );

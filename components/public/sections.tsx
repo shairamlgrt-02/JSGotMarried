@@ -1,6 +1,6 @@
 "use client";
-import { AnimatePresence, motion } from "framer-motion";
-import { useState } from "react";
+import { AnimatePresence, motion, useInView } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 import { submitRsvp } from "@/lib/db";
 import type { Attire, EntourageMember, Faq, ScheduleItem, WeddingInfo } from "@/lib/types";
 import { fullDate } from "./Envelope";
@@ -219,13 +219,46 @@ export function Rsvp({ info }: { info: WeddingInfo }) {
     try { await submitRsvp({ ...f, pax: f.attending === "no" ? 0 : f.pax }); setState("done"); }
     catch (e) { setErr((e as Error).message); setState("error"); }
   }
+  const deadline = new Date(`${info.rsvp_deadline || "2026-10-25"}T23:59:00+03:00`);
+  const deadlineText = deadline.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Bahrain" });
+  const daysLeft = Math.max(0, Math.ceil((deadline.getTime() - Date.now()) / 86400000));
+  const cardRef = useRef<HTMLDivElement>(null);
+  const seen = useInView(cardRef, { once: true, margin: "0px 0px -25% 0px" });
+  useEffect(() => { if (state === "done") try { localStorage.setItem("jsos:rsvped", "1"); window.dispatchEvent(new Event("rsvped")); } catch {} }, [state]);
   const choice = (on: boolean) => `font-serif text-xl px-6 py-2 rounded-full border transition-colors ${on ? "bg-wine text-lace border-wine" : "border-taupe/40 text-mocha hover:border-wine"}`;
   return (
     <section id="rsvp" className="relative px-5 md:px-16 py-24 md:py-36">
-      <Title kicker="Répondez s'il vous plaît" title="Kindly Reply" />
-      <Reveal className="max-w-2xl mx-auto mt-14">
-        <div className="relative">
-          <LaceEdge color="#FCFAF5" flip />
+      <Reveal className="text-center">
+        <motion.div initial={{ scaleX: 0 }} whileInView={{ scaleX: 1 }} viewport={{ once: true }} transition={{ duration: 1, ease: EASE }}
+          className="inline-block bg-wine text-lace px-8 md:px-12 py-2.5 [clip-path:polygon(0_0,100%_0,96%_50%,100%_100%,0_100%,4%_50%)] shadow-[0_6px_14px_rgba(110,31,46,.3)]">
+          <span className="label font-semibold">Your reply is needed</span>
+        </motion.div>
+        <h2 className="script text-wine text-7xl md:text-9xl mt-5 leading-[1.05]">Kindly Reply</h2>
+        <p className="label text-taupe mt-2">Répondez s&apos;il vous plaît</p>
+        <p className="font-serif text-mocha text-xl md:text-2xl mt-6">Please reply by <b className="text-wine font-semibold">{deadlineText}</b></p>
+        {daysLeft > 0 ? (
+          <motion.p animate={{ scale: [1, 1.06, 1] }} transition={{ repeat: Infinity, duration: 2.2, ease: "easeInOut" }} className="inline-flex items-baseline gap-2 mt-3 font-serif text-wine">
+            <span className="text-5xl md:text-6xl font-medium tabular-nums">{daysLeft}</span><span className="label font-semibold">day{daysLeft === 1 ? "" : "s"} left to reply</span>
+          </motion.p>
+        ) : <p className="label text-wine mt-3 font-semibold">The deadline has passed — please message us directly</p>}
+      </Reveal>
+      <div ref={cardRef} className="max-w-2xl mx-auto mt-16">
+        <motion.div initial={{ opacity: 0, y: 90, rotate: -5 }} animate={seen ? { opacity: 1, y: 0, rotate: 0, x: [0, 0, -6, 5, -3, 2, 0] } : {}}
+          transition={{ duration: 1.1, ease: EASE, x: { delay: 1.25, duration: 0.5, times: [0, 0.01, 0.2, 0.4, 0.6, 0.8, 1] } }} className="relative">
+          {/* breathing wine glow until they reply */}
+          {state !== "done" && (
+            <motion.div aria-hidden className="absolute -inset-3 md:-inset-4 rounded-[6px] border-2 border-wine/50 pointer-events-none"
+              animate={{ opacity: [0.25, 0.9, 0.25], boxShadow: ["0 0 0px rgba(110,31,46,0)", "0 0 38px rgba(110,31,46,.35)", "0 0 0px rgba(110,31,46,0)"] }}
+              transition={{ repeat: Infinity, duration: 2.6, ease: "easeInOut", delay: 1.8 }} />
+          )}
+          {/* RSVP wax seal stamped onto the card */}
+          <motion.div initial={{ scale: 2.8, opacity: 0, rotate: -35 }} animate={seen ? { scale: 1, opacity: 1, rotate: -10 } : {}} transition={{ delay: 0.95, duration: 0.45, ease: [0.5, 0, 0.9, 0.4] }}
+            className="absolute z-20 -top-12 md:-top-14 left-1/2 -ml-12 md:-ml-14 w-24 h-24 md:w-28 md:h-28">
+            <img src="/img/seal.webp" alt="" className="absolute inset-0 w-full h-full object-contain drop-shadow-[0_8px_8px_rgba(61,47,38,.45)]" />
+            <span className="absolute inset-0 grid place-items-center font-serif font-semibold text-[#F3DCD8] text-lg md:text-xl tracking-[0.12em] [text-shadow:0_1px_1px_rgba(0,0,0,.45)]">RSVP</span>
+          </motion.div>
+          <div className="relative">
+            <LaceEdge color="#FCFAF5" flip />
           <div className="paper-card relative px-6 md:px-16 py-14 md:py-20 shadow-[0_2px_3px_rgba(61,47,38,.15),0_40px_80px_-40px_rgba(61,47,38,.55)] min-h-[560px]">
             <div className="absolute inset-3 border border-taupe/30 pointer-events-none" />
             <Corners className="w-20 h-20 md:w-28 md:h-28" inset="0.25rem" />
@@ -239,7 +272,7 @@ export function Rsvp({ info }: { info: WeddingInfo }) {
                 </motion.div>
               ) : (
                 <motion.form key="form" onSubmit={submit} exit={{ opacity: 0 }} className="relative space-y-7 text-center">
-                  <p className="font-serif italic text-lg text-taupe">The favour of a reply is requested by the 25th of October</p>
+                  <p className="font-serif italic text-lg text-mocha">Fill this in now — it takes less than a minute.</p>
                   <input className="field text-center" placeholder="Your full name" required value={f.name} onChange={set("name")} maxLength={120} />
                   <input className="field text-center" placeholder="WhatsApp number" type="tel" value={f.phone} onChange={set("phone")} maxLength={40} />
                   <div className="flex flex-wrap justify-center gap-3 pt-2">
@@ -256,16 +289,19 @@ export function Rsvp({ info }: { info: WeddingInfo }) {
                   <input className="field text-center" placeholder="A song to get you dancing" value={f.song_request} onChange={set("song_request")} maxLength={200} />
                   <textarea className="field text-center resize-none" rows={2} placeholder="A little note for the couple" value={f.message} onChange={set("message")} maxLength={1000} />
                   {state === "error" && <p className="text-wine text-sm">{err}</p>}
-                  <button disabled={state === "sending"} className="label bg-wine text-lace rounded-full px-10 py-4 hover:bg-mocha transition-colors disabled:opacity-50">
-                    {state === "sending" ? "Sending…" : "Send Reply"}
-                  </button>
+                  <motion.button disabled={state === "sending"} animate={{ scale: [1, 1.05, 1] }} transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
+                    className="relative overflow-hidden label font-semibold bg-wine text-lace rounded-full px-12 py-4 shadow-[0_8px_20px_-6px_rgba(110,31,46,.6)] hover:bg-mocha transition-colors disabled:opacity-50">
+                    <motion.span aria-hidden className="absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white/35 to-transparent -skew-x-12" animate={{ left: ["-40%", "140%"] }} transition={{ repeat: Infinity, duration: 2.4, repeatDelay: 1.2 }} />
+                    <span className="relative">{state === "sending" ? "Sending…" : "Send My Reply"}</span>
+                  </motion.button>
                 </motion.form>
               )}
             </AnimatePresence>
           </div>
           <LaceEdge color="#FCFAF5" />
-        </div>
-      </Reveal>
+          </div>
+        </motion.div>
+      </div>
     </section>
   );
 }
@@ -343,5 +379,32 @@ export function Footer({ info }: { info: WeddingInfo }) {
         <span className="text-wine">{info.hashtags.join("  ")}</span>
       </div>
     </footer>
+  );
+}
+
+/** Floating "RSVP" reminder: shows once the invitation is scrolled past, hides at the form and after replying. */
+export function RsvpNudge({ info }: { info: WeddingInfo }) {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const check = () => {
+      let done = false; try { done = localStorage.getItem("jsos:rsvped") === "1"; } catch {}
+      const r = document.getElementById("rsvp")?.getBoundingClientRect();
+      const atForm = r ? r.top < window.innerHeight * 0.8 && r.bottom > window.innerHeight * 0.2 : false;
+      setShow(!done && window.scrollY > window.innerHeight * 1.1 && !atForm);
+    };
+    check(); window.addEventListener("scroll", check, { passive: true }); window.addEventListener("rsvped", check);
+    return () => { window.removeEventListener("scroll", check); window.removeEventListener("rsvped", check); };
+  }, []);
+  const d = new Date(`${info.rsvp_deadline || "2026-10-25"}T12:00:00+03:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Asia/Bahrain" });
+  return (
+    <AnimatePresence>
+      {show && (
+        <motion.a href="#rsvp" initial={{ opacity: 0, y: 30, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 30, scale: 0.9 }} transition={{ duration: 0.5, ease: EASE }}
+          className="fixed z-50 bottom-5 right-5 flex items-center gap-3 bg-wine text-lace rounded-full pl-2 pr-5 py-2 shadow-[0_10px_24px_-6px_rgba(110,31,46,.6)]">
+          <motion.span animate={{ rotate: [0, -12, 10, -6, 0] }} transition={{ repeat: Infinity, duration: 1.2, repeatDelay: 2.5 }} className="w-9 h-9 rounded-full bg-lace/15 grid place-items-center text-lg">✉</motion.span>
+          <span className="leading-tight"><span className="block label font-semibold !text-[11px]">RSVP now</span><span className="block font-serif italic text-sm opacity-90">by {d}</span></span>
+        </motion.a>
+      )}
+    </AnimatePresence>
   );
 }

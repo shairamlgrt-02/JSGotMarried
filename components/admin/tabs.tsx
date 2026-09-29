@@ -115,6 +115,7 @@ export function Details() {
               <input type="datetime-local" defaultValue={localDate} key={localDate} onBlur={(e) => e.target.value && saveInfo({ date: `${e.target.value}:00+03:00` })} className="w-full bg-transparent border border-ink/10 rounded-md px-2 py-1.5 focus:border-wine outline-none" />
             </F>
             <F label="Theme name"><EditText value={info.theme_name} onSave={(v) => saveInfo({ theme_name: v })} /></F>
+            <F label="RSVP deadline"><EditText type="date" value={info.rsvp_deadline ?? "2026-10-25"} onSave={(v) => saveInfo({ rsvp_deadline: v })} /></F>
             <div className="grid grid-cols-2 gap-4">
               <F label="Total budget"><EditText type="number" value={info.total_budget} onSave={(v) => saveInfo({ total_budget: num(v) })} /></F>
               <F label="Currency"><EditText value={info.currency} onSave={(v) => saveInfo({ currency: v })} /></F>

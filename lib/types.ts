@@ -17,6 +17,7 @@ export type WeddingInfo = {
   gallery: string[];
   cover_photo?: string;
   music_url?: string;
+  rsvp_deadline?: string; // YYYY-MM-DD
 };
 export type ScheduleItem = { id: string; time: string; title: string; detail: string; order: number };
 export type BudgetStatus = "confirmed" | "quoted" | "pending";
