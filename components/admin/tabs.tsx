@@ -426,7 +426,7 @@ export function Content() {
   const { info, saveInfo } = useInfo();
   const ent = useTable("entourage");
   const faq = useTable("faq");
-  const ROLES: EntourageMember["role"][] = ["sponsor", "bridesmaid", "groomsman", "other"];
+  const ROLES: EntourageMember["role"][] = ["bride_family", "groom_family", "sponsor", "bridesmaid", "groomsman", "other"];
   const [url, setUrl] = useState("");
   return (
     <>

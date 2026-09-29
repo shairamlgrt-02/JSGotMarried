@@ -18,7 +18,14 @@ export function getMode(): Promise<Mode> {
 const KEY = (t: TableName) => `jsos:${t}`;
 const EVT = "jsos:change";
 
+/** Bump when the default program/entourage/FAQ change so browsers pick up the new defaults once. */
+const SEED_VERSION = "2";
+const REFRESH: TableName[] = ["schedule", "entourage", "faq"];
 function localRead<T extends TableName>(t: T): TableMap[T][] {
+  if (localStorage.getItem("jsos:seedv") !== SEED_VERSION) {
+    REFRESH.forEach((r) => localStorage.removeItem(KEY(r)));
+    localStorage.setItem("jsos:seedv", SEED_VERSION);
+  }
   const raw = localStorage.getItem(KEY(t));
   if (raw) try { return JSON.parse(raw); } catch {}
   const seeded = SEED[t] as TableMap[T][];

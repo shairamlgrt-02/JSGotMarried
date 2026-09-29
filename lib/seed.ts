@@ -25,10 +25,11 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     rsvp_deadline: "2026-10-25",
   }],
   schedule: [
-    { id: "s1", time: "4:00 – 6:00 PM", title: "The Ceremony", detail: "We say I do. Please be seated by 3:45 PM.", order: 1 },
-    { id: "s2", time: "6:00 – 7:00 PM", title: "Cocktail Hour", detail: "Filipino street food — isaw, fishballs, kwek-kwek & more.", order: 2 },
-    { id: "s3", time: "7:00 – 10:00 PM", title: "The Reception", detail: "Our film on a 120\" screen as lights dim to 20%, a scratch-card game, and a market giveaway.", order: 3 },
+    { id: "s1", time: "4:00 – 5:00 PM", title: "The Ceremony", detail: "An intimate ceremony, shared with our families, entourage and a few honoured guests. If your heart wants to witness us say “I do”, you are warmly welcome to join — open seating is available around our reserved rows.", order: 1 },
+    { id: "s2", time: "5:00 – 6:30 PM", title: "Cocktail & Mingling Hour", detail: "Everyone is welcome from 5 PM! Snacks, refreshments, photo moments and little activities at the majlis, just outside the hall. This is where we’ll come find you — to hug, laugh and take pictures together.", order: 2 },
+    { id: "s3", time: "7:00 PM onwards", title: "The Reception", detail: "Doors open for the celebration — dinner, our film on the big screen, games and giveaways, and dancing until the very end.", order: 3 },
   ],
+
   budget: [
     { id: "b1", category: "Venue", item: "The Heaven, Damistan", quoted_cost: 660, paid_cost: 0, status: "confirmed" },
     { id: "b2", category: "Attire", item: "Bridal dress — Jolaida", quoted_cost: 180, paid_cost: 0, status: "confirmed" },
@@ -83,11 +84,17 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     { id: "a6", group: "guests", label: "Our Guests", colors: [c("Olive", "#5B5B2E"), c("Moss", "#4A5D23"), c("Forest", "#2F4A2B"), c("Espresso", "#3C2415"), c("Chocolate", "#4E2E1E"), c("Chestnut", "#7B3F26")], reserved: false, notes: "Earth tones please — kindly avoid white, black, burgundy and teal.", swatch_url: "", order: 6 },
   ],
   entourage: [
-    { id: "e1", role: "bridesmaid", name: "Maid of Honor", title: "To be announced", order: 1 },
-    { id: "e2", role: "groomsman", name: "Best Man", title: "To be announced", order: 2 },
-    { id: "e3", role: "sponsor", name: "Principal Sponsors", title: "To be announced", order: 3 },
+    { id: "p1", role: "bride_family", name: "Mr. ——", title: "Father of the Bride", order: 1 },
+    { id: "p2", role: "bride_family", name: "Mrs. ——", title: "Mother of the Bride", order: 2 },
+    { id: "p3", role: "groom_family", name: "Mr. ——", title: "Father of the Groom", order: 3 },
+    { id: "p4", role: "groom_family", name: "Mrs. ——", title: "Mother of the Groom", order: 4 },
+    { id: "e3", role: "sponsor", name: "Principal Sponsors", title: "To be announced", order: 5 },
+    { id: "e1", role: "bridesmaid", name: "Maid of Honor", title: "To be announced", order: 6 },
+    { id: "e2", role: "groomsman", name: "Best Man", title: "To be announced", order: 7 },
   ],
+
   faq: [
+    { id: "f0", question: "Can I watch the ceremony?", answer: "Of course! Our ceremony at 4 PM is intimate — reserved seating is for our families, entourage and a few honoured guests — but anyone who would love to witness it is welcome. Open seats are around the reserved rows. Everyone is invited to celebrate with us from 5 PM.", order: 0 },
     { id: "f1", question: "Can I bring a plus one?", answer: "Your invitation lists your seats. The RSVP lets you choose 1 or 2 pax only if we've reserved two for you.", order: 1 },
     { id: "f2", question: "What should I wear?", answer: "Earth tones — olive, moss, forest, espresso, chocolate, chestnut. Please avoid white, black, burgundy and teal (reserved for us and our families).", order: 2 },
     { id: "f3", question: "Are kids welcome?", answer: "We love your little ones, but this is an adults-only celebration unless they are part of the entourage.", order: 3 },

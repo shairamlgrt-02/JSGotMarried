@@ -33,7 +33,7 @@ export type Priority = "critical" | "high" | "medium";
 export type ChecklistItem = { id: string; task: string; category: Priority; due_date: string; completed: boolean };
 export type AttireGroup = "bride" | "groom" | "shai_family" | "jeg_family" | "bridesmaids" | "groomsmen" | "guests";
 export type Attire = { id: string; group: AttireGroup; label: string; colors: { name: string; hex: string }[]; reserved: boolean; notes: string; swatch_url: string; order: number };
-export type EntourageMember = { id: string; role: "bridesmaid" | "groomsman" | "sponsor" | "other"; name: string; title: string; order: number };
+export type EntourageMember = { id: string; role: "bride_family" | "groom_family" | "bridesmaid" | "groomsman" | "sponsor" | "other"; name: string; title: string; order: number };
 export type Faq = { id: string; question: string; answer: string; order: number };
 
 export type TableMap = {

@@ -82,28 +82,44 @@ export function ElevenEleven({ info }: { info: WeddingInfo }) {
 }
 
 /* ─────────── THE DAY ─────────── */
+/** One program card: opens up to show its details while it's in the middle of the screen, folds back once you scroll past. */
+function ProgramCard({ s, i }: { s: ScheduleItem; i: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const open = useInView(ref, { margin: "-38% 0px -38% 0px" });
+  return (
+    <div ref={ref} className={`relative md:w-1/2 mb-10 md:mb-14 ${i % 2 ? "md:ml-auto md:pl-14" : "md:pr-14"}`}>
+      <motion.span animate={{ scale: open ? 1.5 : 1 }} className={`hidden md:block absolute top-10 w-3 h-3 rotate-45 bg-wine shadow ${i % 2 ? "-left-[6px]" : "-right-[6px]"}`} />
+      <motion.div animate={{ scale: open ? 1.04 : 0.94, rotate: open ? 0 : i % 2 ? 1.5 : -1.5, opacity: open ? 1 : 0.82 }} transition={{ duration: 0.7, ease: EASE }}
+        className="[filter:drop-shadow(0_14px_14px_rgba(61,47,38,.22))]">
+        <div className="paper-card deckle relative px-7 md:px-9 py-8 md:py-9 text-center">
+          <div className="absolute inset-2 border border-taupe/25 pointer-events-none" />
+          <motion.div aria-hidden animate={{ opacity: open ? 1 : 0 }} className="absolute inset-2 border-2 border-wine/40 pointer-events-none" />
+          <p className="label text-wine font-semibold">{s.time}</p>
+          <h3 className="font-serif text-4xl md:text-5xl text-ink mt-2">{s.title}</h3>
+          <motion.div initial={false} animate={{ height: open ? "auto" : 0, opacity: open ? 1 : 0 }} transition={{ duration: 0.7, ease: EASE }} className="overflow-hidden">
+            <Flourish className="w-32 mx-auto mt-4 text-taupe/70" />
+            <p className="font-serif italic text-lg md:text-xl text-mocha mt-3 leading-relaxed">{s.detail}</p>
+          </motion.div>
+          <motion.p animate={{ opacity: open ? 0 : 0.7 }} className="label !text-[10px] text-taupe mt-3">details ↓</motion.p>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 export function Schedule({ items }: { items: ScheduleItem[] }) {
   const sorted = [...items].sort((a, b) => a.order - b.order);
   return (
     <section id="day" className="relative px-6 md:px-16 py-20 md:py-28">
       <Title kicker="Order of the Day" title="The Day" />
-      <div className="relative max-w-3xl mx-auto mt-16">
+      <Reveal className="text-center mt-8">
+        <p className="inline-block font-serif text-lg md:text-xl text-ink bg-[#FBF6EE] border border-wine/30 rounded-full px-6 py-2 shadow-sm">
+          Everyone is welcome from <b className="text-wine">5:00 PM</b> until the last dance
+        </p>
+      </Reveal>
+      <div className="relative max-w-3xl mx-auto mt-14">
         <div className="absolute left-1/2 top-0 bottom-0 w-px bg-taupe/30 hidden md:block" />
-        {sorted.map((s, i) => (
-          <Reveal key={s.id} delay={i * 0.05} className={`relative md:w-1/2 mb-14 ${i % 2 ? "md:ml-auto md:pl-14" : "md:pr-14"}`}>
-            <span className={`hidden md:block absolute top-1/2 w-3 h-3 rotate-45 bg-wine shadow ${i % 2 ? "-left-[6px]" : "-right-[6px]"}`} />
-            <Tilt max={6}>
-              <div className="[filter:drop-shadow(0_14px_14px_rgba(61,47,38,.22))]" style={{ transform: `rotate(${i % 2 ? 1.2 : -1.2}deg)` }}>
-                <div className="paper-card deckle relative px-8 py-9 text-center">
-                  <div className="absolute inset-2 border border-taupe/25 pointer-events-none" />
-                  <p className="label text-wine">{s.time}</p>
-                  <h3 className="font-serif text-4xl md:text-5xl text-mocha mt-2">{s.title}</h3>
-                  <p className="font-serif italic text-lg text-taupe mt-3 leading-relaxed">{s.detail}</p>
-                </div>
-              </div>
-            </Tilt>
-          </Reveal>
-        ))}
+        {sorted.map((s, i) => <ProgramCard key={s.id} s={s} i={i} />)}
       </div>
     </section>
   );
@@ -181,23 +197,42 @@ export function DressCode({ attire }: { attire: Attire[] }) {
 
 /* ─────────── ENTOURAGE ─────────── */
 export function Entourage({ people }: { people: EntourageMember[] }) {
-  const groups: [EntourageMember["role"], string][] = [["sponsor", "Principal Sponsors"], ["bridesmaid", "Bridesmaids"], ["groomsman", "Groomsmen"], ["other", "With Love"]];
   const sorted = [...people].sort((a, b) => a.order - b.order);
+  const by = (r: EntourageMember["role"]) => sorted.filter((p) => p.role === r);
+  const bride = by("bride_family"), groom = by("groom_family");
+  const groups: [EntourageMember["role"], string][] = [["sponsor", "Principal Sponsors"], ["bridesmaid", "Bridesmaids"], ["groomsman", "Groomsmen"], ["other", "With Love"]];
+  const Person = ({ p }: { p: EntourageMember }) => (
+    <li><p className="font-serif text-2xl md:text-3xl text-ink">{p.name}</p>{p.title && <p className="font-serif italic text-taupe text-lg">{p.title}</p>}</li>
+  );
   return (
-    <section className="relative px-6 md:px-16 py-20 md:py-28">
-      <Title kicker="Standing With Us" title="The Entourage" />
-      <div className="flex flex-wrap justify-center gap-x-20 gap-y-14 mt-16 max-w-5xl mx-auto text-center">
+    <section id="family" className="relative px-6 md:px-16 py-20 md:py-28">
+      <Title kicker="The Hearts Behind Us" title="Our Families" />
+      {(bride.length > 0 || groom.length > 0) && (
+        <Reveal className="max-w-4xl mx-auto mt-14">
+          <p className="font-serif italic text-mocha text-xl md:text-2xl text-center">With grateful hearts and the blessing of our parents</p>
+          <div className="relative grid md:grid-cols-2 gap-10 md:gap-0 mt-10 text-center">
+            <div className="hidden md:flex absolute left-1/2 top-0 bottom-0 -translate-x-1/2 flex-col items-center">
+              <div className="flex-1 w-px bg-taupe/35" /><Paisley className="w-10 h-14 text-wine/70 my-3" /><div className="flex-1 w-px bg-taupe/35" />
+            </div>
+            {([["Parents of the Bride", bride], ["Parents of the Groom", groom]] as const).map(([t, list]) => (
+              <div key={t} className="md:px-12">
+                <p className="label text-wine font-semibold mb-5">{t}</p>
+                <ul className="space-y-4">{list.map((p) => <Person key={p.id} p={p} />)}</ul>
+              </div>
+            ))}
+          </div>
+        </Reveal>
+      )}
+      <Flourish className="w-56 mx-auto mt-16 text-taupe/70" />
+      <p className="label text-taupe text-center mt-6">Standing with us</p>
+      <div className="flex flex-wrap justify-center gap-x-20 gap-y-14 mt-10 max-w-5xl mx-auto text-center">
         {groups.map(([role, title]) => {
-          const list = sorted.filter((p) => p.role === role);
+          const list = by(role);
           if (!list.length) return null;
           return (
             <Reveal key={role} className="min-w-[220px]">
               <p className="label text-wine mb-5">{title}</p>
-              <ul className="space-y-3">
-                {list.map((p) => (
-                  <li key={p.id}><p className="font-serif text-2xl text-mocha">{p.name}</p>{p.title && <p className="font-serif italic text-taupe">{p.title}</p>}</li>
-                ))}
-              </ul>
+              <ul className="space-y-3">{list.map((p) => <Person key={p.id} p={p} />)}</ul>
             </Reveal>
           );
         })}
