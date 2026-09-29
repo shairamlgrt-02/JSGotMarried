@@ -22,14 +22,15 @@ const stainBg = {
 };
 
 /** The long vintage love letter that everything below the envelope is printed on. */
-export default function Letter({ children, peeks }: { children: React.ReactNode; peeks?: React.ReactNode }) {
+export default function Letter({ children, under, over }: { children: React.ReactNode; under?: React.ReactNode; over?: React.ReactNode }) {
   return (
-    <div className="relative mx-auto w-[94%] md:w-[86%] max-w-5xl mt-10 mb-24">
+    <div className="relative mx-auto w-[86%] md:w-[84%] max-w-5xl mt-10 mb-24">
+      {under}
       {/* lace peeking above the letter */}
-      <LaceEdge flip className="relative z-[2] -mb-4 md:-mb-6 scale-x-[1.02]" />
+      <LaceEdge flip className="relative z-[6] -mb-4 md:-mb-6 scale-x-[1.02]" />
       {/* soft cast shadow (cheap: separate blurred layer, no filters on the big sheet) */}
-      <div aria-hidden className="absolute inset-x-2 top-12 bottom-6 bg-[#5A463A]/25 blur-2xl rounded-[30px] translate-y-3" />
-      <div className="relative deckle-long bg-[#FBF8F1] overflow-hidden">
+      <div aria-hidden className="absolute z-[4] inset-x-2 top-12 bottom-6 bg-[#5A463A]/25 blur-2xl rounded-[30px] translate-y-3" />
+      <div className="relative z-[5] deckle-long bg-[#FBF8F1] overflow-hidden">
         <div aria-hidden className="absolute inset-0 bg-[url('/img/paper.webp')] bg-[length:100%_auto] bg-repeat-y opacity-90" />
         <div aria-hidden className="absolute inset-0 paper-card opacity-70 mix-blend-normal" style={{ backgroundColor: "transparent" }} />
         {/* fold creases */}
@@ -43,29 +44,32 @@ export default function Letter({ children, peeks }: { children: React.ReactNode;
         <div aria-hidden className="absolute inset-0 pointer-events-none shadow-[inset_0_0_60px_rgba(150,115,80,.18),inset_0_0_8px_rgba(150,115,80,.25)]" />
         <div className="relative z-[1]">{children}</div>
       </div>
-      <LaceEdge className="relative z-[2] -mt-4 md:-mt-6 scale-x-[1.02]" />
-      {peeks}
+      <LaceEdge className="relative z-[6] -mt-4 md:-mt-6 scale-x-[1.02]" />
+      {over}
     </div>
   );
 }
 
 /**
- * A realistic wedding object peeking in from the side of the letter.
- * Parallax (moves slower/faster than the page), slow scroll-rotation, hover/device tilt.
+ * A realistic wedding object lying flat beside the letter.
+ * - `edge`: fraction of the object's width that sits OUTSIDE the letter edge (the rest is under/over the letter or off-screen).
+ * - `layer`: "under" = tucked beneath the letter, "over" = resting on top of the letter margin.
+ * Subtle parallax + tiny rotation drift so it feels like it's lying on a table; tilts on hover / device tilt.
  */
-export function Peek({ src, alt = "", side, top, width, rotate = 0, speed = 0.3, flip = false, mobile = true, className = "" }: {
-  src: string; alt?: string; side: "left" | "right"; top: string; width: string; rotate?: number; speed?: number; flip?: boolean; mobile?: boolean; className?: string;
+export function Peek({ src, alt = "", side, top, width, rotate = 0, edge = 0.5, layer = "under", speed = 0.08, flip = false, mobile = true }: {
+  src: string; alt?: string; side: "left" | "right"; top: string; width: string; rotate?: number; edge?: number; layer?: "under" | "over"; speed?: number; flip?: boolean; mobile?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
-  const y = useTransform(scrollYProgress, [0, 1], [speed * 260, -speed * 260]);
-  const r = useTransform(scrollYProgress, [0, 1], [rotate - 6, rotate + 6]);
+  const y = useTransform(scrollYProgress, [0, 1], [speed * 300, -speed * 300]);
+  const r = useTransform(scrollYProgress, [0, 1], [rotate - 3, rotate + 3]);
+  const shift = `${(side === "left" ? -edge : edge) * 100}%`;
   return (
-    <motion.div ref={ref} aria-hidden style={{ y, x: side === "left" ? "-42%" : "42%", top, [side]: 0, width }}
-      className={`absolute z-20 ${mobile ? "" : "hidden md:block"} ${className}`}>
-      <Tilt max={14} glare={false}>
+    <motion.div ref={ref} aria-hidden style={{ y, x: shift, top, [side]: 0, width }}
+      className={`absolute ${layer === "under" ? "z-[1]" : "z-[20]"} ${mobile ? "" : "hidden md:block"}`}>
+      <Tilt max={6} glare={false}>
         <motion.img src={src} alt={alt} loading="lazy" style={{ rotate: r, scaleX: flip ? -1 : 1 }}
-          className="w-full h-auto select-none drop-shadow-[6px_18px_14px_rgba(51,39,31,.35)]" draggable={false} />
+          className={`w-full h-auto select-none ${layer === "under" ? "drop-shadow-[4px_10px_10px_rgba(51,39,31,.30)]" : "drop-shadow-[5px_14px_10px_rgba(51,39,31,.38)]"}`} draggable={false} />
       </Tilt>
     </motion.div>
   );

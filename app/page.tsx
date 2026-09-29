@@ -13,16 +13,23 @@ export default function Home() {
   const { rows: entourage } = useTable("entourage");
   const { rows: faq } = useTable("faq");
   const info = infoRows[0];
-  const peeks = (
+  // Real-world relative scale: veil (huge) > shoes > garter > bowtie > rings. Sizes in vw so proportions hold on phones.
+  const under = (
     <>
-      <Peek src="/img/rings.webp" alt="Wedding rings" side="right" top="2.5%" width="clamp(110px, 16vw, 230px)" rotate={-8} speed={0.35} />
-      <Peek src="/img/veil.webp" side="left" top="10%" width="clamp(200px, 30vw, 460px)" rotate={8} speed={0.2} />
-      <Peek src="/img/bowtie.webp" side="right" top="24%" width="clamp(110px, 15vw, 220px)" rotate={14} speed={0.45} mobile={false} />
-      <Peek src="/img/garter.webp" side="left" top="36%" width="clamp(130px, 18vw, 260px)" rotate={-12} speed={0.3} />
-      <Peek src="/img/shoes.webp" side="right" top="49%" width="clamp(150px, 20vw, 300px)" rotate={-6} speed={0.25} />
-      <Peek src="/img/veil.webp" side="right" top="63%" width="clamp(200px, 28vw, 420px)" rotate={-10} speed={0.2} flip mobile={false} />
-      <Peek src="/img/rings.webp" side="left" top="77%" width="clamp(100px, 13vw, 190px)" rotate={10} speed={0.4} mobile={false} />
-      <Peek src="/img/bowtie.webp" side="left" top="90%" width="clamp(100px, 13vw, 190px)" rotate={-16} speed={0.35} />
+      <Peek src="/img/veil.webp" side="right" top="1%" width="78vw" rotate={-18} edge={0.3} />
+      <Peek src="/img/shoes.webp" side="right" top="19%" width="44vw" rotate={96} edge={0.46} />
+      <Peek src="/img/garter.webp" side="right" top="41%" width="30vw" rotate={18} edge={0.42} />
+      <Peek src="/img/veil.webp" side="left" top="50%" width="74vw" rotate={164} edge={0.32} flip />
+      <Peek src="/img/shoes.webp" side="left" top="67%" width="42vw" rotate={-84} edge={0.46} flip />
+      <Peek src="/img/garter.webp" side="left" top="87%" width="28vw" rotate={196} edge={0.42} mobile={false} />
+    </>
+  );
+  const over = (
+    <>
+      <Peek src="/img/rings.webp" side="left" top="8%" width="clamp(70px, 10vw, 150px)" rotate={24} edge={0.72} layer="over" speed={0.12} />
+      <Peek src="/img/bowtie.webp" side="left" top="30%" width="22vw" rotate={-28} edge={0.62} layer="over" />
+      <Peek src="/img/rings.webp" side="right" top="76%" width="clamp(64px, 9vw, 140px)" rotate={-32} edge={0.7} layer="over" speed={0.12} />
+      <Peek src="/img/bowtie.webp" side="right" top="94%" width="20vw" rotate={34} edge={0.6} layer="over" mobile={false} />
     </>
   );
   return (
@@ -31,7 +38,7 @@ export default function Home() {
       <main className="relative z-[1] overflow-x-clip">
         <SmoothScroll /><ProgressBar />
         <EnvelopeHero info={info} />
-        <Letter peeks={peeks}>
+        <Letter under={under} over={over}>
           <Invitation info={info} />
           <Story info={info} />
           <ElevenEleven info={info} />
