@@ -1,5 +1,4 @@
 "use client";
-import { LaceEdge } from "./ornaments";
 
 /** Faint, real-looking stains scattered down the letter. */
 const STAINS: { top: string; left: string; size: string; kind: "ring" | "blot" | "fox" }[] = [
@@ -19,14 +18,13 @@ const stainBg = {
 };
 
 /** Fine, even paper grain (tiny noise – no visible repeat) and very soft fibre mottling. */
-const GRAIN = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .36 0 0 0 0 .27 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`;
-const FIBRE = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.012 .02' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .55 0 0 0 0 .44 0 0 0 0 .32 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E")`;
+const GRAIN = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .36 0 0 0 0 .27 0 0 0 .16 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`;
+const FIBRE = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.012 .02' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .55 0 0 0 0 .44 0 0 0 0 .32 0 0 0 .13 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E")`;
 
 /** One long, continuous vintage love letter that everything below the envelope is written on. */
 export default function Letter({ children, aside }: { children: React.ReactNode; aside?: React.ReactNode }) {
   return (
-    <div className="relative mx-auto w-[92%] md:w-[84%] max-w-5xl mt-10 mb-24">
-      <LaceEdge flip className="relative z-[6] -mb-4 md:-mb-6 scale-x-[1.02]" />
+    <div className="relative mx-auto w-[92%] md:w-[84%] max-w-5xl mt-6 mb-24">
       <div aria-hidden className="absolute z-[4] inset-x-2 top-12 bottom-6 bg-[#5A463A]/25 blur-2xl rounded-[30px] translate-y-3" />
       <div className="relative z-[5] deckle-long overflow-hidden" style={{ backgroundColor: "#F6F0E4", backgroundImage: `${GRAIN}, ${FIBRE}`, backgroundSize: "220px 220px, 600px 600px" }}>
         {/* soft light across the sheet */}
@@ -36,10 +34,12 @@ export default function Letter({ children, aside }: { children: React.ReactNode;
         ))}
         {/* aged edges */}
         <div aria-hidden className="absolute inset-0 pointer-events-none shadow-[inset_0_0_60px_rgba(150,115,80,.16),inset_0_0_8px_rgba(150,115,80,.22)]" />
-        <div className="relative z-[1] py-10 md:py-16">{children}</div>
+        {/* lace lying ON the paper, top and bottom */}
+        <div aria-hidden className="absolute z-[2] top-0 inset-x-0 h-12 md:h-16 bg-[url('/img/lacetrim.webp')] bg-repeat-x bg-[length:auto_100%] [filter:sepia(.3)_brightness(1.1)_saturate(.75)_drop-shadow(0_2px_1.5px_rgba(61,47,38,.3))]" style={{ transform: "scaleY(-1)" }} />
+        <div aria-hidden className="absolute z-[2] bottom-0 inset-x-0 h-12 md:h-16 bg-[url('/img/lacetrim.webp')] bg-repeat-x bg-[length:auto_100%] [filter:sepia(.3)_brightness(1.1)_saturate(.75)_drop-shadow(0_-2px_1.5px_rgba(61,47,38,.3))]" />
+        <div className="relative z-[1] pt-16 md:pt-24 pb-16 md:pb-24">{children}</div>
       </div>
       {aside}
-      <LaceEdge className="relative z-[6] -mt-4 md:-mt-6 scale-x-[1.02]" />
     </div>
   );
 }
