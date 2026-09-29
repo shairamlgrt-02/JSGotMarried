@@ -53,6 +53,24 @@ function Card({ info }: { info: WeddingInfo }) {
   );
 }
 
+function Door({ side, open, A, onOpen }: { side: "l" | "r"; open: boolean; A: number; onOpen: () => void }) {
+  return (
+    <motion.div initial={false} animate={{ rotateY: open ? (side === "l" ? -A : A) : 0 }}
+      transition={{ delay: 0.7, duration: 2.8, ease: [0.45, 0, 0.2, 1] }}
+      style={{ transformOrigin: side === "l" ? "0% 50%" : "100% 50%" }}
+      onClick={onOpen}
+      className={`absolute top-0 bottom-0 w-1/2 z-[4] ${open ? "pointer-events-none" : "cursor-pointer"} ${side === "l" ? "left-0" : "right-0"}`}>
+      <div className={`absolute inset-0 overflow-hidden bg-[#EDE3D4] ${side === "l" ? "rounded-l-[4px]" : "rounded-r-[4px]"} shadow-[0_2px_3px_rgba(61,47,38,.2),0_30px_50px_-25px_rgba(61,47,38,.55)]`}>
+        <div className="absolute inset-0 bg-[url('/img/lace.webp')] bg-cover" style={{ backgroundPosition: side === "l" ? "left center" : "right center" }} />
+        <div className={`absolute inset-0 ${side === "l" ? "bg-[linear-gradient(90deg,rgba(255,255,255,.18),transparent_60%,rgba(90,70,58,.14))]" : "bg-[linear-gradient(270deg,rgba(255,255,255,.18),transparent_60%,rgba(90,70,58,.14))]"}`} />
+        <div className={`absolute inset-y-[4%] ${side === "l" ? "left-[7%] right-[4%]" : "right-[7%] left-[4%]"} border border-[#BCA994]/70`} />
+        <motion.div initial={false} animate={{ opacity: open ? [0, 0.3, 0.18] : 0 }} transition={{ delay: 0.7, duration: 2.8, ease: "easeInOut" }} className="absolute inset-0 bg-[#3D2F26]" />
+      </div>
+      <div className={`absolute inset-y-0 w-px bg-[#A8927C]/60 ${side === "l" ? "right-0" : "left-0"}`} />
+    </motion.div>
+  );
+}
+
 const RATIO = 1.32; // portrait
 
 export default function EnvelopeHero({ info }: { info: WeddingInfo }) {
@@ -73,22 +91,6 @@ export default function EnvelopeHero({ info }: { info: WeddingInfo }) {
   const { W, A } = dims;
   const H = W * RATIO;
   const T = (delay: number, duration: number) => ({ delay, duration, ease: EASE });
-
-  const Door = ({ side }: { side: "l" | "r" }) => (
-    <motion.div initial={false} animate={{ rotateY: open ? (side === "l" ? -A : A) : 0 }}
-      transition={T(0.45, 1.8)}
-      style={{ transformOrigin: side === "l" ? "0% 50%" : "100% 50%" }}
-      onClick={() => setOpen(true)}
-      className={`absolute top-0 bottom-0 w-1/2 z-[4] ${open ? "pointer-events-none" : "cursor-pointer"} ${side === "l" ? "left-0" : "right-0"}`}>
-      <div className={`absolute inset-0 overflow-hidden bg-[#EDE3D4] ${side === "l" ? "rounded-l-[4px]" : "rounded-r-[4px]"} shadow-[0_2px_3px_rgba(61,47,38,.2),0_30px_50px_-25px_rgba(61,47,38,.55)]`}>
-        <div className="absolute inset-0 bg-[url('/img/lace.webp')] bg-cover" style={{ backgroundPosition: side === "l" ? "left center" : "right center" }} />
-        <div className={`absolute inset-0 ${side === "l" ? "bg-[linear-gradient(90deg,rgba(255,255,255,.18),transparent_60%,rgba(90,70,58,.14))]" : "bg-[linear-gradient(270deg,rgba(255,255,255,.18),transparent_60%,rgba(90,70,58,.14))]"}`} />
-        <div className={`absolute inset-y-[4%] ${side === "l" ? "left-[7%] right-[4%]" : "right-[7%] left-[4%]"} border border-[#BCA994]/70`} />
-        <motion.div initial={false} animate={{ opacity: open ? [0, 0.3, 0.18] : 0 }} transition={T(0.45, 1.8)} className="absolute inset-0 bg-[#3D2F26]" />
-      </div>
-      <div className={`absolute inset-y-0 w-px bg-[#A8927C]/60 ${side === "l" ? "right-0" : "left-0"}`} />
-    </motion.div>
-  );
 
   return (
     <section className="relative min-h-[100svh] flex flex-col items-center justify-center overflow-x-clip pt-20 pb-6">
@@ -113,12 +115,12 @@ export default function EnvelopeHero({ info }: { info: WeddingInfo }) {
           </motion.div>
 
           {/* the card */}
-          <motion.div initial={false} animate={{ y: open ? [0, -6, 0] : 0 }} transition={T(1.2, 1.4)} style={{ left: "4%", top: "4%", width: "92%", height: "92%" }} className="absolute z-[2]">
+          <motion.div initial={false} animate={{ y: open ? [0, -6, 0] : 0 }} transition={T(2.2, 1.6)} style={{ left: "4%", top: "4%", width: "92%", height: "92%" }} className="absolute z-[2]">
             <Card info={info} />
           </motion.div>
 
-          <Door side="l" />
-          <Door side="r" />
+          <Door side="l" open={open} A={A} onOpen={() => setOpen(true)} />
+          <Door side="r" open={open} A={A} onOpen={() => setOpen(true)} />
 
           {/* wax seal across the seam — tap to break */}
           <button type="button" onClick={() => setOpen(true)} disabled={open} aria-label="Break the seal to open the invitation"
@@ -133,7 +135,7 @@ export default function EnvelopeHero({ info }: { info: WeddingInfo }) {
               <motion.img key={side} src="/img/seal.webp" alt="" aria-hidden draggable={false}
                 initial={false}
                 animate={open ? { x: side === "l" ? -42 : 42, y: 80, rotate: side === "l" ? -26 : 30, opacity: 0 } : { x: 0, y: 0, rotate: 0, opacity: 1 }}
-                transition={{ x: T(0, 0.8), y: T(0.05, 0.9), rotate: T(0, 0.8), opacity: T(0.35, 0.5) }}
+                transition={{ x: T(0.1, 1.1), y: T(0.2, 1.2), rotate: T(0.1, 1.1), opacity: T(0.7, 0.6) }}
                 style={{ clipPath: side === "l" ? "polygon(0 0, 52% 0, 46% 22%, 55% 40%, 45% 58%, 54% 78%, 48% 100%, 0 100%)" : "polygon(52% 0, 100% 0, 100% 100%, 48% 100%, 54% 78%, 45% 58%, 55% 40%, 46% 22%)" }}
                 className="absolute inset-0 w-full h-full object-contain drop-shadow-[0_6px_6px_rgba(61,47,38,.45)] transition-[filter] group-hover:brightness-110" />
             ))}
@@ -147,7 +149,7 @@ export default function EnvelopeHero({ info }: { info: WeddingInfo }) {
           <motion.span animate={{ y: [0, -6, 0] }} transition={{ repeat: Infinity, duration: 1.6 }} className="text-2xl text-wine leading-none">↑</motion.span>
           <span className="label text-wine font-semibold bg-[#FBF8F2]/90 rounded-full px-5 py-2 shadow-[0_2px_10px_rgba(61,47,38,.12)]">Tap the seal to open</span>
         </motion.div>
-        <motion.a href="#rsvp" initial={false} animate={{ opacity: open ? 1 : 0, y: open ? 0 : 10 }} transition={T(open ? 2.4 : 0, 0.8)}
+        <motion.a href="#rsvp" initial={false} animate={{ opacity: open ? 1 : 0, y: open ? 0 : 10 }} transition={T(open ? 3.6 : 0, 0.8)}
           className={`absolute flex flex-col items-center gap-1 text-wine ${open ? "" : "pointer-events-none"}`}>
           <span className="label font-semibold bg-[#FBF8F2]/90 rounded-full px-5 py-2 shadow-[0_2px_10px_rgba(61,47,38,.12)]">Scroll to RSVP</span>
           <motion.svg viewBox="0 0 24 36" className="w-5 h-8" animate={{ y: [0, 7, 0] }} transition={{ repeat: Infinity, duration: 1.6, ease: "easeInOut" }} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
