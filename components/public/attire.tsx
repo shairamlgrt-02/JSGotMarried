@@ -5,17 +5,17 @@ import type { Attire } from "@/lib/types";
 import { EASE } from "./fx";
 import { FlipHint, useFlip } from "./stickers";
 
-/** A watercolour figure recoloured with real satin shine: base art + multiply tint (masked to the fabric) + screen highlight. */
+/** A watercolour figure drawn straight onto the paper, recoloured in satin: transparent art + masked multiply tint + soft white shine. */
 function TinFigure({ kind, color, className = "" }: { kind: "man" | "woman"; color: string; className?: string }) {
-  const mask = `url(/img/attire-${kind}-mask.webp)`;
+  const mask = `url(/img/attire-${kind}-mask.png)`;
   return (
-    <div className={`relative ${className}`}>
-      <img src={`/img/attire-${kind}.webp`} alt="" className="w-full h-auto pointer-events-none select-none" draggable={false} />
+    <div className={`relative inline-block ${className}`}>
+      <img src={`/img/attire-${kind}.webp`} alt="" className="h-full w-auto pointer-events-none select-none" draggable={false} />
       <motion.div initial={false} animate={{ backgroundColor: color }} transition={{ duration: 0.8, ease: EASE }}
-        className="absolute inset-0 mix-blend-multiply"
-        style={{ WebkitMask: `${mask} no-repeat center / 100% 100% luminance`, mask: `${mask} no-repeat center / 100% 100% luminance` } as React.CSSProperties} />
+        className="absolute inset-0 mix-blend-multiply pointer-events-none"
+        style={{ WebkitMaskImage: mask, maskImage: mask, WebkitMaskSize: "100% 100%", maskSize: "100% 100%", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat" }} />
       <img src={`/img/attire-${kind}-hl.webp`} alt="" draggable={false}
-        className="absolute inset-0 w-full h-full mix-blend-screen pointer-events-none select-none" />
+        className="absolute inset-0 w-full h-full pointer-events-none select-none" />
     </div>
   );
 }
@@ -32,22 +32,22 @@ export function AttireGuide({ guests }: { guests?: Attire }) {
   const colors = guests?.colors?.length ? guests.colors : [{ name: "Olive", hex: "#5B5B2E" }];
   const [pick, setPick] = useState(0);
   const c = colors[Math.min(pick, colors.length - 1)];
-  const { flip, toggle, peek } = useFlip();
+  const { flip, toggle } = useFlip();
   return (
     <div className="max-w-4xl mx-auto mt-10 [perspective:1800px]">
-      <motion.div animate={flip ? { rotateY: 180 } : { rotateY: 0, ...peek }} transition={flip ? { duration: 1, ease: EASE } : { duration: 1.4, repeat: Infinity, repeatDelay: 3.2, ease: "easeInOut" }}
+      <motion.div animate={flip ? { rotateY: 180 } : { rotateY: 0 }} transition={{ duration: 1, ease: EASE }}
         className="grid [transform-style:preserve-3d]">
         {/* FRONT — the look */}
         <div className="[grid-area:1/1] [backface-visibility:hidden] paper-card deckle relative px-5 md:px-12 py-8 md:py-10 text-center shadow-[0_2px_3px_rgba(61,47,38,.15),0_30px_50px_-28px_rgba(61,47,38,.55)]">
           <p className="label text-wine font-semibold">Black tie · in earth tones</p>
           <p className="font-serif italic text-mocha text-lg md:text-xl mt-2 max-w-xl mx-auto">Floor-length column, sheath or slim A-line dresses · tuxedos or dark suits with a tie. Bring a light wrap or scarf — evenings can get cool.</p>
-          <div className="flex justify-center items-end gap-8 md:gap-16 mt-5">
+          <div className="flex justify-center items-end gap-6 md:gap-16 mt-5">
             <div>
-              <TinFigure kind="man" color={c.hex} className="w-28 md:w-40" />
+              <TinFigure kind="man" color={c.hex} className="h-64 md:h-[26rem]" />
               <p className="label text-taupe !text-[10px] mt-1">Tuxedo / dark suit</p>
             </div>
             <div>
-              <TinFigure kind="woman" color={c.hex} className="w-24 md:w-36" />
+              <TinFigure kind="woman" color={c.hex} className="h-64 md:h-[26rem]" />
               <p className="label text-taupe !text-[10px] mt-1">Column dress · with a wrap</p>
             </div>
           </div>
@@ -60,7 +60,7 @@ export function AttireGuide({ guests }: { guests?: Attire }) {
                 style={{ backgroundColor: col.hex, backgroundImage: "linear-gradient(135deg,rgba(255,255,255,.25),transparent 55%)" }} />
             ))}
           </div>
-          <div className="mt-6"><button type="button" onClick={toggle}><FlipHint label="Need help? What to avoid" /></button></div>
+          <div className="mt-6"><button type="button" onClick={toggle}><FlipHint label="Need help? Tap to see what to avoid" /></button></div>
         </div>
         {/* BACK — kindly avoid */}
         <div className="[grid-area:1/1] [backface-visibility:hidden] [transform:rotateY(180deg)] paper-card deckle relative px-5 md:px-12 py-8 md:py-10 text-center shadow-[0_2px_3px_rgba(61,47,38,.15),0_30px_50px_-28px_rgba(61,47,38,.55)]">

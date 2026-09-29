@@ -132,24 +132,22 @@ export function FlipHint({ label = "Tap to flip", className = "" }: { label?: st
   );
 }
 
-/** Wraps a two-sided card: peeks (little wiggle) every few seconds until it has been flipped once. */
+/** Wraps a two-sided card: flips only when the guest taps the hint. */
 export function useFlip() {
   const [flip, setFlip] = useState(false);
-  const [used, setUsed] = useState(false);
-  const toggle = () => { setFlip((f) => !f); setUsed(true); };
-  const peek = used ? {} : { rotateY: [0, -16, 0, -8, 0] };
-  return { flip, toggle, peek, used };
+  const toggle = () => setFlip((f) => !f);
+  return { flip, toggle };
 }
 
 /** A personal vintage postcard you can flip — front: your photo + "Wish you were here", back: a handwritten note. */
 export function Postcard({ from, venue, date, photo }: { from: string; venue: string; date: string; photo?: string }) {
-  const { flip, toggle, peek } = useFlip();
+  const { flip, toggle } = useFlip();
   return (
     <section className="relative px-5 md:px-16 py-14 md:py-20">
       <motion.div initial={{ opacity: 0, y: 50, rotate: -6 }} whileInView={{ opacity: 1, y: 0, rotate: -2 }} viewport={{ once: true, margin: "-10%" }} transition={{ duration: 1.1, ease: EASE }}
         className="max-w-2xl mx-auto [perspective:1600px]">
         <button type="button" onClick={toggle} aria-label="Flip the postcard" className="relative block w-full aspect-[3/2] text-left">
-          <motion.div animate={flip ? { rotateY: 180 } : { rotateY: 0, ...peek }} transition={flip ? { duration: 1.1, ease: EASE } : { duration: 1.4, repeat: Infinity, repeatDelay: 2.6, ease: "easeInOut" }} className="absolute inset-0 [transform-style:preserve-3d]">
+          <motion.div animate={flip ? { rotateY: 180 } : { rotateY: 0 }} transition={{ duration: 1.1, ease: EASE }} className="absolute inset-0 [transform-style:preserve-3d]">
             {/* FRONT */}
             <div className="absolute inset-0 [backface-visibility:hidden] bg-[#FBF7EF] shadow-[0_2px_3px_rgba(61,47,38,.2),0_24px_40px_-18px_rgba(61,47,38,.5)] p-[3.5%] grid grid-cols-[1fr_1.1fr] gap-[4%]">
               <div className="relative bg-[#EDE3D4] p-[5%] shadow-[inset_0_0_0_1px_rgba(61,47,38,.1)] -rotate-2">
@@ -183,7 +181,7 @@ export function Postcard({ from, venue, date, photo }: { from: string; venue: st
             </div>
           </motion.div>
         </button>
-        <div className="text-center mt-6"><button type="button" onClick={toggle}><FlipHint label={flip ? "Flip back" : "Tap to turn over"} /></button></div>
+        <div className="text-center mt-6"><button type="button" onClick={toggle}><FlipHint label={flip ? "Tap to turn over again" : "Tap to turn over"} /></button></div>
       </motion.div>
     </section>
   );
