@@ -19,7 +19,7 @@ const KEY = (t: TableName) => `jsos:${t}`;
 const EVT = "jsos:change";
 
 /** Bump when the default program/entourage/FAQ change so browsers pick up the new defaults once. */
-const SEED_VERSION = "3";
+const SEED_VERSION = "4";
 const REFRESH: TableName[] = ["schedule", "entourage", "faq", "attire"];
 function localRead<T extends TableName>(t: T): TableMap[T][] {
   if (localStorage.getItem("jsos:seedv") !== SEED_VERSION) {
@@ -72,15 +72,25 @@ export async function remove(t: TableName, id: string) {
   window.dispatchEvent(new CustomEvent(EVT, { detail: t }));
 }
 
-export async function submitRsvp(g: Omit<Guest, "id" | "source" | "created_at">) {
+export async function submitRsvp(g: Omit<Guest, "id" | "source" | "created_at"> & { code?: string }): Promise<{ approved: boolean | null }> {
   // The server saves to Supabase and e-mails the couple; the browser keeps a copy only when the server can't be reached.
   try {
     const r = await fetch("/api/rsvp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(g) });
-    if (r.ok) return;
+    if (r.ok) { const j = await r.json().catch(() => ({})); return { approved: typeof j.approved === "boolean" ? j.approved : null }; }
   } catch { /* offline or dev without env — fall through */ }
   const cur = localRead("guests");
-  cur.push({ ...g, id: crypto.randomUUID(), source: "RSVP form", created_at: new Date().toISOString() });
+  cur.push({ ...g, id: crypto.randomUUID(), source: "RSVP form", created_at: new Date().toISOString(), approved: false } as Guest);
   localWrite("guests", cur);
+  return { approved: false };
+}
+
+/** Ask the server whether an invite code matches a household. Exact-match only — never lists guests. */
+export async function checkCode(code: string): Promise<{ name: string; pax: number } | null> {
+  try {
+    const r = await fetch(`/api/rsvp?code=${encodeURIComponent(code)}`, { cache: "no-store" });
+    if (r.ok) { const j = await r.json().catch(() => ({})); return j.ok ? { name: j.name as string, pax: (j.pax as number) || 1 } : null; }
+  } catch { /* offline */ }
+  return null;
 }
 
 export function resetLocal() {

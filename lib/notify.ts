@@ -8,6 +8,7 @@ type RsvpForMail = {
   dietary: string;
   message: string;
   song_request: string;
+  approval?: string;
 };
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br/>");
@@ -35,6 +36,7 @@ export async function sendRsvpEmail(row: RsvpForMail): Promise<boolean> {
       ...(row.dietary ? [["Dietary needs", row.dietary] as [string, string]] : []),
       ...(row.message ? [["Message", row.message] as [string, string]] : []),
       ...(row.song_request ? [["Song request", row.song_request] as [string, string]] : []),
+      ...(row.approval ? [["Invite", row.approval] as [string, string]] : []),
     ];
     const html = `<!doctype html><html><body style="margin:0;padding:24px;background:#F7F2E9;font-family:Georgia,serif;color:#37312B">
       <table role="presentation" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;background:#FBF8F1;border:1px solid #E7DCCA;border-radius:14px;padding:26px 30px;width:100%">

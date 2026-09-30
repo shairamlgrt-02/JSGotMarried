@@ -34,6 +34,19 @@ html.lenis, html.lenis body { height: auto; }
 
 .field { @apply w-full bg-transparent border-b border-taupe/40 py-3 font-serif text-xl text-ink placeholder:text-taupe/60 placeholder:italic outline-none transition-colors focus:border-wine; }
 
+/* ─────────── Public site: shared rhythm + column ───────────
+   Sizes and spacings live in tailwind.config.ts (text-body, py-sec …). These helpers only bundle the
+   repeats so every section has the same side margins, vertical rhythm and column width.
+   (.label / .display above are still used by the admin binder, so the public page has its own .micro.) */
+@layer components {
+  .sec { @apply relative px-5 py-sec md:px-16; }            /* a normal section */
+  .sec-lg { @apply relative px-5 py-sec-lg md:px-16; }      /* the invitation */
+  .sec-sm { @apply relative px-5 py-sec-sm md:px-16; }      /* connectors: postcard, photo strips */
+  .col { @apply mx-auto w-full max-w-2xl; }                 /* single-column cards: one comfortable width everywhere */
+  .col-wide { @apply mx-auto w-full max-w-4xl; }            /* two-column layouts (story, venue, schedule, families) */
+  .micro { @apply font-serif uppercase font-semibold text-micro tracking-[0.22em]; }
+}
+
 @media print {
   .no-print { display: none !important; }
   body { background: white !important; color: black !important; }

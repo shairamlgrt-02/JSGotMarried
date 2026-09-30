@@ -23,6 +23,8 @@ create table if not exists guests (
   attending text default 'pending', dietary text, message text, song_request text, source text default 'manual',
   created_at timestamptz default now()
 );
+alter table guests add column if not exists code text default '';
+alter table guests add column if not exists approved boolean default null;
 create table if not exists vendors (id text primary key default gen_random_uuid()::text, type text, name text, quote numeric default 0, contact text, status text default 'pending', notes text);
 create table if not exists checklist (id text primary key default gen_random_uuid()::text, task text, category text default 'medium', due_date date, completed boolean default false);
 create table if not exists attire (id text primary key default gen_random_uuid()::text, "group" text, label text, colors jsonb default '[]', reserved boolean default false, notes text, swatch_url text default '', "order" int default 0);

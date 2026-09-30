@@ -271,6 +271,15 @@ export function Budget() {
 }
 
 /* ═════════════ 6. GUESTS ═════════════ */
+/** Collision-checked household invite code, e.g. JS-7KQF. */
+const genCode = (rows: Guest[]) => {
+  const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  for (;;) {
+    const bytes = crypto.getRandomValues(new Uint8Array(4));
+    const c = "JS-" + Array.from(bytes).map((b) => alphabet[b % alphabet.length]).join("");
+    if (!rows.some((r) => r.code === c)) return c;
+  }
+};
 export function Guests() {
   const { rows, save, del, error } = useTable("guests", false);
   const [filter, setFilter] = useState<"all" | Attending>("all");
@@ -299,9 +308,9 @@ export function Guests() {
           {(["all", ...ATT] as const).map((f) => <Btn key={f} variant={filter === f ? "dark" : "ghost"} onClick={() => setFilter(f)}>{f}</Btn>)}
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left min-w-[1000px] text-sm">
+          <table className="w-full text-left min-w-[1120px] text-sm">
             <thead><tr className="label text-ink/50 border-b border-ink/10">
-              <th className="py-3 px-2">Name</th><th className="px-2">WhatsApp</th><th className="px-2 w-16">Pax</th><th className="px-2">Attending</th><th className="px-2">Dietary</th><th className="px-2">Song</th><th className="px-2">Message</th><th className="px-2">Source</th><th />
+              <th className="py-3 px-2">Name</th><th className="px-2">WhatsApp</th><th className="px-2 w-16">Pax</th><th className="px-2">Attending</th><th className="px-2">Dietary</th><th className="px-2">Song</th><th className="px-2">Message</th><th className="px-2">Source</th><th className="px-2">Invite</th><th />
             </tr></thead>
             <tbody className="divide-y divide-ink/10">
               {shown.map((g: Guest) => (
@@ -314,6 +323,25 @@ export function Guests() {
                   <td className="px-1"><EditText value={g.song_request} onSave={(v) => save({ ...g, song_request: v })} /></td>
                   <td className="px-1 max-w-[260px]"><EditText value={g.message} onSave={(v) => save({ ...g, message: v })} /></td>
                   <td className="px-2 py-2"><Tag>{g.source === "RSVP form" ? "quoted" : "pending"}</Tag><div className="text-[10px] text-ink/40 mt-1">{g.source}</div></td>
+                  <td className="px-2 py-2 whitespace-nowrap">
+                    {g.approved === false ? <Tag>needs review</Tag> : g.approved === true ? <Tag>confirmed</Tag> : g.code ? <Tag>invited</Tag> : <span className="text-ink/30 text-[10px]">—</span>}
+                    <div className="flex flex-wrap gap-x-2 gap-y-1 mt-1 max-w-[150px]">
+                      {!g.code ? (
+                        <button className="label !text-[9px] text-wine hover:text-burgundy" onClick={() => save({ ...g, code: genCode(rows) })}>issue code</button>
+                      ) : (
+                        <>
+                          <span className="label !text-[9px] text-ink/60">{g.code}</span>
+                          <button className="label !text-[9px] text-moss" onClick={() => navigator.clipboard?.writeText(`${location.origin}/?rsvp=${g.code}`)}>copy link</button>
+                        </>
+                      )}
+                      {g.approved === false && (
+                        <>
+                          <button className="label !text-[9px] text-moss" onClick={() => save({ ...g, approved: true })}>approve</button>
+                          <button className="label !text-[9px] text-ink/40 hover:text-burgundy" onClick={() => save({ ...g, attending: "no", approved: true })}>decline</button>
+                        </>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-1"><button onClick={() => confirm(`Remove ${g.name}?`) && del(g.id)} className="text-ink/30 hover:text-burgundy px-2 py-2">✕</button></td>
                 </tr>
               ))}
