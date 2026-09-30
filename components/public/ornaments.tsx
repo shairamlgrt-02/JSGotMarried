@@ -58,7 +58,8 @@ export function Corner({ className = "", color = "currentColor" }: { className?:
 /** Four realistic embossed corners positioned inside a relative parent. */
 export function Corners({ className = "w-20 h-20 md:w-28 md:h-28", inset = "0.75rem" }: { className?: string; color?: string; inset?: string }) {
   const pos = [{ top: inset, left: inset }, { top: inset, right: inset, transform: "scaleX(-1)" }, { bottom: inset, left: inset, transform: "scaleY(-1)" }, { bottom: inset, right: inset, transform: "scale(-1,-1)" }];
-  return <>{pos.map((s, i) => <img key={i} src="/img/corner.webp" alt="" aria-hidden loading="lazy" className={`absolute pointer-events-none object-contain drop-shadow-[1px_3px_2px_rgba(61,47,38,.28)] ${className}`} style={s as React.CSSProperties} />)}</>;
+  // CSS backgrounds, not <img>: a missing asset degrades silently instead of showing a broken-image glyph
+  return <>{pos.map((s, i) => <div key={i} aria-hidden className={`absolute pointer-events-none bg-[url('/img/corner.webp')] bg-center bg-no-repeat bg-contain drop-shadow-[1px_3px_2px_rgba(61,47,38,.28)] ${className}`} style={s as React.CSSProperties} />)}</>;
 }
 
 /** Real lace trim strip (photographic), repeated horizontally. `flip` for a top edge. */
@@ -98,7 +99,7 @@ export function OvalFrame({ children, className = "" }: { children?: React.React
         {children}
         <div className="absolute inset-0 rounded-[50%] shadow-[inset_0_6px_18px_rgba(40,28,20,.45)] pointer-events-none" />
       </div>
-      <img src="/img/frame.webp" alt="" aria-hidden className="absolute inset-0 w-full h-full object-contain pointer-events-none drop-shadow-[4px_14px_12px_rgba(61,47,38,.35)]" />
+      <img src="/img/frame.webp" alt="" aria-hidden className="absolute inset-0 w-full h-full object-contain pointer-events-none drop-shadow-[0_2px_2px_rgba(61,47,38,.22)] drop-shadow-[0_9px_16px_rgba(61,47,38,.10)]" />
     </div>
   );
 }

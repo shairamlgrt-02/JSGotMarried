@@ -25,11 +25,11 @@ function Card({ info }: { info: WeddingInfo }) {
         {/* lace lying on the card */}
         <div aria-hidden className={`${lace} top-0`} style={{ transform: "scaleY(-1)" }} />
         <div aria-hidden className={`${lace} bottom-0`} />
-        <OvalFrame className="w-[40cqw] relative mt-[3cqw]">
+        <OvalFrame className="w-[44cqw] relative mt-[3cqw]">
           {photo ? <img src={photo} alt={`${info.groom} and ${info.bride}`} className="w-full h-full object-cover" /> : (
             <div className="w-full h-full bg-[linear-gradient(160deg,#EFE7DB,#DDD0BE)] flex flex-col items-center justify-center text-taupe">
               <Paisley className="w-[5cqw] h-[8cqw] opacity-50" />
-              <span className="font-serif italic mt-[1.5cqw] text-[3cqw]">our photo</span>
+              <span className="font-serif italic mt-[1.5cqw] text-[max(3cqw,10px)]">our photo</span>
             </div>
           )}
         </OvalFrame>
@@ -38,16 +38,16 @@ function Card({ info }: { info: WeddingInfo }) {
         </h1>
         <p className="relative font-serif font-medium text-wine text-[7.6cqw] mt-[2.4cqw] leading-none tracking-[0.16em]">{fullDate(info.date)}</p>
         <p className="relative script text-mocha text-[7.6cqw] mt-[1.8cqw] leading-none">Save the Date</p>
-        <p className="relative font-serif italic text-ink text-[3.9cqw] mt-[2.4cqw]">{weekday(info.date)} · {timeWords(info.date)}</p>
+        <p className="relative font-serif italic text-ink text-[max(3.9cqw,13px)] mt-[2.4cqw]">{weekday(info.date)} · {timeWords(info.date)}</p>
         <div className="relative flex gap-[5cqw] mt-[2.4cqw] font-serif text-ink">
           {([["Days", cd.days], ["Hours", cd.hours], ["Mins", cd.minutes], ["Secs", cd.seconds]] as const).map(([l, v]) => (
             <div key={l} className="flex flex-col items-center">
               <span className="text-[7.4cqw] font-medium leading-none tabular-nums">{cd.ready ? String(v).padStart(2, "0") : "--"}</span>
-              <span className="uppercase tracking-[0.18em] text-[2.5cqw] font-semibold text-mocha mt-[1cqw]">{l}</span>
+              <span className="uppercase tracking-[0.18em] text-[max(2.5cqw,10px)] font-semibold text-mocha mt-[1cqw]">{l}</span>
             </div>
           ))}
         </div>
-        <p className="relative caps text-mocha font-semibold text-[2.8cqw] mt-[2.6cqw] mb-[3cqw]">{info.venue_name} · {info.venue_address.split(",")[0]}</p>
+        <p className="relative caps text-mocha font-semibold text-[max(2.8cqw,11px)] mt-[2.6cqw] mb-[3cqw]">{info.venue_name} · {info.venue_address.split(",")[0]}</p>
       </div>
     </div>
   );
@@ -127,8 +127,8 @@ export default function EnvelopeHero({ info }: { info: WeddingInfo }) {
             className="absolute z-[6] left-1/2 top-1/2 w-[26%] max-w-[124px] aspect-square -translate-x-1/2 -translate-y-1/2 cursor-pointer disabled:cursor-default group">
             {!open && (
               <>
-                <motion.span aria-hidden className="absolute inset-[6%] rounded-full border-2 border-wine/50" animate={{ scale: [1, 1.45], opacity: [0.7, 0] }} transition={{ repeat: Infinity, duration: 1.8, ease: "easeOut" }} />
-                <motion.span aria-hidden className="absolute inset-[6%] rounded-full border border-wine/40" animate={{ scale: [1, 1.45], opacity: [0.6, 0] }} transition={{ repeat: Infinity, duration: 1.8, ease: "easeOut", delay: 0.9 }} />
+                <span aria-hidden className="absolute inset-[6%] rounded-full border-2 border-wine/35 scale-[1.2]" />
+                <span aria-hidden className="absolute inset-[6%] rounded-full border border-wine/20 scale-[1.42]" />
               </>
             )}
             {(["l", "r"] as const).map((side) => (
@@ -146,15 +146,15 @@ export default function EnvelopeHero({ info }: { info: WeddingInfo }) {
       {/* instruction under the folder: tap the seal → then scroll to RSVP */}
       <div className="relative h-20 mt-5 w-full flex justify-center">
         <motion.div initial={false} animate={{ opacity: open ? 0 : 1 }} transition={T(0, 0.4)} className={`absolute flex flex-col items-center gap-1 ${open ? "pointer-events-none" : ""}`}>
-          <motion.span animate={{ y: [0, -6, 0] }} transition={{ repeat: Infinity, duration: 1.6 }} className="text-2xl text-wine leading-none">↑</motion.span>
-          <span className="label text-wine font-semibold bg-[#FBF8F2]/90 rounded-full px-5 py-2 shadow-[0_2px_10px_rgba(61,47,38,.12)]">Tap the seal to open</span>
+          <span className="text-2xl text-wine leading-none">↑</span>
+          <span className="micro text-wine bg-[#FBF8F2]/90 rounded-full px-5 py-2 shadow-[0_2px_10px_rgba(61,47,38,.12)]">Tap the seal to open</span>
         </motion.div>
         <motion.a href="#rsvp" initial={false} animate={{ opacity: open ? 1 : 0, y: open ? 0 : 10 }} transition={T(open ? 3.6 : 0, 0.8)}
           className={`absolute flex flex-col items-center gap-1 text-wine ${open ? "" : "pointer-events-none"}`}>
-          <span className="label font-semibold bg-[#FBF8F2]/90 rounded-full px-5 py-2 shadow-[0_2px_10px_rgba(61,47,38,.12)]">Scroll to RSVP</span>
-          <motion.svg viewBox="0 0 24 36" className="w-5 h-8" animate={{ y: [0, 7, 0] }} transition={{ repeat: Infinity, duration: 1.6, ease: "easeInOut" }} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+          <span className="micro bg-[#FBF8F2]/90 rounded-full px-5 py-2 shadow-[0_2px_10px_rgba(61,47,38,.12)]">Scroll to RSVP</span>
+          <svg viewBox="0 0 24 36" className="w-5 h-8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
             <path d="M12 2v28M5 23l7 8 7-8" />
-          </motion.svg>
+          </svg>
         </motion.a>
       </div>
     </section>
