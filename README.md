@@ -18,7 +18,7 @@ If you don't set any Supabase keys, the app runs in **local mode**: data is save
 
 ## Connect Supabase (free, recommended)
 1. Create a project at https://supabase.com.
-2. **SQL Editor** → paste `supabase/schema.sql` → Run.
+2. **SQL Editor** → paste `supabase/schema.sql` → Run. (It is idempotent — re-running it on an existing project safely adds any new columns, like the RSVP invite-code gate.)
 3. **Project Settings → API**: copy the Project URL, the `anon` key and the `service_role` key.
 4. Create `.env.local` (copy `.env.example`) and fill in:
    ```
