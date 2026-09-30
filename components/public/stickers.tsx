@@ -1,7 +1,7 @@
 "use client";
 import { motion } from "framer-motion";
 import { useState } from "react";
-import { EASE } from "./fx";
+import { EASE, EASE_OUT, rise } from "./fx";
 import { Paisley as Rings } from "./ornaments";
 
 /** Perforated postage-stamp outline (semicircle bites along every edge). */
@@ -19,11 +19,11 @@ function stampPath(w: number, h: number, r = 3, step = 10) {
   return d + " Z";
 }
 
-/** "Stuck on" entrance used by every sticker/stamp. */
+/** "Stuck on" entrance used by every sticker/stamp: presses down onto the page once — no overshoot, no bounce. */
 export function StickOn({ children, rotate = 0, className = "", delay = 0 }: { children: React.ReactNode; rotate?: number; className?: string; delay?: number }) {
   return (
-    <motion.div aria-hidden initial={{ opacity: 0, scale: 1.5, rotate: rotate - 18 }} whileInView={{ opacity: 1, scale: 1, rotate }} viewport={{ once: true, margin: "-10%" }}
-      transition={{ duration: 0.55, delay, ease: [0.3, 1.5, 0.5, 1] }} whileHover={{ scale: 1.08, rotate: rotate + 4 }}
+    <motion.div aria-hidden initial={{ opacity: 0, scale: 1.2, rotate: rotate - 8 }} whileInView={{ opacity: 1, scale: 1, rotate }} viewport={{ once: true, margin: "-10%" }}
+      transition={{ duration: 0.7, delay, ease: EASE_OUT }} whileHover={{ scale: 1.08, rotate: rotate + 4, transition: { duration: 0.25 } }}
       className={`pointer-events-auto select-none ${className}`}>{children}</motion.div>
   );
 }
@@ -86,7 +86,7 @@ export function Sticker({ kind, className = "" }: { kind: StickerKind; className
   const base = "inline-flex items-center justify-center text-center border-[5px] border-white shadow-[0_2px_2px_rgba(61,47,38,.25),0_8px_14px_-6px_rgba(61,47,38,.4)]";
   switch (kind) {
     case "wedo":
-      return <span className={`${base} rounded-full bg-wine text-lace px-5 py-2 font-serif font-semibold tracking-[0.12em] text-base md:text-lg ${className}`}>#JSWeDo</span>;
+      return <span className={`${base} rounded-full bg-wine text-lace px-5 py-2 font-serif font-semibold tracking-[0.12em] text-fine ${className}`}>#JSWeDo</span>;
     case "wish":
       return (
         <span className={`${base} rounded-full bg-[#F4E6DA] text-wine w-24 h-24 md:w-28 md:h-28 flex-col ${className}`}>
@@ -112,23 +112,22 @@ export function Sticker({ kind, className = "" }: { kind: StickerKind; className
         </span>
       );
     case "dance":
-      return <span className={`${base} rounded-[14px] bg-[#FBF6EE] text-mocha px-4 py-2 font-serif italic text-base md:text-lg -skew-x-3 ${className}`}>save me a <b className="not-italic text-wine">dance</b> ♪</span>;
+      return <span className={`${base} rounded-[14px] bg-[#FBF6EE] text-mocha px-4 py-2 font-serif italic text-fine -skew-x-3 ${className}`}>save me a <b className="not-italic text-wine">dance</b> ♪</span>;
     case "love":
       return <span className={`${base} rounded-full bg-[#E9D3CC] text-wine px-5 py-2 script text-3xl leading-none ${className}`}>with love</span>;
   }
 }
 
-/** Animated "tap to flip" hint: a wine pill with a spinning arrow + a pointing hand. */
+/** "Tap to flip" hint: a wine pill with a turn arrow + a pointing hand. Completely still — it reads as a button, not a toy. */
 export function FlipHint({ label = "Tap to flip", className = "" }: { label?: string; className?: string }) {
   return (
-    <motion.span animate={{ scale: [1, 1.07, 1] }} transition={{ repeat: Infinity, duration: 1.6, ease: "easeInOut" }}
-      className={`inline-flex items-center gap-2 bg-wine text-lace rounded-full pl-3 pr-4 py-1.5 shadow-[0_6px_14px_-4px_rgba(110,31,46,.6)] ${className}`}>
-      <motion.svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2.2, ease: "linear" }}>
+    <span className={`inline-flex items-center gap-2 bg-wine text-lace rounded-full pl-4 pr-5 py-2 shadow-[0_6px_14px_-4px_rgba(110,31,46,.6)] ${className}`}>
+      <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
         <path d="M20 12a8 8 0 11-2.3-5.6M20 4v4h-4" />
-      </motion.svg>
-      <span className="label font-semibold !text-[11px]">{label}</span>
-      <motion.span animate={{ x: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 0.9 }} className="text-base leading-none">👆</motion.span>
-    </motion.span>
+      </svg>
+      <span className="micro text-left text-balance">{label}</span>
+      <span className="text-base leading-none" aria-hidden>👆</span>
+    </span>
   );
 }
 
@@ -139,19 +138,23 @@ export function useFlip() {
   return { flip, toggle };
 }
 
-/** A personal vintage postcard you can flip — front: your photo + "Wish you were here", back: a handwritten note. */
+/**
+ * A personal vintage postcard you can flip — front: your photo + "Wish you were here", back: a handwritten note.
+ * Both faces share one grid cell, so the card is always as tall as its content needs (never smaller than 5:4 on a
+ * phone / 3:2 on wide screens) and the text can stay at a readable size.
+ */
 export function Postcard({ from, venue, date, photo }: { from: string; venue: string; date: string; photo?: string }) {
   const { flip, toggle } = useFlip();
+  const face = "[grid-area:1/1] [backface-visibility:hidden] bg-[#FBF7EF] shadow-[0_2px_3px_rgba(61,47,38,.2),0_24px_40px_-18px_rgba(61,47,38,.5)] p-4 md:p-6 grid gap-4 md:gap-6";
   return (
-    <section className="relative px-5 md:px-16 py-14 md:py-20">
-      <motion.div initial={{ opacity: 0, y: 50, rotate: -6 }} whileInView={{ opacity: 1, y: 0, rotate: -2 }} viewport={{ once: true, margin: "-10%" }} transition={{ duration: 1.1, ease: EASE }}
-        className="max-w-2xl mx-auto [perspective:1600px]">
-        <button type="button" onClick={toggle} aria-label="Flip the postcard" className="relative block w-full aspect-[3/2] text-left">
-          <motion.div animate={flip ? { rotateY: 180 } : { rotateY: 0 }} transition={{ duration: 1.1, ease: EASE }} className="absolute inset-0 [transform-style:preserve-3d]">
+    <section className="sec-sm">
+      <motion.div {...rise(0, 28)} style={{ rotate: -1.5 }} className="col [perspective:1600px]">
+        <button type="button" onClick={toggle} aria-label="Flip the postcard" className="relative block w-full text-left">
+          <motion.div animate={flip ? { rotateY: 180 } : { rotateY: 0 }} transition={{ duration: 1.1, ease: EASE }} className="grid aspect-[5/4] md:aspect-[3/2] [transform-style:preserve-3d]">
             {/* FRONT */}
-            <div className="absolute inset-0 [backface-visibility:hidden] bg-[#FBF7EF] shadow-[0_2px_3px_rgba(61,47,38,.2),0_24px_40px_-18px_rgba(61,47,38,.5)] p-[3.5%] grid grid-cols-[1fr_1.1fr] gap-[4%]">
-              <div className="relative bg-[#EDE3D4] p-[5%] shadow-[inset_0_0_0_1px_rgba(61,47,38,.1)] -rotate-2">
-                <div className="w-full h-full overflow-hidden">
+            <div className={`${face} grid-cols-[0.9fr_1.1fr] md:grid-cols-[1fr_1.1fr]`}>
+              <div className="relative bg-[#EDE3D4] shadow-[inset_0_0_0_1px_rgba(61,47,38,.1)] -rotate-2 min-h-[10rem]">
+                <div className="absolute inset-2 md:inset-3 overflow-hidden">
                   {photo ? <img src={photo} alt="" className="w-full h-full object-cover [filter:sepia(.25)_contrast(1.02)]" /> : (
                     <div className="w-full h-full bg-[linear-gradient(160deg,#EFE7DB,#DDD0BE)] grid place-items-center"><Rings className="w-10 h-14 text-taupe/50" /></div>
                   )}
@@ -159,23 +162,23 @@ export function Postcard({ from, venue, date, photo }: { from: string; venue: st
                 <span className="absolute -top-2 left-1/2 -translate-x-1/2 h-5 w-16 bg-[#EFE4D2]/80 shadow-sm rotate-3" />
               </div>
               <div className="relative flex flex-col justify-center text-center">
-                <p className="script text-wine text-[9vw] md:text-6xl leading-[0.95]">Wish you<br />were here</p>
-                <p className="font-serif italic text-mocha text-[3.2vw] md:text-lg mt-3">…and you will be.</p>
-                <p className="label text-taupe mt-3 !text-[10px] md:!text-xs">with love, {from} · {date}</p>
+                <p className="script text-wine text-script-sm">Wish you<br />were here</p>
+                <p className="font-serif italic text-mocha text-fine md:text-body mt-3">…and you will be.</p>
+                <p className="micro text-taupe mt-3 text-balance tracking-[0.12em]">with love, {from} · {date}</p>
               </div>
             </div>
             {/* BACK */}
-            <div className="absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)] bg-[#FBF7EF] shadow-[0_2px_3px_rgba(61,47,38,.2),0_24px_40px_-18px_rgba(61,47,38,.5)] p-[4%] grid grid-cols-[1.25fr_1fr] gap-[4%]">
-              <div className="border-r border-taupe/40 pr-[5%] flex flex-col justify-center">
-                <p className="script text-wine text-3xl md:text-5xl leading-none">Dear you,</p>
-                <p className="font-serif italic text-mocha text-[3.4vw] md:text-xl leading-snug mt-3">We can&apos;t wait to celebrate with you at {venue}. Come early, stay late, hug us often. Save us a dance — and a seat by the snacks.</p>
-                <p className="script text-wine text-2xl md:text-4xl mt-3">— {from}</p>
+            <div className={`${face} [transform:rotateY(180deg)] grid-cols-[1.5fr_1fr] md:grid-cols-[1.25fr_1fr]`}>
+              <div className="border-r border-taupe/40 pr-4 md:pr-6 flex flex-col justify-center">
+                <p className="script text-wine text-script-sm">Dear you,</p>
+                <p className="font-serif italic text-mocha text-fine md:text-body leading-snug mt-3">We can&apos;t wait to celebrate with you at {venue}. Come early, stay late, hug us often. Save us a dance — and a seat by the snacks.</p>
+                <p className="script text-wine text-h3 mt-3 text-balance">— {from}</p>
               </div>
-              <div className="relative flex flex-col justify-end pb-[8%]">
+              <div className="relative flex flex-col justify-end pb-1 md:pb-3 min-h-[11rem]">
                 <div className="absolute top-0 right-0 w-[34%]"><Stamp kind="initials" className="w-full" /></div>
                 <Postmark className="absolute top-[4%] right-[18%] w-[70%]" top="WITH LOVE · J & S" />
                 {["To: our favourite people", "wherever you are", "see you on 11.11"].map((l) => (
-                  <p key={l} className="font-serif italic text-mocha text-[3vw] md:text-lg border-b border-taupe/50 pb-1 mt-[6%]">{l}</p>
+                  <p key={l} className="font-serif italic text-mocha text-fine md:text-body leading-snug border-b border-taupe/50 pb-1 mt-3">{l}</p>
                 ))}
               </div>
             </div>
