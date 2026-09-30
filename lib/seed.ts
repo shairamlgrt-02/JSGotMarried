@@ -15,7 +15,7 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     theme_name: "Vintage Lace",
     story: "Two marketers who spent years telling other people's stories finally wrote their own. One brief, one late-night idea, one wish that came true. On 11.11 we make the wish official — and we want you there when we do.",
     instagram: "@shaiandjeg",
-    hashtags: ["#JSWeDo", "#JSWishComeTrue"],
+    hashtags: ["#JSGotMarried", "#JSWeDo", "#JSWishComeTrue"],
     total_budget: 2500,
     currency: "BHD",
     save_the_date_url: "",
@@ -99,6 +99,6 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     { id: "f2", question: "What should I wear?", answer: "Earth tones — olive, moss, forest, espresso, chocolate, chestnut. Please avoid white, black, burgundy and teal (reserved for us and our families).", order: 2 },
     { id: "f3", question: "Are kids welcome?", answer: "We love your little ones, but this is an adults-only celebration unless they are part of the entourage.", order: 3 },
     { id: "f4", question: "Is there parking?", answer: "Yes, parking is available at The Heaven, Damistan.", order: 4 },
-    { id: "f5", question: "Can I post photos?", answer: "Please! Tag @shaiandjeg and use #JSWeDo and #JSWishComeTrue. We only ask for an unplugged ceremony.", order: 5 },
+    { id: "f5", question: "Can I post photos?", answer: "Please! Tag @shaiandjeg and use #JSGotMarried — #JSWeDo and #JSWishComeTrue work beautifully too. We only ask for an unplugged ceremony.", order: 5 },
   ],
 };
