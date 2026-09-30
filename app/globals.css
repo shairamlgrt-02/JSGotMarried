@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ease: cubic-bezier(0.76, 0, 0.24, 1);
+  --font-serif: "Cormorant Garamond";
+  --font-script: "Pinyon Script";
+  --font-sans: "Jost";
+}
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+::selection { background: #6E1F2E; color: #FCFAF5; }
+
+/* Rough ivory paper */
+.paper-bg { background-color: #F7F4EE; }
+.paper-bg::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image:
+    radial-gradient(ellipse at center, transparent 60%, rgba(120,100,85,.10) 100%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .35  0 0 0 0 .27  0 0 0 0 .2  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='600'><filter id='f'><feTurbulence type='fractalNoise' baseFrequency='.012 .09' numOctaves='2'/><feColorMatrix values='0 0 0 0 .5  0 0 0 0 .42  0 0 0 0 .33  0 0 0 .22 0'/></filter><rect width='100%' height='100%' filter='url(%23f)'/></svg>");
+  opacity: .3;
+}
+.paper-card {
+  background-color: #FCFAF5;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='3'/><feColorMatrix values='0 0 0 0 .4  0 0 0 0 .32  0 0 0 0 .25  0 0 0 .12 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+.label { @apply font-serif uppercase tracking-[0.32em] text-[12px] font-semibold; }
+.display { @apply font-serif leading-[0.95] font-light; }
+.caps { @apply font-serif uppercase font-light tracking-[0.18em]; }
+.script { @apply font-script font-normal; }
+
+.field { @apply w-full bg-transparent border-b border-taupe/40 py-3 font-serif text-xl text-ink placeholder:text-taupe/60 placeholder:italic outline-none transition-colors focus:border-wine; }
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: white !important; color: black !important; }
+  .paper-bg::before { display: none; }
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: .85; transform: scale(1) translate(0,0); }
+  20% { opacity: 1; transform: scale(1.04) translate(1%, -1%); }
+  45% { opacity: .75; transform: scale(.98) translate(-1%, 1%); }
+  70% { opacity: .95; transform: scale(1.03) translate(1%, 0); }
+}
+.emboss { mix-blend-mode: multiply; filter: contrast(1.35) brightness(1.02); }
+.deckle { clip-path: polygon(0% 1%, 3% 0%, 7% .8%, 12% .2%, 18% .9%, 25% .1%, 31% .7%, 38% 0%, 45% .8%, 52% .2%, 60% .9%, 67% .1%, 74% .7%, 81% 0%, 88% .8%, 94% .2%, 100% .9%, 99.3% 6%, 100% 13%, 99.2% 21%, 100% 29%, 99.4% 38%, 100% 47%, 99.2% 56%, 100% 65%, 99.4% 74%, 100% 83%, 99.3% 92%, 100% 99%, 95% 100%, 88% 99.2%, 81% 100%, 73% 99.3%, 66% 100%, 58% 99.2%, 50% 100%, 42% 99.3%, 34% 100%, 26% 99.2%, 18% 100%, 10% 99.3%, 4% 100%, 0% 99%, .7% 91%, 0% 83%, .8% 74%, 0% 65%, .6% 56%, 0% 47%, .8% 38%, 0% 29%, .6% 20%, 0% 12%, .7% 5%); }
+/* torn edges for tall sheets: fixed-size jaggies via mask so they don't stretch with height */
+.deckle-long {
+  -webkit-mask-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='60' preserveAspectRatio='none'><path d='M0 0 L14 0 L14 60 L0 60 L3 54 L1 47 L4 40 L2 33 L5 26 L2 19 L4 12 L1 6 Z' fill='black'/></svg>"),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='60' preserveAspectRatio='none'><path d='M0 0 L14 0 L11 6 L13 12 L10 19 L12 26 L9 33 L12 40 L10 47 L13 54 L14 60 L0 60 Z' fill='black'/></svg>"),
+    linear-gradient(black, black);
+  -webkit-mask-size: 14px 60px, 14px 60px, calc(100% - 26px) 100%;
+  -webkit-mask-repeat: repeat-y, repeat-y, no-repeat;
+  -webkit-mask-position: left top, right top, center;
+  mask-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='60' preserveAspectRatio='none'><path d='M0 0 L14 0 L14 60 L0 60 L3 54 L1 47 L4 40 L2 33 L5 26 L2 19 L4 12 L1 6 Z' fill='black'/></svg>"),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='60' preserveAspectRatio='none'><path d='M0 0 L14 0 L11 6 L13 12 L10 19 L12 26 L9 33 L12 40 L10 47 L13 54 L14 60 L0 60 Z' fill='black'/></svg>"),
+    linear-gradient(black, black);
+  mask-size: 14px 60px, 14px 60px, calc(100% - 26px) 100%;
+  mask-repeat: repeat-y, repeat-y, no-repeat;
+  mask-position: left top, right top, center;
+}
+
+.peek { transform: translateX(var(--em)); }
+@media (min-width: 768px) { .peek { transform: translateX(var(--e)); } }
+
+/* Lace trim: transparent lace photo, ivory, with a tight contact shadow + soft lift so it reads as fabric lying on paper */
+.lace-trim {
+  height: clamp(44px, 7vw, 76px);
+  background: url('/img/lacetrim.webp') center top / auto 100% repeat-x;
+  filter: brightness(1.04) sepia(.08) drop-shadow(0 -1px .6px rgba(61,47,38,.35)) drop-shadow(0 -3px 4px rgba(61,47,38,.14));
+  pointer-events: none;
+}
+.lace-trim-bottom { filter: brightness(1.04) sepia(.08) drop-shadow(0 1px .6px rgba(61,47,38,.35)) drop-shadow(0 3px 4px rgba(61,47,38,.14)); }
