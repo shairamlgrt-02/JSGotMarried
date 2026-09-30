@@ -1,4 +1,5 @@
 "use client";
+import { MotionConfig } from "framer-motion";
 import Ambience from "@/components/public/Ambience";
 import EnvelopeHero from "@/components/public/Envelope";
 import Letter from "@/components/public/Letter";
@@ -22,7 +23,7 @@ export default function Home() {
   const { rows: faq } = useTable("faq");
   const info = infoRows[0];
   return (
-    <>
+    <MotionConfig reducedMotion="user">
       <Ambience />
       <main className="relative z-[1] overflow-x-clip">
         <SmoothScroll /><ProgressBar />
@@ -32,7 +33,7 @@ export default function Home() {
             <D deco={<Deco at="tl" rotate={-8}><Sticker kind="wish" className="scale-[.62] md:scale-100 origin-top-left" /></Deco>}><Story info={info} /></D>
             <D deco={<Deco at="tr" rotate={-6}><Stamp kind="date" className="w-12 md:w-24" /></Deco>}><ElevenEleven info={info} /></D>
             <PolaroidPair info={info} from={8} caps={["us", "11.11"]} />
-            <D deco={<Deco at="tr" rotate={5}><Sticker kind="wedo" className="text-sm" /></Deco>}><Schedule items={schedule} /></D>
+            <D deco={<Deco at="tr" rotate={5}><Sticker kind="wedo" /></Deco>}><Schedule items={schedule} /></D>
             <D deco={<Deco at="tl" rotate={-4}><Postmark className="w-28 md:w-48" /></Deco>}><Venue info={info} /></D>
             <Postcard from={`${info.groom} & ${info.bride}`} venue={info.venue_name} date="11.11.2026" photo={info.cover_photo || info.gallery[0]} />
             <Gallery info={info} />
@@ -40,7 +41,7 @@ export default function Home() {
             <PolaroidPair info={info} from={10} caps={["always", "forever"]} />
             {entourage.length > 0 && <D deco={<Deco at="tl" rotate={-7}><Stamp kind="initials" className="w-12 md:w-24" /></Deco>}><Entourage people={entourage} /></D>}
             <Rsvp info={info} />
-            <D deco={<Deco at="tr" rotate={6}><Sticker kind="dance" className="text-sm" /></Deco>}><FaqSection faqs={faq} /></D>
+            <D deco={<Deco at="tr" rotate={6}><Sticker kind="dance" /></Deco>}><FaqSection faqs={faq} /></D>
             <Moments info={info} />
             <D className="pt-16 md:pt-8" deco={<Deco at="tl" rotate={-6}><Sticker kind="cheers" /></Deco>}><SignOff info={info} /></D>
         </Letter>
@@ -48,6 +49,6 @@ export default function Home() {
         <MusicButton src={info.music_url} />
         <RsvpNudge info={info} />
       </main>
-    </>
+    </MotionConfig>
   );
 }

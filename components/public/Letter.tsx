@@ -42,16 +42,18 @@ export default function Letter({ children, aside }: { children: React.ReactNode;
   const spin = useTransform(y, (v) => `${(v / 3) % 360}deg`);
 
   return (
-    <div ref={ref} className="relative mx-auto w-[92%] md:w-[84%] max-w-5xl mt-10 mb-24">
-      <motion.div style={{ clipPath: done ? "none" : clip, WebkitClipPath: done ? "none" : clip }} className="relative">
-        <div aria-hidden className="absolute z-[4] inset-x-2 top-12 bottom-6 bg-[#5A463A]/25 blur-2xl rounded-[30px] translate-y-3" />
+    <div ref={ref} className="relative mx-auto w-[92%] md:w-[84%] max-w-5xl mt-10 mb-14">
+      {/* soft halo: a box-shadow on the clipped wrapper instead of a full-height blur(40px)
+          layer — same look at the edges, a fraction of the paint cost. It sits inside the
+          clip, so the glow unrolls with the letter. */}
+      <motion.div style={{ clipPath: done ? "none" : clip, WebkitClipPath: done ? "none" : clip }} className="relative shadow-[0_14px_38px_6px_rgba(90,70,58,0.22)]">
         <div className="relative z-[5] deckle-long overflow-hidden" style={{ backgroundColor: "#F6F0E4", backgroundImage: `${GRAIN}, ${FIBRE}`, backgroundSize: "220px 220px, 600px 600px" }}>
           <div aria-hidden className="absolute inset-0 pointer-events-none bg-[linear-gradient(165deg,rgba(255,255,255,.35),transparent_18%,transparent_82%,rgba(120,95,75,.06))]" />
           {STAINS.map((st, i) => (
             <div key={i} aria-hidden className="absolute rounded-full pointer-events-none" style={{ top: st.top, left: st.left, width: st.size, height: st.size, background: stainBg[st.kind], transform: `rotate(${i * 37}deg) scaleX(${1 + (i % 3) * 0.12})` }} />
           ))}
           <div aria-hidden className="absolute inset-0 pointer-events-none shadow-[inset_0_0_60px_rgba(150,115,80,.16),inset_0_0_8px_rgba(150,115,80,.22)]" />
-          <div className="relative z-[1] pt-16 md:pt-24 pb-16 md:pb-24">{children}</div>
+          <div className="relative z-[1] pt-6 md:pt-10 pb-6 md:pb-10">{children}</div>
         </div>
         <div aria-hidden className="lace-trim absolute z-[7] -top-3 md:-top-4 -inset-x-1" style={{ transform: "scaleY(-1)" }} />
         <div aria-hidden className="lace-trim lace-trim-bottom absolute z-[7] -bottom-3 md:-bottom-4 -inset-x-1" />
@@ -76,7 +78,7 @@ export default function Letter({ children, aside }: { children: React.ReactNode;
         </motion.div>
       )}
       {!inView && (
-        <p className="absolute left-0 right-0 top-[clamp(46px,7vw,76px)] text-center label text-wine">Keep scrolling · our letter unrolls</p>
+        <p className="absolute left-0 right-0 top-[clamp(46px,7vw,76px)] text-center micro text-wine">Keep scrolling · our letter unrolls</p>
       )}
     </div>
   );

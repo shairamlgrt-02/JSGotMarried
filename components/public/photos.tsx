@@ -2,7 +2,7 @@
 import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import type { WeddingInfo } from "@/lib/types";
-import { EASE, Tilt } from "./fx";
+import { Tilt, rise } from "./fx";
 import { Paisley } from "./ornaments";
 
 /**
@@ -37,7 +37,7 @@ function Tape({ className = "", rotate = -4 }: { className?: string; rotate?: nu
 /** Classic photobooth strip — part of the letter's design. */
 export function PhotoStrip({ photos, caption, horizontal = false, rotate = -3, className = "" }: { photos: string[]; caption: string; horizontal?: boolean; rotate?: number; className?: string }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 40, rotate: rotate * 2 }} whileInView={{ opacity: 1, y: 0, rotate }} viewport={{ once: true, margin: "-10%" }} transition={{ duration: 1.2, ease: EASE }} className={`relative ${className}`}>
+    <motion.div {...rise(0, 26)} style={{ rotate }} className={`relative ${className}`}>
       <Tilt max={8} className="relative">
         <Tape className="-top-3 left-1/2 -translate-x-1/2" rotate={rotate > 0 ? -5 : 4} />
         <div className={`relative bg-[#FBF8F2] p-[5%] shadow-[0_1px_2px_rgba(61,47,38,.2),0_18px_30px_-12px_rgba(61,47,38,.45)] ${horizontal ? "p-[1.6%]" : ""}`}>
@@ -46,7 +46,7 @@ export function PhotoStrip({ photos, caption, horizontal = false, rotate = -3, c
               <div key={i} className="aspect-[4/3] overflow-hidden shadow-[inset_0_0_0_1px_rgba(61,47,38,.08)]"><Slot src={src} /></div>
             ))}
           </div>
-          <p className={`text-center font-serif text-mocha tracking-[0.2em] ${horizontal ? "text-xs md:text-sm mt-2" : "text-[11px] md:text-xs mt-3"}`}>{caption}</p>
+          <p className={`text-center font-serif font-medium text-micro text-mocha text-balance ${horizontal ? "uppercase tracking-[0.16em] mt-2" : "tracking-[0.1em] mt-3"}`}>{caption}</p>
         </div>
       </Tilt>
     </motion.div>
@@ -56,13 +56,12 @@ export function PhotoStrip({ photos, caption, horizontal = false, rotate = -3, c
 /** A single polaroid. */
 export function Polaroid({ src, caption, rotate = 0, className = "" }: { src: string; caption?: string; rotate?: number; className?: string }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-5%" }} transition={{ duration: 1, ease: EASE }}
-      whileHover={{ rotate: 0, scale: 1.05, zIndex: 30 }} style={{ rotate }} className={`relative ${className}`}>
+    <motion.div {...rise(0, 24)} whileHover={{ rotate: 0, scale: 1.05, zIndex: 30, transition: { duration: 0.3 } }} style={{ rotate }} className={`relative ${className}`}>
       <Tape className="-top-3 left-1/2 -translate-x-1/2" rotate={-rotate * 1.5} />
       <div className="bg-[#FCFAF6] p-[7%] pb-0 shadow-[0_1px_2px_rgba(61,47,38,.2),0_14px_24px_-10px_rgba(61,47,38,.45)]">
         <div className="aspect-square overflow-hidden"><Slot src={src} /></div>
         <div className="h-12 md:h-14 flex items-center justify-center">
-          {caption && <p className="script text-wine text-2xl md:text-3xl leading-none translate-y-[2px]">{caption}</p>}
+          {caption && <p className="script text-wine text-h3 leading-none translate-y-[2px]">{caption}</p>}
         </div>
       </div>
     </motion.div>
@@ -95,8 +94,8 @@ export function Moments({ info }: { info: WeddingInfo }) {
   if (!extra.length) return null;
   const rots = [-5, 3, -2, 6, -4, 2];
   return (
-    <section className="px-6 md:px-16 py-16">
-      <div className="flex flex-wrap justify-center gap-6 md:gap-10 max-w-4xl mx-auto">
+    <section className="sec-sm">
+      <div className="flex flex-wrap justify-center gap-5 md:gap-10 col-wide">
         {extra.map((src, i) => <Polaroid key={i} src={src} rotate={rots[i % rots.length]} className="w-[42%] md:w-56" />)}
       </div>
     </section>

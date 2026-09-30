@@ -34,25 +34,25 @@ export function AttireGuide({ guests }: { guests?: Attire }) {
   const c = colors[Math.min(pick, colors.length - 1)];
   const { flip, toggle } = useFlip();
   return (
-    <div className="max-w-4xl mx-auto mt-10 [perspective:1800px]">
+    <div className="col mt-8 md:mt-10 [perspective:1800px]">
       <motion.div animate={flip ? { rotateY: 180 } : { rotateY: 0 }} transition={{ duration: 1, ease: EASE }}
         className="grid [transform-style:preserve-3d]">
         {/* FRONT — the look */}
         <div className="[grid-area:1/1] [backface-visibility:hidden] paper-card deckle relative px-5 md:px-12 py-8 md:py-10 text-center shadow-[0_2px_3px_rgba(61,47,38,.15),0_30px_50px_-28px_rgba(61,47,38,.55)]">
-          <p className="label text-wine font-semibold">Black tie · in earth tones</p>
-          <p className="font-serif italic text-mocha text-lg md:text-xl mt-2 max-w-xl mx-auto">Floor-length column, sheath or slim A-line dresses · tuxedos or dark suits with a tie. Bring a light wrap or scarf — evenings can get cool.</p>
-          <div className="flex justify-center items-end gap-6 md:gap-16 mt-5">
+          <p className="micro text-wine">Black tie · in earth tones</p>
+          <p className="font-serif italic text-mocha text-body mt-3 max-w-xl mx-auto text-pretty">Floor-length column, sheath or slim A-line dresses · tuxedos or dark suits with a tie. Bring a light wrap or scarf — evenings can get cool.</p>
+          <div className="flex justify-center items-end gap-5 md:gap-16 mt-6">
             <div>
               <TinFigure kind="man" color={c.hex} className="h-64 md:h-[26rem]" />
-              <p className="label text-taupe !text-[10px] mt-1">Tuxedo / dark suit</p>
+              <p className="micro text-taupe tracking-[0.12em] text-balance mt-2">Tuxedo / dark suit</p>
             </div>
             <div>
               <TinFigure kind="woman" color={c.hex} className="h-64 md:h-[26rem]" />
-              <p className="label text-taupe !text-[10px] mt-1">Column dress · with a wrap</p>
+              <p className="micro text-taupe tracking-[0.12em] text-balance mt-2">Column dress · with a wrap</p>
             </div>
           </div>
-          <p className="script text-wine text-4xl mt-3 h-10">{c.name}</p>
-          <p className="label text-taupe mt-1 mb-3">Tap a colour to try it on</p>
+          <p className="script text-wine text-script-sm mt-4 h-[1.25em]">{c.name}</p>
+          <p className="micro text-taupe mt-2 mb-4">Tap a colour to try it on</p>
           <div className="flex flex-wrap justify-center gap-3 md:gap-4">
             {colors.map((col, i) => (
               <motion.button key={col.name} type="button" onClick={() => setPick(i)} whileTap={{ scale: 0.9 }} animate={{ y: pick === i ? -6 : 0 }} aria-label={col.name}
@@ -63,15 +63,15 @@ export function AttireGuide({ guests }: { guests?: Attire }) {
           <div className="mt-6"><button type="button" onClick={toggle}><FlipHint label="Need help? Tap to see what to avoid" /></button></div>
         </div>
         {/* BACK — kindly avoid */}
-        <div className="[grid-area:1/1] [backface-visibility:hidden] [transform:rotateY(180deg)] paper-card deckle relative px-5 md:px-12 py-8 md:py-10 text-center shadow-[0_2px_3px_rgba(61,47,38,.15),0_30px_50px_-28px_rgba(61,47,38,.55)]">
-          <p className="label text-wine font-semibold">Kindly avoid</p>
-          <p className="script text-wine text-5xl mt-1">A little help</p>
-          <div className="grid grid-cols-2 gap-2 md:gap-3 mt-5 max-w-2xl mx-auto text-left">
+        <div className="[grid-area:1/1] [backface-visibility:hidden] [transform:rotateY(180deg)] paper-card deckle relative px-5 md:px-12 py-8 md:py-10 text-center flex flex-col justify-center shadow-[0_2px_3px_rgba(61,47,38,.15),0_30px_50px_-28px_rgba(61,47,38,.55)]">
+          <p className="micro text-wine">Kindly avoid</p>
+          <p className="script text-wine text-script-sm mt-2">A little help</p>
+          <div className="grid sm:grid-cols-2 gap-2 md:gap-3 mt-6 max-w-2xl mx-auto w-full text-left">
             {AVOID.map(([what, why], i) => (
               <motion.div key={what} initial={false} animate={flip ? { opacity: 1, x: 0 } : { opacity: 0, x: -10 }} transition={{ delay: flip ? 0.5 + i * 0.05 : 0, duration: 0.4 }}
-                className="flex items-center gap-2.5 bg-[#FBF6EE] border border-taupe/25 rounded-full pl-1.5 pr-3 py-1.5">
-                <span className="w-6 h-6 shrink-0 rounded-full bg-wine text-lace grid place-items-center text-xs">✕</span>
-                <span className="leading-tight"><span className="block font-serif text-base md:text-lg text-ink">{what}</span><span className="block font-serif italic text-xs md:text-sm text-taupe">{why}</span></span>
+                className="flex items-center gap-3 bg-[#FBF6EE] border border-taupe/25 rounded-full pl-2 pr-4 py-2">
+                <span className="w-7 h-7 shrink-0 rounded-full bg-wine text-lace grid place-items-center text-sm leading-none">✕</span>
+                <span className="leading-tight"><span className="block font-serif text-body text-ink">{what}</span><span className="block font-serif italic text-fine text-taupe">{why}</span></span>
               </motion.div>
             ))}
           </div>
