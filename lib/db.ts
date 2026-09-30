@@ -73,14 +73,14 @@ export async function remove(t: TableName, id: string) {
 }
 
 export async function submitRsvp(g: Omit<Guest, "id" | "source" | "created_at">) {
-  if ((await getMode()) === "local") {
-    const cur = localRead("guests");
-    cur.push({ ...g, id: crypto.randomUUID(), source: "RSVP form", created_at: new Date().toISOString() });
-    localWrite("guests", cur);
-    return;
-  }
-  const r = await fetch("/api/rsvp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(g) });
-  if (!r.ok) throw new Error((await r.json()).error || "Could not send RSVP");
+  // The server saves to Supabase and e-mails the couple; the browser keeps a copy only when the server can't be reached.
+  try {
+    const r = await fetch("/api/rsvp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(g) });
+    if (r.ok) return;
+  } catch { /* offline or dev without env — fall through */ }
+  const cur = localRead("guests");
+  cur.push({ ...g, id: crypto.randomUUID(), source: "RSVP form", created_at: new Date().toISOString() });
+  localWrite("guests", cur);
 }
 
 export function resetLocal() {
