@@ -26,13 +26,19 @@ export type Attending = "yes" | "no" | "pending";
 export type Guest = {
   id: string; name: string; phone: string; pax: number; attending: Attending;
   dietary: string; message: string; song_request: string; source: "RSVP form" | "manual"; created_at?: string;
+  /** Invite code: on manual rows it is the household's key; on form rows the code they replied with. */
+  code?: string;
+  /** null = not part of the gate (manual/legacy) · true = confirmed · false = awaiting the couple's review. */
+  approved?: boolean | null;
+  /** Name of the second guest when a party of two was requested. */
+  plus_one?: string;
 };
 export type VendorStatus = "quoted" | "contacted" | "booked" | "pending";
 export type Vendor = { id: string; type: string; name: string; quote: number; contact: string; status: VendorStatus; notes: string };
 export type Priority = "critical" | "high" | "medium";
 export type ChecklistItem = { id: string; task: string; category: Priority; due_date: string; completed: boolean };
 export type AttireGroup = "bride" | "groom" | "shai_family" | "jeg_family" | "bridesmaids" | "groomsmen" | "guests";
-export type Attire = { id: string; group: AttireGroup; label: string; colors: { name: string; hex: string }[]; reserved: boolean; notes: string; swatch_url: string; order: number };
+export type Attire = { id: string; group: AttireGroup; label: string; colors: { name: string; hex: string; fabric?: string }[]; reserved: boolean; notes: string; swatch_url: string; order: number };
 export type EntourageMember = { id: string; role: "bride_family" | "groom_family" | "bridesmaid" | "groomsman" | "sponsor" | "other"; name: string; title: string; order: number };
 export type Faq = { id: string; question: string; answer: string; order: number };
 
