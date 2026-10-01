@@ -26,6 +26,12 @@ export type Attending = "yes" | "no" | "pending";
 export type Guest = {
   id: string; name: string; phone: string; pax: number; attending: Attending;
   dietary: string; message: string; song_request: string; source: "RSVP form" | "manual"; created_at?: string;
+  /** Invite code: on manual rows it is the household's key; on form rows the code they replied with. */
+  code?: string;
+  /** null = not part of the gate (manual/legacy) · true = confirmed · false = awaiting the couple's review. */
+  approved?: boolean | null;
+  /** Name of the second guest when a party of two was requested. */
+  plus_one?: string;
 };
 export type VendorStatus = "quoted" | "contacted" | "booked" | "pending";
 export type Vendor = { id: string; type: string; name: string; quote: number; contact: string; status: VendorStatus; notes: string };
