@@ -2,6 +2,7 @@
 import { Reorder, useDragControls } from "framer-motion";
 import { useMemo, useState } from "react";
 import { getMode, pushSeedSafely, refreshFaqCopy, resetLocal, uid } from "@/lib/db";
+import { entourageGroups } from "@/lib/entourage";
 import { mergeHousehold, planHouseholdMerges } from "@/lib/guests";
 import { useCountdown, useTable } from "@/lib/hooks";
 import type { Attending, Attire, BudgetItem, BudgetStatus, ChecklistItem, EntourageMember, Guest, Priority, ScheduleItem, Vendor, VendorStatus } from "@/lib/types";
@@ -550,17 +551,29 @@ export function Content() {
           <p className="text-xs text-ink/60 mt-3"><b>Order matters:</b> 1–4 = photo strips in Our Story · 5–8 = long photo strip · 9–12 = polaroids · 13+ = extra polaroids near the end.</p>
           <p className="text-xs text-ink/50 mt-1">Tip: photos are compressed automatically. For many large photos, host them (e.g. Supabase Storage / Cloudinary) and paste URLs.</p>
         </Card>
-        <Card title="Entourage" action={<Btn onClick={() => ent.save({ id: uid(), role: "bridesmaid", name: "Name", title: "", order: ent.rows.length + 1 })}>+ Add</Btn>}>
-          <ul className="divide-y divide-ink/10">
-            {[...ent.rows].sort((a, b) => a.order - b.order).map((p) => (
-              <li key={p.id} className="py-2 grid grid-cols-2 md:grid-cols-[165px_1fr_1fr_auto] gap-2 items-center">
-                <Select value={p.role} options={ROLES} onChange={(v) => ent.save({ ...p, role: v })} className="text-xs" />
-                <EditText value={p.name} onSave={(v) => ent.save({ ...p, name: v })} className="font-serif text-lg" />
-                <EditText value={p.title} placeholder="e.g. Sister of the bride" onSave={(v) => ent.save({ ...p, title: v })} className="text-sm" />
-                <button onClick={() => ent.del(p.id)} className="text-ink/30 hover:text-burgundy px-2">✕</button>
-              </li>
+        <Card title="Entourage" action={<Btn onClick={() => ent.save({ id: uid(), role: "bridesmaid", name: "To be announced", title: "", order: ent.rows.length + 1 })}>+ Add</Btn>}>
+          <p className="text-sm text-ink/60 mb-4">
+            Every role is a category — add as many people as you like under <b>Principal Sponsors</b>, <b>Groomsmen</b> or <b>Bridesmaids</b> and the site
+            gathers them under one heading. They always stand in this order: parents, principal sponsors, best man, groomsmen, maid of honor, bridesmaids,
+            ring bearer, flower girl, honoured guests — no matter when you add them.
+          </p>
+          <div className="space-y-5">
+            {entourageGroups(ent.rows).map((g) => (
+              <div key={g.role}>
+                <p className="label text-wine mb-1">{g.heading} · {g.people.length}</p>
+                <ul className="divide-y divide-ink/10">
+                  {g.people.map((p) => (
+                    <li key={p.id} className="py-2 grid grid-cols-2 md:grid-cols-[165px_1fr_1fr_auto] gap-2 items-center">
+                      <Select value={p.role} options={ROLES} onChange={(v) => ent.save({ ...p, role: v })} className="text-xs" />
+                      <EditText value={p.name} onSave={(v) => ent.save({ ...p, name: v })} className="font-serif text-lg" />
+                      <EditText value={p.title} placeholder="e.g. Sister of the bride" onSave={(v) => ent.save({ ...p, title: v })} className="text-sm" />
+                      <button onClick={() => ent.del(p.id)} className="text-ink/30 hover:text-burgundy px-2">✕</button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ))}
-          </ul>
+          </div>
         </Card>
         <Card title="FAQ" action={<><Btn variant="ghost" onClick={refreshFaq}>Refresh wording</Btn><Btn onClick={() => faq.save({ id: uid(), question: "New question?", answer: "", order: faq.rows.length + 1 })}>+ Add</Btn></>}>
           <ul className="divide-y divide-ink/10">

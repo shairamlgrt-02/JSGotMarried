@@ -2,6 +2,7 @@
 import { AnimatePresence, motion, useInView, useScroll, useSpring } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { submitRsvp, type InviteState } from "@/lib/db";
+import { entourageHeading } from "@/lib/entourage";
 import type { Attire, EntourageMember, Faq, ScheduleItem, WeddingInfo } from "@/lib/types";
 import { fullDate } from "./Envelope";
 import { EASE, EASE_OUT, Reveal, Tilt, rise } from "./fx";
@@ -262,6 +263,7 @@ export function Entourage({ people }: { people: EntourageMember[] }) {
   const honoured = by("honored_guest");
   const others = by("other");
   const half = Math.ceil(sponsors.length / 2);
+  const honouredHalf = Math.ceil(honoured.length / 2);
   const Person = ({ p }: { p: EntourageMember }) => (
     <li><p className="font-serif text-lead md:text-h3 text-ink text-balance">{p.name}</p>{p.title && <p className="font-serif italic text-taupe text-tag md:text-fine">{p.title}</p>}</li>
   );
@@ -282,11 +284,11 @@ export function Entourage({ people }: { people: EntourageMember[] }) {
           <div className="relative grid grid-cols-2 gap-8 md:gap-0 mt-8 text-center">
             <Divider />
             <div className="px-2 md:px-12">
-              <p className="micro text-wine mb-4">Parents of the Groom</p>
+              <p className="micro text-wine mb-4">{entourageHeading("groom_family")}</p>
               <List list={groom} />
             </div>
             <div className="px-2 md:px-12">
-              <p className="micro text-wine mb-4">Parents of the Bride</p>
+              <p className="micro text-wine mb-4">{entourageHeading("bride_family")}</p>
               <List list={bride} />
             </div>
           </div>
@@ -297,7 +299,7 @@ export function Entourage({ people }: { people: EntourageMember[] }) {
       <div className="col-wide mt-8 text-center space-y-10 md:space-y-12">
         {sponsors.length > 0 && (
           <Reveal>
-            <p className="micro text-wine mb-4 text-center">Principal Sponsors</p>
+            <p className="micro text-wine mb-4 text-center">{entourageHeading("sponsor")}</p>
             {sponsors.length === 1 ? (
               <List list={sponsors} className="max-w-sm mx-auto" />
             ) : (
@@ -316,13 +318,13 @@ export function Entourage({ people }: { people: EntourageMember[] }) {
               <div className="px-2 md:px-10 space-y-10">
                 {bestMan.length > 0 && (
                   <div>
-                    <p className="micro text-wine mb-4">Best Man</p>
+                    <p className="micro text-wine mb-4">{entourageHeading("best_man")}</p>
                     <List list={bestMan} />
                   </div>
                 )}
                 {groomsmen.length > 0 && (
                   <div>
-                    <p className="micro text-wine mb-4">Groomsmen</p>
+                    <p className="micro text-wine mb-4">{entourageHeading("groomsman")}</p>
                     <List list={groomsmen} />
                   </div>
                 )}
@@ -330,13 +332,13 @@ export function Entourage({ people }: { people: EntourageMember[] }) {
               <div className="px-2 md:px-10 space-y-10">
                 {maidOfHonor.length > 0 && (
                   <div>
-                    <p className="micro text-wine mb-4">Maid of Honor</p>
+                    <p className="micro text-wine mb-4">{entourageHeading("maid_of_honor")}</p>
                     <List list={maidOfHonor} />
                   </div>
                 )}
                 {bridesmaids.length > 0 && (
                   <div>
-                    <p className="micro text-wine mb-4">Bridesmaids</p>
+                    <p className="micro text-wine mb-4">{entourageHeading("bridesmaid")}</p>
                     <List list={bridesmaids} />
                   </div>
                 )}
@@ -349,11 +351,11 @@ export function Entourage({ people }: { people: EntourageMember[] }) {
             <div className="relative grid grid-cols-2 gap-8 md:gap-0">
               <Divider />
               <div className="px-2 md:px-10">
-                <p className="micro text-wine mb-4">Ring Bearer</p>
+                <p className="micro text-wine mb-4">{entourageHeading("ring_bearer")}</p>
                 <List list={ringBearer} />
               </div>
               <div className="px-2 md:px-10">
-                <p className="micro text-wine mb-4">Flower Girl</p>
+                <p className="micro text-wine mb-4">{entourageHeading("flower_girl")}</p>
                 <List list={flowerGirl} />
               </div>
             </div>
@@ -361,13 +363,21 @@ export function Entourage({ people }: { people: EntourageMember[] }) {
         )}
         {honoured.length > 0 && (
           <Reveal>
-            <p className="micro text-wine mb-4 text-center">Our Honoured Guests</p>
-            <List list={honoured} className="max-w-sm mx-auto" />
+            <p className="micro text-wine mb-4 text-center">{entourageHeading("honored_guest")}</p>
+            {honoured.length === 1 ? (
+              <List list={honoured} className="max-w-sm mx-auto" />
+            ) : (
+              <div className="relative grid grid-cols-2 gap-8 md:gap-0 max-w-3xl mx-auto">
+                <Divider />
+                <div className="px-2 md:px-10"><List list={honoured.slice(0, honouredHalf)} /></div>
+                <div className="px-2 md:px-10"><List list={honoured.slice(honouredHalf)} /></div>
+              </div>
+            )}
           </Reveal>
         )}
         {others.length > 0 && (
           <Reveal>
-            <p className="micro text-wine mb-4 text-center">With Love</p>
+            <p className="micro text-wine mb-4 text-center">{entourageHeading("other")}</p>
             <List list={others} className="max-w-sm mx-auto" />
           </Reveal>
         )}
