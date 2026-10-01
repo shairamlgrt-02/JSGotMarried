@@ -20,7 +20,7 @@ const KEY = (t: TableName) => `jsos:${t}`;
 const EVT = "jsos:change";
 
 /** Bump when the default program/entourage/FAQ change so browsers pick up the new defaults once. */
-const SEED_VERSION = "15"; // round 21: Maid of Honor, Best Man, Flower Girl, Ring Bearer & Honored Guest roles
+const SEED_VERSION = "16"; // round 22: FAQ copy refreshed — the dress-code palette and the kids' policy
 const REFRESH: TableName[] = ["schedule", "entourage", "faq", "attire"];
 function localRead<T extends TableName>(t: T): TableMap[T][] {
   if (localStorage.getItem("jsos:seedv") !== SEED_VERSION) {
@@ -176,6 +176,25 @@ async function listStored<T extends TableName>(t: T): Promise<TableMap[T][]> {
 }
 
 export type SeedPushReport = { added: number; refreshed: string[] };
+export type FaqRefreshReport = { rewritten: number; added: number };
+/**
+ * Rewrite the standard FAQ questions with the latest wording from the code. The ordinary
+ * "push starter data" only ever fills in *missing* rows, so copy that changed after the
+ * binder was first seeded (the dress-code palette, the kids' policy…) would never reach a
+ * live project — this is the one-click way. Questions the couple wrote themselves are never
+ * touched: only the seeded ids (f0, f1, f2…) are rewritten, and a deleted one comes back.
+ */
+export async function refreshFaqCopy(): Promise<FaqRefreshReport> {
+  const seeded = SEED.faq as { id: string }[];
+  const stored = (await listStored("faq")) as { id: string }[];
+  const report: FaqRefreshReport = {
+    rewritten: seeded.filter((s) => stored.some((c) => c.id === s.id)).length,
+    added: seeded.filter((s) => !stored.some((c) => c.id === s.id)).length,
+  };
+  await upsert("faq", SEED.faq as never);
+  window.dispatchEvent(new CustomEvent(EVT, { detail: "faq" }));
+  return report;
+}
 /**
  * “Push starter data”, the gentle way:
  *  · guests — never touched: the guest list, the RSVPs and the invite codes stay exactly as they are;

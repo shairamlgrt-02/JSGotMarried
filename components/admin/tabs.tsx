@@ -1,7 +1,7 @@
 "use client";
 import { Reorder, useDragControls } from "framer-motion";
 import { useMemo, useState } from "react";
-import { getMode, pushSeedSafely, resetLocal, uid } from "@/lib/db";
+import { getMode, pushSeedSafely, refreshFaqCopy, resetLocal, uid } from "@/lib/db";
 import { mergeHousehold, planHouseholdMerges } from "@/lib/guests";
 import { useCountdown, useTable } from "@/lib/hooks";
 import type { Attending, Attire, BudgetItem, BudgetStatus, ChecklistItem, EntourageMember, Guest, Priority, ScheduleItem, Vendor, VendorStatus } from "@/lib/types";
@@ -493,9 +493,24 @@ export function Content() {
   const faq = useTable("faq");
   const ROLES = ENTOURAGE_ROLES;
   const [url, setUrl] = useState("");
+  const [msg, setMsg] = useState("");
+  /** Push the latest copy of the standard questions (dress code, kids' policy…) to the binder. */
+  async function refreshFaq() {
+    if (!confirm(
+      "Refresh the standard questions with the latest wording?\n\n" +
+      "· The standard questions (ceremony, plus-one, dress code, kids, parking, photos) are rewritten with the newest copy — use this when the dress code or the kids' policy changes.\n" +
+      "· A standard question you deleted comes back.\n" +
+      "· Questions you wrote yourself are never touched."
+    )) return;
+    try {
+      const r = await refreshFaqCopy();
+      setMsg(`FAQ refreshed ✓ ${r.rewritten} rewritten · ${r.added} added`);
+    } catch (e) { setMsg(`Error: ${(e as Error).message}`); }
+  }
   return (
     <>
       <PageHead kicker="Images, entourage & FAQ" title="Content." />
+      {msg && <p className="mb-4 text-sm text-moss">{msg}</p>}
       <div className="grid md:grid-cols-2 gap-5">
         <Card title="Cover photo (on the invitation card)">
           {info.cover_photo ? <img src={info.cover_photo} alt="" className="rounded-xl w-full max-h-80 object-contain bg-ink/5" /> : <div className="h-40 rounded-xl border-2 border-dashed border-ink/15 grid place-items-center text-ink/40">No cover photo yet — shows inside the carved oval frame</div>}
@@ -547,7 +562,7 @@ export function Content() {
             ))}
           </ul>
         </Card>
-        <Card title="FAQ" action={<Btn onClick={() => faq.save({ id: uid(), question: "New question?", answer: "", order: faq.rows.length + 1 })}>+ Add</Btn>}>
+        <Card title="FAQ" action={<><Btn variant="ghost" onClick={refreshFaq}>Refresh wording</Btn><Btn onClick={() => faq.save({ id: uid(), question: "New question?", answer: "", order: faq.rows.length + 1 })}>+ Add</Btn></>}>
           <ul className="divide-y divide-ink/10">
             {[...faq.rows].sort((a, b) => a.order - b.order).map((f) => (
               <li key={f.id} className="py-2 flex gap-2">

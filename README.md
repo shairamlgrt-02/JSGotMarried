@@ -17,6 +17,9 @@ Anything you edit in the Binder shows up on the public site.
 
 Guests who already replied see a sealed "welcome" card instead of the form, and the same code can't reply twice. If your list still shows doubled rows from an older build, the **Merge N duplicates** button at the top of the tab folds each household back into one row.
 
+## Updating the FAQ / dress-code copy
+Everything in the FAQ is editable any time in **Content → FAQ** (question, answer, order, add, delete). When the *standard* questions change in the code — the dress-code palette, the kids' policy, parking — press **Refresh wording** on that card: it rewrites the standard questions with the newest copy (and restores one you deleted) while leaving any question you wrote yourself untouched. The ordinary "Push starter data" in Settings only ever fills in missing rows, so it won't refresh wording that already exists.
+
 ## Run locally / StackBlitz
 ```bash
 npm install
