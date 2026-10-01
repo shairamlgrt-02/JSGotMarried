@@ -39,8 +39,13 @@ export default function Letter({ children, aside }: { children: React.ReactNode;
     if (!el) return;
     const set = () => setFull(el.offsetHeight + 60);
     set();
+    /* the letter's height changes after first paint (gated sections mount once an
+       invite resolves, fonts/images settle) — keep the roll pinned to the viewport's
+       bottom edge by re-measuring on every content size change, not just on resize */
+    const ro = new ResizeObserver(set);
+    ro.observe(el);
     window.addEventListener("resize", set);
-    return () => window.removeEventListener("resize", set);
+    return () => { ro.disconnect(); window.removeEventListener("resize", set); };
   }, []);
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { setDone(true); return; }
