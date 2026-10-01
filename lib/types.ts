@@ -39,7 +39,29 @@ export type Priority = "critical" | "high" | "medium";
 export type ChecklistItem = { id: string; task: string; category: Priority; due_date: string; completed: boolean };
 export type AttireGroup = "bride" | "groom" | "shai_family" | "jeg_family" | "bridesmaids" | "groomsmen" | "guests";
 export type Attire = { id: string; group: AttireGroup; label: string; colors: { name: string; hex: string; fabric?: string }[]; reserved: boolean; notes: string; swatch_url: string; order: number };
-export type EntourageMember = { id: string; role: "bride_family" | "groom_family" | "bridesmaid" | "groomsman" | "sponsor" | "other"; name: string; title: string; order: number };
+export type EntourageRole =
+  | "bride_family" | "groom_family"
+  | "sponsor"
+  | "best_man" | "groomsman"
+  | "maid_of_honor" | "bridesmaid"
+  | "flower_girl" | "ring_bearer"
+  | "honored_guest"
+  | "other";
+export type EntourageMember = { id: string; role: EntourageRole; name: string; title: string; order: number };
+/** The admin picker's wording; the public site prints its own headings. */
+export const ENTOURAGE_ROLES: { value: EntourageRole; label: string }[] = [
+  { value: "groom_family", label: "Groom's Family" },
+  { value: "bride_family", label: "Bride's Family" },
+  { value: "sponsor", label: "Principal Sponsor" },
+  { value: "best_man", label: "Best Man" },
+  { value: "groomsman", label: "Groomsman" },
+  { value: "maid_of_honor", label: "Maid of Honor" },
+  { value: "bridesmaid", label: "Bridesmaid" },
+  { value: "flower_girl", label: "Flower Girl" },
+  { value: "ring_bearer", label: "Ring Bearer" },
+  { value: "honored_guest", label: "Honored Guest" },
+  { value: "other", label: "Other" },
+];
 export type Faq = { id: string; question: string; answer: string; order: number };
 
 export type TableMap = {

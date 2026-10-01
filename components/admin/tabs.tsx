@@ -1,11 +1,10 @@
 "use client";
 import { Reorder, useDragControls } from "framer-motion";
 import { useMemo, useState } from "react";
-import { getMode, resetLocal, uid, upsert } from "@/lib/db";
+import { getMode, pushSeedSafely, resetLocal, uid } from "@/lib/db";
 import { useCountdown, useTable } from "@/lib/hooks";
-import { SEED } from "@/lib/seed";
-import type { Attending, Attire, BudgetItem, BudgetStatus, ChecklistItem, EntourageMember, Guest, Priority, ScheduleItem, TableName, Vendor, VendorStatus } from "@/lib/types";
-import { TABLES } from "@/lib/types";
+import type { Attending, Attire, BudgetItem, BudgetStatus, ChecklistItem, EntourageMember, Guest, Priority, ScheduleItem, Vendor, VendorStatus } from "@/lib/types";
+import { ENTOURAGE_ROLES, TABLES } from "@/lib/types";
 import { Btn, Card, Donut, EditText, PageHead, Progress, Select, Stat, Tag, download, fileToDataUrl, money, toCsv } from "./ui";
 
 const num = (v: string) => (isNaN(parseFloat(v)) ? 0 : parseFloat(v));
@@ -454,7 +453,7 @@ export function Content() {
   const { info, saveInfo } = useInfo();
   const ent = useTable("entourage");
   const faq = useTable("faq");
-  const ROLES: EntourageMember["role"][] = ["bride_family", "groom_family", "sponsor", "bridesmaid", "groomsman", "other"];
+  const ROLES = ENTOURAGE_ROLES;
   const [url, setUrl] = useState("");
   return (
     <>
@@ -501,7 +500,7 @@ export function Content() {
         <Card title="Entourage" action={<Btn onClick={() => ent.save({ id: uid(), role: "bridesmaid", name: "Name", title: "", order: ent.rows.length + 1 })}>+ Add</Btn>}>
           <ul className="divide-y divide-ink/10">
             {[...ent.rows].sort((a, b) => a.order - b.order).map((p) => (
-              <li key={p.id} className="py-1.5 grid grid-cols-[110px_1fr_1fr_auto] gap-2 items-center">
+              <li key={p.id} className="py-2 grid grid-cols-2 md:grid-cols-[165px_1fr_1fr_auto] gap-2 items-center">
                 <Select value={p.role} options={ROLES} onChange={(v) => ent.save({ ...p, role: v })} className="text-xs" />
                 <EditText value={p.name} onSave={(v) => ent.save({ ...p, name: v })} className="font-serif text-lg" />
                 <EditText value={p.title} placeholder="e.g. Sister of the bride" onSave={(v) => ent.save({ ...p, title: v })} className="text-sm" />
@@ -538,11 +537,17 @@ export function Settings({ mode, onPrint }: { mode: string; onPrint: () => void 
     download(`js-wedding-binder-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(all, null, 2), "application/json");
   }
   async function pushSeed() {
-    if (!confirm("Upload the starter data (details, schedule, budget, vendors, checklist, attire, entourage, FAQ) to Supabase? Existing rows with the same id will be overwritten.")) return;
+    if (!confirm(
+      "Push the starter data to Supabase?\n\n" +
+      "· Your guest list, their RSVPs and the invite codes are never touched.\n" +
+      "· The attire palette is refreshed from the code — families, entourage and guest weaves get the latest colours.\n" +
+      "· Everything else — details, cover photo, gallery, song, schedule, budget, vendors, checklist, entourage and FAQ — only fills in rows that are missing. Nothing you wrote, uploaded or chose is ever overwritten.\n\n" +
+      "Continue?"
+    )) return;
     setMsg("Uploading…");
     try {
-      for (const t of TABLES) if (t !== "guests") await upsert(t as TableName, SEED[t] as never);
-      setMsg("Done ✓ Supabase is seeded.");
+      const r = await pushSeedSafely();
+      setMsg(`Done ✓ ${r.added ? `${r.added} missing ${r.added === 1 ? "row" : "rows"} added` : "nothing was missing"} · attire refreshed from the code · your guests and your edits are untouched.`);
     } catch (e) { setMsg(`Error: ${(e as Error).message}`); }
   }
   return (
@@ -553,7 +558,12 @@ export function Settings({ mode, onPrint }: { mode: string; onPrint: () => void 
           <div className="flex items-center gap-3 mb-3"><Tag>{mode === "supabase" ? "confirmed" : "pending"}</Tag><b>{mode === "supabase" ? "Connected to Supabase" : "Local demo mode (this browser only)"}</b></div>
           {mode === "supabase" ? (
             <>
-              <p className="text-sm text-ink/70">Everything you edit is saved to your Supabase database and shown on the public site. First time? Seed it with the starter data:</p>
+              <p className="text-sm text-ink/70">Everything you edit is saved to your Supabase database and shown on the public site. First time? Seed it with the starter data — this is safe to press any time:</p>
+              <ul className="text-sm text-ink/70 mt-3 space-y-1.5 list-disc pl-5">
+                <li>Your <b>guest list, RSVPs and invite codes</b> are never touched.</li>
+                <li>The <b>attire palette is refreshed from the code</b> — the gem stones, weaves and notes always match the site.</li>
+                <li>Everything else <b>only fills in rows that are missing</b> — your details, cover photo, gallery, song, schedule, budget, vendors, checklist, entourage and FAQ are never overwritten.</li>
+              </ul>
               <Btn variant="dark" className="mt-4" onClick={pushSeed}>Push starter data to Supabase</Btn>
             </>
           ) : (

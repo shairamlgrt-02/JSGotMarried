@@ -55,4 +55,10 @@ alter table attire enable row level security;
 alter table entourage enable row level security;
 alter table faq enable row level security;
 
--- Seed data is loaded from the admin: Settings → "Push starter data to Supabase".
+-- Seed data is loaded from the admin: Settings → "Push starter data to Supabase" (safe to press any
+-- time: guests are skipped, the attire palette is refreshed from the code, everything else only
+-- fills in rows that are missing — nothing the couple wrote or uploaded is overwritten).
+
+-- Tell PostgREST to re-read the schema, so freshly added columns (guests.code, guests.approved,
+-- guests.plus_one …) are usable right away instead of throwing “schema cache” errors.
+notify pgrst, 'reload schema';

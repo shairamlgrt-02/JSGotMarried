@@ -1,5 +1,6 @@
 "use client";
 import { SEED } from "./seed";
+import { TABLES } from "./types";
 import type { Guest, TableMap, TableName } from "./types";
 
 /**
@@ -19,7 +20,7 @@ const KEY = (t: TableName) => `jsos:${t}`;
 const EVT = "jsos:change";
 
 /** Bump when the default program/entourage/FAQ change so browsers pick up the new defaults once. */
-const SEED_VERSION = "14"; // round 20: scarab green, liquid-soft weaves, loving notes
+const SEED_VERSION = "15"; // round 21: Maid of Honor, Best Man, Flower Girl, Ring Bearer & Honored Guest roles
 const REFRESH: TableName[] = ["schedule", "entourage", "faq", "attire"];
 function localRead<T extends TableName>(t: T): TableMap[T][] {
   if (localStorage.getItem("jsos:seedv") !== SEED_VERSION) {
@@ -149,6 +150,48 @@ export async function submitRsvp(g: Omit<Guest, "id" | "source" | "created_at"> 
 export function resetLocal() {
   for (const t of Object.keys(SEED) as TableName[]) localStorage.removeItem(KEY(t));
   window.dispatchEvent(new CustomEvent(EVT, { detail: "*" }));
+}
+
+/**
+ * Rows exactly as the database holds them — no seed fallback. The safe push must never mistake
+ * an empty (or missing) row for a seeded one.
+ */
+async function listStored<T extends TableName>(t: T): Promise<TableMap[T][]> {
+  if ((await getMode()) === "local") return localRead(t);
+  const r = await fetch(`/api/data/${t}`, { cache: "no-store" });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.statusText);
+  return (await r.json()) as TableMap[T][];
+}
+
+export type SeedPushReport = { added: number; refreshed: string[] };
+/**
+ * “Push starter data”, the gentle way:
+ *  · guests — never touched: the guest list, the RSVPs and the invite codes stay exactly as they are;
+ *  · attire — refreshed fully from the code palette (the swatches live in code);
+ *  · every other table, wedding_info included — only rows whose id is missing are added, so the
+ *    couple's details, cover photo, gallery, song, schedule, budget, vendors, checklist,
+ *    entourage and FAQ are never overwritten.
+ */
+export async function pushSeedSafely(): Promise<SeedPushReport> {
+  const report: SeedPushReport = { added: 0, refreshed: [] };
+  for (const t of TABLES) {
+    if (t === "guests") continue;
+    const stored = (await listStored(t)) as { id: string }[];
+    if (t === "attire") {
+      const seedRows = SEED.attire as { id: string }[];
+      for (const row of stored) if (!seedRows.some((s) => s.id === row.id)) await remove("attire", row.id);
+      await upsert("attire", SEED.attire as never);
+      report.refreshed.push(t);
+      continue;
+    }
+    const missing = (SEED[t] as { id: string }[]).filter((s) => !stored.some((c) => c.id === s.id));
+    if (missing.length) {
+      await upsert(t as TableName, missing as never);
+      report.added += missing.length;
+    }
+  }
+  window.dispatchEvent(new CustomEvent(EVT, { detail: "*" }));
+  return report;
 }
 
 export const uid = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : Math.random().toString(36).slice(2));

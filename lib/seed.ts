@@ -2,6 +2,9 @@ import type { TableMap, TableName } from "./types";
 
 const c = (name: string, hex: string, fabric?: string) => ({ name, hex, fabric });
 
+/** Our song — Dilaw (Maki), piano instrumental by Angelo Magnaye. Signed Supabase Storage link. */
+const SONG_URL = "https://bqdjucurmpophnafchwi.supabase.co/storage/v1/object/sign/song/Dilaw%20-%20Maki%20Piano%20Instrumental%20Tutorial%20by%20Angelo%20Magnaye.mp3?token=eyJraWQiOiIwMzUwMzI3Ni04N2FlLTRmNDYtOTQ3Zi0wYmQ2ZWM3OTY4ZDYiLCJhbGciOiJIUzUxMiJ9.eyJ1cmwiOiJzb25nL0RpbGF3IC0gTWFraSBQaWFubyBJbnN0cnVtZW50YWwgVHV0b3JpYWwgYnkgQW5nZWxvIE1hZ25heWUubXAzIiwic2NvcGUiOiJkb3dubG9hZCIsImlhdCI6MTc5MDg2OTEzMiwiZXhwIjoxODIyNDA1MTMyfQ.EFDXxP2IC_q8CBs05vn-xLsDJW8nVHHSsZ-_Xmekkkk_Jfafvv6ACXpJuGOQHQFHXkapY7RcHc4Q42UMLKQ94w";
+
 export const SEED: { [K in TableName]: TableMap[K][] } = {
   wedding_info: [{
     id: "main",
@@ -21,7 +24,7 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     save_the_date_url: "",
     gallery: [],
     cover_photo: "",
-    music_url: "",
+    music_url: SONG_URL,
     rsvp_deadline: "2026-10-25",
   }],
   schedule: [
@@ -90,8 +93,12 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     { id: "p3", role: "groom_family", name: "Mr. ——", title: "Father of the Groom", order: 3 },
     { id: "p4", role: "groom_family", name: "Mrs. ——", title: "Mother of the Groom", order: 4 },
     { id: "e3", role: "sponsor", name: "Principal Sponsors", title: "To be announced", order: 5 },
-    { id: "e1", role: "bridesmaid", name: "Maid of Honor", title: "To be announced", order: 6 },
-    { id: "e2", role: "groomsman", name: "Best Man", title: "To be announced", order: 7 },
+    { id: "e1", role: "maid_of_honor", name: "Maid of Honor", title: "To be announced", order: 6 },
+    { id: "e2", role: "best_man", name: "Best Man", title: "To be announced", order: 7 },
+    { id: "e4", role: "flower_girl", name: "Flower Girl", title: "To be announced", order: 8 },
+    { id: "e5", role: "ring_bearer", name: "Ring Bearer", title: "To be announced", order: 9 },
+    // Honored guests have no placeholder row — add them as they're found and they'll gather
+    // under “Honoured Guests” on the site.
   ],
 
   faq: [

@@ -50,10 +50,14 @@ export function EditText({ value, onSave, className = "", placeholder, type = "t
   );
 }
 
-export function Select<T extends string>({ value, options, onChange, className = "" }: { value: T; options: readonly T[]; onChange: (v: T) => void; className?: string }) {
+/** An option is either the raw value (shown as-is) or a value with a friendlier label. */
+export type SelectOption<T extends string> = T | { value: T; label: string };
+export function Select<T extends string>({ value, options, onChange, className = "" }: { value: T; options: readonly SelectOption<T>[]; onChange: (v: T) => void; className?: string }) {
   return (
     <select value={value} onChange={(e) => onChange(e.target.value as T)} className={`bg-transparent rounded-md px-2 py-1.5 border border-ink/10 focus:border-wine outline-none capitalize ${className}`}>
-      {options.map((o) => <option key={o} value={o}>{o}</option>)}
+      {options.map((o) => typeof o === "string"
+        ? <option key={o} value={o}>{o}</option>
+        : <option key={o.value} value={o.value}>{o.label}</option>)}
     </select>
   );
 }

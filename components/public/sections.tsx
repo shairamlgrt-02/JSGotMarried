@@ -256,7 +256,10 @@ export function Entourage({ people }: { people: EntourageMember[] }) {
   // two columns everywhere — his side left, her side right — so neither family reads as "first"
   const bride = by("bride_family"), groom = by("groom_family");
   const sponsors = by("sponsor");
+  const bestMan = by("best_man"), maidOfHonor = by("maid_of_honor");
   const groomsmen = by("groomsman"), bridesmaids = by("bridesmaid");
+  const ringBearer = by("ring_bearer"), flowerGirl = by("flower_girl");
+  const honoured = by("honored_guest");
   const others = by("other");
   const half = Math.ceil(sponsors.length / 2);
   const Person = ({ p }: { p: EntourageMember }) => (
@@ -306,19 +309,60 @@ export function Entourage({ people }: { people: EntourageMember[] }) {
             )}
           </Reveal>
         )}
-        {(groomsmen.length > 0 || bridesmaids.length > 0) && (
+        {(bestMan.length > 0 || maidOfHonor.length > 0 || groomsmen.length > 0 || bridesmaids.length > 0) && (
+          <Reveal>
+            <div className="relative grid grid-cols-2 gap-8 md:gap-0">
+              <Divider />
+              <div className="px-2 md:px-10 space-y-10">
+                {bestMan.length > 0 && (
+                  <div>
+                    <p className="micro text-wine mb-4">Best Man</p>
+                    <List list={bestMan} />
+                  </div>
+                )}
+                {groomsmen.length > 0 && (
+                  <div>
+                    <p className="micro text-wine mb-4">Groomsmen</p>
+                    <List list={groomsmen} />
+                  </div>
+                )}
+              </div>
+              <div className="px-2 md:px-10 space-y-10">
+                {maidOfHonor.length > 0 && (
+                  <div>
+                    <p className="micro text-wine mb-4">Maid of Honor</p>
+                    <List list={maidOfHonor} />
+                  </div>
+                )}
+                {bridesmaids.length > 0 && (
+                  <div>
+                    <p className="micro text-wine mb-4">Bridesmaids</p>
+                    <List list={bridesmaids} />
+                  </div>
+                )}
+              </div>
+            </div>
+          </Reveal>
+        )}
+        {(ringBearer.length > 0 || flowerGirl.length > 0) && (
           <Reveal>
             <div className="relative grid grid-cols-2 gap-8 md:gap-0">
               <Divider />
               <div className="px-2 md:px-10">
-                <p className="micro text-wine mb-4">Groomsmen</p>
-                <List list={groomsmen} />
+                <p className="micro text-wine mb-4">Ring Bearer</p>
+                <List list={ringBearer} />
               </div>
               <div className="px-2 md:px-10">
-                <p className="micro text-wine mb-4">Bridesmaids</p>
-                <List list={bridesmaids} />
+                <p className="micro text-wine mb-4">Flower Girl</p>
+                <List list={flowerGirl} />
               </div>
             </div>
+          </Reveal>
+        )}
+        {honoured.length > 0 && (
+          <Reveal>
+            <p className="micro text-wine mb-4 text-center">Our Honoured Guests</p>
+            <List list={honoured} className="max-w-sm mx-auto" />
           </Reveal>
         )}
         {others.length > 0 && (
