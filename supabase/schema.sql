@@ -23,11 +23,27 @@ create table if not exists guests (
   attending text default 'pending', dietary text, message text, song_request text, source text default 'manual',
   created_at timestamptz default now()
 );
+alter table guests add column if not exists code text default '';
+alter table guests add column if not exists approved boolean default null;
+alter table guests add column if not exists plus_one text default '';
+
 create table if not exists vendors (id text primary key default gen_random_uuid()::text, type text, name text, quote numeric default 0, contact text, status text default 'pending', notes text);
 create table if not exists checklist (id text primary key default gen_random_uuid()::text, task text, category text default 'medium', due_date date, completed boolean default false);
 create table if not exists attire (id text primary key default gen_random_uuid()::text, "group" text, label text, colors jsonb default '[]', reserved boolean default false, notes text, swatch_url text default '', "order" int default 0);
 create table if not exists entourage (id text primary key default gen_random_uuid()::text, role text, name text, title text, "order" int default 0);
 create table if not exists faq (id text primary key default gen_random_uuid()::text, question text, answer text, "order" int default 0);
+
+-- ── attire palette (round 16): a dozen guest tones — six glossy greens, six shining browns ──
+insert into attire (id, "group", label, colors, reserved, notes, swatch_url, "order") values
+  ('a3', 'shai_family', 'Shai''s Family', '[{"name":"Copper","hex":"#8C3617"}]'::jsonb, true, '', '', 3),
+  ('a4', 'jeg_family', 'Jeg''s Family', '[{"name":"Burgundy","hex":"#5C1223"}]'::jsonb, true, '', '', 4),
+  ('a5', 'bridesmaids', 'Bridesmaids', '[{"name":"Turquoise","hex":"#0F7E7A"},{"name":"Amethyst","hex":"#5E2487"},{"name":"Garnet","hex":"#8E1226"},{"name":"Sapphire","hex":"#0A2A6E"},{"name":"Ruby","hex":"#B01A63"},{"name":"Citrine","hex":"#BE8B0F"}]'::jsonb, true, 'Five bridesmaids in jewel stones; the Maid of Honor shines in Citrine gold', '', 5),
+  ('a7', 'groomsmen', 'Groomsmen', '[{"name":"Grey","hex":"#6E6E6E"},{"name":"Black","hex":"#101010"}]'::jsonb, true, 'Satin-lapel tux or suit', '', 6),
+  ('a6', 'guests', 'Our Guests', '[{"name":"Emerald","hex":"#0A5C33"},{"name":"Laurel","hex":"#35562B"},{"name":"Jade","hex":"#23825A"},{"name":"Olive","hex":"#5F6B24"},{"name":"Peridot","hex":"#9AA62C"},{"name":"Chartreuse","hex":"#B4BC1C"},{"name":"Coffee","hex":"#452A18"},{"name":"Smoky Topaz","hex":"#5E4630"},{"name":"Bronze","hex":"#6F4F1D"},{"name":"Toffee","hex":"#7C5230"},{"name":"Dark Honey","hex":"#8A5A0C"},{"name":"Caramel","hex":"#9C6A28"}]'::jsonb, false, 'Black tie in glossy greens and warm shining browns — kindly avoid black, white, burgundy and copper. Shine welcome: satin, silk or velvet; please skip tulle & chiffon.', '', 7)
+on conflict (id) do update set "group" = excluded."group", label = excluded.label, colors = excluded.colors,
+  reserved = excluded.reserved, notes = excluded.notes, swatch_url = excluded.swatch_url, "order" = excluded."order";
+-- the Maid of Honor no longer has her own card — she sits with the bridesmaids, in Citrine
+delete from attire where id = 'a8' or "group" = 'moh';
 
 alter table wedding_info enable row level security;
 alter table schedule enable row level security;
