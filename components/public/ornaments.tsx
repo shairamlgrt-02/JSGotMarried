@@ -58,7 +58,8 @@ export function Corner({ className = "", color = "currentColor" }: { className?:
 /** Four realistic embossed corners positioned inside a relative parent. */
 export function Corners({ className = "w-20 h-20 md:w-28 md:h-28", inset = "0.75rem" }: { className?: string; color?: string; inset?: string }) {
   const pos = [{ top: inset, left: inset }, { top: inset, right: inset, transform: "scaleX(-1)" }, { bottom: inset, left: inset, transform: "scaleY(-1)" }, { bottom: inset, right: inset, transform: "scale(-1,-1)" }];
-  return <>{pos.map((s, i) => <img key={i} src="/img/corner.webp" alt="" aria-hidden loading="lazy" className={`absolute pointer-events-none object-contain drop-shadow-[1px_3px_2px_rgba(61,47,38,.28)] ${className}`} style={s as React.CSSProperties} />)}</>;
+  // CSS backgrounds, not <img>: a missing asset degrades silently instead of showing a broken-image glyph
+  return <>{pos.map((s, i) => <div key={i} aria-hidden className={`absolute pointer-events-none bg-[url('/img/corner.webp')] bg-center bg-no-repeat bg-contain drop-shadow-[1px_3px_2px_rgba(61,47,38,.28)] ${className}`} style={s as React.CSSProperties} />)}</>;
 }
 
 /** Real lace trim strip (photographic), repeated horizontally. `flip` for a top edge. */
@@ -98,7 +99,45 @@ export function OvalFrame({ children, className = "" }: { children?: React.React
         {children}
         <div className="absolute inset-0 rounded-[50%] shadow-[inset_0_6px_18px_rgba(40,28,20,.45)] pointer-events-none" />
       </div>
-      <img src="/img/frame.webp" alt="" aria-hidden className="absolute inset-0 w-full h-full object-contain pointer-events-none drop-shadow-[4px_14px_12px_rgba(61,47,38,.35)]" />
+      <img src="/img/frame.webp" alt="" aria-hidden className="absolute inset-0 w-full h-full object-contain pointer-events-none drop-shadow-[0_2px_2px_rgba(61,47,38,.22)] drop-shadow-[0_9px_16px_rgba(61,47,38,.10)]" />
     </div>
+  );
+}
+
+/** Mix a hex toward white (t>0) or black (t<0). */
+const mix = (hex: string, t: number) => {
+  const n = parseInt(hex.slice(1), 16);
+  const f = (v: number) => Math.round(t > 0 ? v + (255 - v) * t : v * (1 + t));
+  return `#${((f((n >> 16) & 255) << 16) | (f((n >> 8) & 255) << 8) | f(n & 255)).toString(16).padStart(6, "0")}`;
+};
+
+/** A jewel dot — the entourage wears gems, not flat paint. Coloured stones are cut en
+ *  cabochon like the reference: polished dome, marbled interior, deep shadowed rim,
+ *  a soft gloss top-left and a fire-glow bottom-right. No metal bezel, ever. */
+export function GemDot({ hex, kind = "gem", name, className = "" }: { hex: string; kind?: "gem" | "pearl" | "onyx" | "geode"; name?: string; className?: string }) {
+  const base = kind === "pearl" ? "#F4EFE6" : hex;
+  const cabochon = (gloss: string) =>
+    [
+      gloss,
+      // fire-glow, bottom right — a whisper, not a flare
+      `radial-gradient(circle at 71% 75%, rgba(255,255,255,.38) 0 4%, ${mix(base, 0.28)}77 11%, transparent 36%)`,
+      // marbled veins through the stone
+      `conic-gradient(from 200deg at 56% 44%, transparent 0deg, rgba(255,255,255,.07) 24deg, transparent 46deg, rgba(0,0,0,.22) 78deg, transparent 104deg, rgba(255,255,255,.06) 140deg, transparent 168deg, rgba(0,0,0,.2) 210deg, transparent 240deg, rgba(255,255,255,.07) 286deg, transparent 318deg)`,
+      // cloudy heart
+      `radial-gradient(circle at 46% 58%, ${mix(base, 0.14)}55 0%, transparent 46%)`,
+      // domed body, deep saturated core, dark rim
+      `radial-gradient(circle at 50% 40%, ${mix(base, 0.26)} 0%, ${base} 46%, ${mix(base, -0.55)} 78%, ${mix(base, -0.8)} 100%)`,
+    ].join(", ");
+  const facets =
+    kind === "pearl"
+      ? `radial-gradient(circle at 33% 28%, rgba(255,255,255,.98) 0 8%, rgba(255,255,255,.5) 16%, transparent 30%), radial-gradient(circle at 68% 62%, rgba(255,190,210,.5), transparent 42%), radial-gradient(circle at 55% 40%, rgba(190,235,225,.45), transparent 46%), linear-gradient(160deg, #FFFFFF, #EDE4D6 55%, #D9CCBB)`
+      : kind === "onyx"
+        ? cabochon(`radial-gradient(ellipse 40% 28% at 33% 25%, rgba(255,255,255,.8) 0 10%, rgba(255,255,255,.28) 42%, transparent 72%)`)
+        : kind === "geode"
+          ? `radial-gradient(circle at 30% 25%, rgba(255,255,255,.9) 0 6%, transparent 22%), repeating-conic-gradient(from 40deg at 50% 50%, ${mix(base, -0.35)} 0 9%, ${mix(base, 0.25)} 9% 16%, ${mix(base, -0.12)} 16% 27%)`
+          : cabochon(`radial-gradient(ellipse 40% 28% at 34% 26%, rgba(255,255,255,.6) 0 8%, rgba(255,255,255,.22) 42%, transparent 72%)`);
+  return (
+    <span title={name} aria-label={name} className={`inline-block rounded-full ring-2 ring-lace ${className}`}
+      style={{ backgroundColor: base, backgroundImage: facets, boxShadow: "inset 0 -3px 6px rgba(0,0,0,.35), inset 0 2px 3px rgba(255,255,255,.35), 0 2px 4px rgba(61,47,38,.35)" }} />
   );
 }

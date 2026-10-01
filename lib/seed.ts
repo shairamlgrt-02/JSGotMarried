@@ -15,7 +15,7 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     theme_name: "Vintage Lace",
     story: "Two marketers who spent years telling other people's stories finally wrote their own. One brief, one late-night idea, one wish that came true. On 11.11 we make the wish official — and we want you there when we do.",
     instagram: "@shaiandjeg",
-    hashtags: ["#JSWeDo", "#JSWishComeTrue"],
+    hashtags: ["#JSGotMarried", "#JSWeDo", "#JSWishComeTrue"],
     total_budget: 2500,
     currency: "BHD",
     save_the_date_url: "",
@@ -78,10 +78,11 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
   attire: [
     { id: "a1", group: "bride", label: "The Bride", colors: [c("White", "#F6F1EB")], reserved: true, notes: "", swatch_url: "", order: 1 },
     { id: "a2", group: "groom", label: "The Groom", colors: [c("Black", "#0B0B0B")], reserved: true, notes: "", swatch_url: "", order: 2 },
-    { id: "a3", group: "shai_family", label: "Shai's Family", colors: [c("Burgundy", "#6B1D2A")], reserved: true, notes: "", swatch_url: "", order: 3 },
-    { id: "a4", group: "jeg_family", label: "Jeg's Family", colors: [c("Teal", "#1F5C5C")], reserved: true, notes: "", swatch_url: "", order: 4 },
-    { id: "a5", group: "bridesmaids", label: "Bridesmaids", colors: [c("Amethyst", "#5D3A6B"), c("Magenta", "#8B1E5A"), c("Garnet", "#7A1F2B"), c("Antique Gold", "#B08D4A"), c("Copper", "#A0522D")], reserved: true, notes: "Mixed jewel-tone satin", swatch_url: "", order: 5 },
-    { id: "a6", group: "guests", label: "Our Guests", colors: [c("Olive", "#5B5B2E"), c("Moss", "#4A5D23"), c("Forest", "#2F4A2B"), c("Espresso", "#3C2415"), c("Chocolate", "#4E2E1E"), c("Chestnut", "#7B3F26")], reserved: false, notes: "Black tie, in earth tones — kindly avoid black, white, burgundy and teal.", swatch_url: "", order: 6 },
+    { id: "a3", group: "shai_family", label: "Shai's Family", colors: [c("Copper", "#8C3617")], reserved: true, notes: "", swatch_url: "", order: 3 },
+    { id: "a4", group: "jeg_family", label: "Jeg's Family", colors: [c("Burgundy", "#5C1223")], reserved: true, notes: "", swatch_url: "", order: 4 },
+    { id: "a5", group: "bridesmaids", label: "Bridesmaids", colors: [c("Turquoise", "#0F7E7A"), c("Amethyst", "#5E2487"), c("Garnet", "#8E1226"), c("Sapphire", "#0A2A6E"), c("Ruby", "#B01A63"), c("Citrine", "#BE8B0F")], reserved: true, notes: "Five bridesmaids in jewel stones; the Maid of Honor shines in Citrine gold", swatch_url: "", order: 5 },
+    { id: "a7", group: "groomsmen", label: "Groomsmen", colors: [c("Grey", "#6E6E6E"), c("Black", "#101010")], reserved: true, notes: "Satin-lapel tux or suit", swatch_url: "", order: 6 },
+    { id: "a6", group: "guests", label: "Our Guests", colors: [c("Emerald", "#0A5C33"), c("Laurel", "#35562B"), c("Jade", "#23825A"), c("Jewel Beetle", "#0C7F60"), c("Olive", "#5F6B24"), c("Peridot", "#9AA62C"), c("Coffee", "#452A18"), c("Smoky Topaz", "#5E4630"), c("Bronze", "#6F4F1D"), c("Toffee", "#7C5230"), c("Dark Honey", "#8A5A0C"), c("Caramel", "#9C6A28")], reserved: false, notes: "Black tie in glossy greens and warm shining browns — kindly avoid black, white, burgundy and copper. Shine welcome: satin, silk or velvet; please skip tulle & chiffon.", swatch_url: "", order: 7 },
   ],
   entourage: [
     { id: "p1", role: "bride_family", name: "Mr. ——", title: "Father of the Bride", order: 1 },
@@ -99,6 +100,6 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     { id: "f2", question: "What should I wear?", answer: "Earth tones — olive, moss, forest, espresso, chocolate, chestnut. Please avoid white, black, burgundy and teal (reserved for us and our families).", order: 2 },
     { id: "f3", question: "Are kids welcome?", answer: "We love your little ones, but this is an adults-only celebration unless they are part of the entourage.", order: 3 },
     { id: "f4", question: "Is there parking?", answer: "Yes, parking is available at The Heaven, Damistan.", order: 4 },
-    { id: "f5", question: "Can I post photos?", answer: "Please! Tag @shaiandjeg and use #JSWeDo and #JSWishComeTrue. We only ask for an unplugged ceremony.", order: 5 },
+    { id: "f5", question: "Can I post photos?", answer: "Please! Tag @shaiandjeg and use #JSGotMarried — #JSWeDo and #JSWishComeTrue work beautifully too. We only ask for an unplugged ceremony.", order: 5 },
   ],
 };
