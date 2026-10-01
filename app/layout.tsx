@@ -15,13 +15,13 @@ export const metadata: Metadata = {
     siteName: "Jeger & Shaira",
     title: "Jeger & Shaira — 11.11.2026",
     description: "Save the Date · #JSWeDo #JSWishComeTrue",
-    images: [{ url: "/og.png", width: 1200, height: 630, alt: shareImageAlt }],
+    images: [{ url: "/og.jpg", width: 1200, height: 630, alt: shareImageAlt }],
   },
   twitter: {
     card: "summary_large_image",
     title,
     description,
-    images: ["/og.png"],
+    images: ["/og.jpg"],
   },
 };
 
