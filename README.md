@@ -9,6 +9,14 @@ A digital art piece plus a wedding binder, in one Next.js app.
 
 Anything you edit in the Binder shows up on the public site.
 
+## Sending invite links (Guests & RSVP)
+1. `/admin` → **Guests & RSVP** → **+ Add guest** — one row per household: name, WhatsApp number, and *pax* = how many seats you're inviting them to (1 or 2).
+2. In the **Invite** column hit **issue code** — the row gets a personal code, e.g. `JS-7KQF`.
+3. Hit **copy link** (`https://your-site/?rsvp=JS-7KQF`) or **send ↗** to open WhatsApp with the invitation already written, then send it to that guest. `https://your-site/JS-7KQF` works too.
+4. They open the link, the private pages unseal and they fill the form once. Their reply is written **onto that same row** (never a second row), so the binder stays one row per household: the code turns into a `confirmed` or `needs review` tag, and a plus-one is approved with one click.
+
+Guests who already replied see a sealed "welcome" card instead of the form, and the same code can't reply twice. If your list still shows doubled rows from an older build, the **Merge N duplicates** button at the top of the tab folds each household back into one row.
+
 ## Run locally / StackBlitz
 ```bash
 npm install

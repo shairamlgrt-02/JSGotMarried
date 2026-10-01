@@ -23,6 +23,10 @@ create table if not exists guests (
   attending text default 'pending', dietary text, message text, song_request text, source text default 'manual',
   created_at timestamptz default now()
 );
+-- One row per household: `code` is the household's personal invite key. While the row is
+-- waiting it is the invitation (approved IS NULL); when the guest replies through their link
+-- the SAME row is overwritten with the reply (approved NOT NULL), so the guest list never
+-- doubles up. approved = true → confirmed · false → waiting for the couple's review.
 alter table guests add column if not exists code text default '';
 alter table guests add column if not exists approved boolean default null;
 alter table guests add column if not exists plus_one text default '';

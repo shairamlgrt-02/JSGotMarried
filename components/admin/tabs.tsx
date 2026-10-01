@@ -2,6 +2,7 @@
 import { Reorder, useDragControls } from "framer-motion";
 import { useMemo, useState } from "react";
 import { getMode, pushSeedSafely, resetLocal, uid } from "@/lib/db";
+import { mergeHousehold, planHouseholdMerges } from "@/lib/guests";
 import { useCountdown, useTable } from "@/lib/hooks";
 import type { Attending, Attire, BudgetItem, BudgetStatus, ChecklistItem, EntourageMember, Guest, Priority, ScheduleItem, Vendor, VendorStatus } from "@/lib/types";
 import { ENTOURAGE_ROLES, TABLES } from "@/lib/types";
@@ -279,10 +280,24 @@ const genCode = (rows: Guest[]) => {
     if (!rows.some((r) => r.code === c)) return c;
   }
 };
+/** The personal invitation link for one household — both …/?rsvp=JS-XXXX and …/JS-XXXX unseal the site. */
+const inviteLink = (code: string) => `${location.origin}/?rsvp=${code}`;
+/** One-tap WhatsApp share of that link (straight to the guest when we have their number). */
+const inviteHref = (code: string, phone: string, couple: string, day: string) => {
+  const digits = phone.replace(/\D/g, "");
+  const text = `You're invited ✦ ${couple} · ${day}\nOpen your personal invitation: ${inviteLink(code)}`;
+  return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
+};
 export function Guests() {
   const { rows, save, del, error } = useTable("guests", false);
+  const { info } = useInfo();
   const [filter, setFilter] = useState<"all" | Attending>("all");
   const [q, setQ] = useState("");
+  const [msg, setMsg] = useState("");
+  /** Codes owning more than one row — leftovers from the old "reply = a new row" behaviour. */
+  const merges = useMemo(() => planHouseholdMerges(rows), [rows]);
+  const couple = `${info.bride} & ${info.groom}`;
+  const day = new Date(info.date).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
   const shown = rows
     .filter((g) => filter === "all" || g.attending === filter)
     .filter((g) => !q || `${g.name} ${g.phone}`.toLowerCase().includes(q.toLowerCase()))
@@ -290,12 +305,33 @@ export function Guests() {
   const pax = rows.filter((g) => g.attending === "yes").reduce((s, g) => s + g.pax, 0);
   const pendingPax = rows.filter((g) => g.attending === "pending").reduce((s, g) => s + g.pax, 0);
   const add = () => save({ id: uid(), name: "New guest", phone: "", pax: 1, attending: "pending", dietary: "", message: "", song_request: "", source: "manual", created_at: new Date().toISOString() });
+  /** Fold every extra row of a household back into one: the reply wins, the leftovers go. */
+  async function mergeDuplicates() {
+    if (!merges.length) return;
+    if (!confirm(
+      `Merge ${merges.length} duplicated household ${merges.length === 1 ? "row" : "rows"}?\n\n` +
+      "Every invitation code keeps a single row: the guest's reply is written onto the row you typed " +
+      "(their answer wins, anything it left blank is rescued from the copy) and the leftover row is deleted. " +
+      "Nothing else in the binder is touched."
+    )) return;
+    for (const { keep, drop } of merges) {
+      await save(mergeHousehold(keep, drop));
+      for (const g of drop) await del(g.id);
+    }
+    setMsg(`Merged ✓ ${merges.length} household ${merges.length === 1 ? "row" : "rows"} — one row per invitation code again.`);
+  }
   return (
     <>
       <PageHead kicker="RSVP inbox + manual list" title="The guest list.">
         <Btn onClick={add}>+ Add guest</Btn>
         <Btn variant="ghost" onClick={() => download("guests.csv", toCsv(rows))}>Export CSV</Btn>
+        {merges.length > 0 && <Btn variant="ghost" onClick={mergeDuplicates}>Merge {merges.length} duplicate{merges.length === 1 ? "" : "s"}</Btn>}
       </PageHead>
+      {msg && <p className="mb-4 text-sm text-moss">{msg}</p>}
+      <p className="text-sm text-ink/60 mb-5 max-w-3xl">
+        Add each household once, hit <b>issue code</b>, then <b>copy link</b> or <b>send&#160;↗</b> on WhatsApp. The guest opens their personal
+        link and fills the form once — the reply is written onto <i>this same row</i>, so nobody is ever duplicated.
+      </p>
       {error && <div className="mb-4 text-red-300">{error}</div>}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-5">
         <Card className="!bg-moss !text-paper"><Stat label="Catering headcount" value={pax} sub={`+ up to ${pendingPax} pending`} /></Card>
@@ -330,7 +366,9 @@ export function Guests() {
                       ) : (
                         <>
                           <span className="label !text-[9px] text-ink/60">{g.code}</span>
-                          <button className="label !text-[9px] text-moss" onClick={() => navigator.clipboard?.writeText(`${location.origin}/?rsvp=${g.code}`)}>copy link</button>
+                          <button className="label !text-[9px] text-moss" onClick={() => navigator.clipboard?.writeText(inviteLink(g.code!))}>copy link</button>
+                          <a className="label !text-[9px] text-wine hover:text-burgundy" target="_blank" rel="noreferrer"
+                            href={inviteHref(g.code!, g.phone || "", couple, day)} title={g.phone ? "Send the invitation on WhatsApp" : "Send the invitation on WhatsApp — pick the contact there"}>send ↗</a>
                         </>
                       )}
                       {g.approved === false && (

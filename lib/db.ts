@@ -80,6 +80,14 @@ export type InviteReply = {
 export type InviteState = { name: string; pax: number; reply: InviteReply | null; demo?: boolean };
 
 /**
+ * A guest row is a *reply* once `approved` is set (true = confirmed, false = waiting for the
+ * couple). Before that it is the plain invitation row the couple typed by hand. One code,
+ * one row: the reply overwrites the invitation instead of adding a second row.
+ */
+import { isReply } from "./guests";
+export { isReply };
+
+/**
  * Perpetual test invite: …/JS-DEMO (or /test) unseals the whole site and runs the full
  * RSVP journey with throwaway data — demo replies live only in the tester's browser
  * (localStorage), never reach Supabase and never e-mail the couple.
@@ -109,8 +117,8 @@ export async function fetchInvite(code: string): Promise<InviteState | null> {
   } catch { /* offline — fall through to local */ }
   const rows = localRead("guests") as Guest[];
   const same = rows.filter((g) => (g.code || "").toUpperCase() === cc);
-  const invite = same.find((g) => g.approved === null || g.approved === undefined);
-  const reply = same.find((g) => g.approved !== null && g.approved !== undefined);
+  const invite = same.find((g) => !isReply(g));
+  const reply = same.find(isReply);
   if (!invite && !reply) return null;
   return {
     name: invite?.name ?? reply!.name,
@@ -136,13 +144,17 @@ export async function submitRsvp(g: Omit<Guest, "id" | "source" | "created_at"> 
     if (r.status === 409) return { approved: null, already: true };
     if (r.ok) { const j = await r.json().catch(() => ({})); return { approved: typeof j.approved === "boolean" ? j.approved : null, already: false }; }
   } catch { /* offline or dev without env — fall through */ }
-  // local mode: mirror the server rules (one code, one reply; a second seat waits for review)
+  // local mode: mirror the server rules — one code, one row; the reply overwrites the
+  // invitation in place (same id) and a second seat waits for the couple's review.
   const cur = localRead("guests") as Guest[];
   const cc = (g.code || "").toUpperCase();
-  if (cc && cur.some((x) => (x.code || "").toUpperCase() === cc && x.approved !== null && x.approved !== undefined)) return { approved: null, already: true };
-  const invite = cc ? cur.find((x) => (x.code || "").toUpperCase() === cc && (x.approved === null || x.approved === undefined)) : null;
+  const same = cc ? cur.filter((x) => (x.code || "").toUpperCase() === cc) : [];
+  if (same.some(isReply)) return { approved: null, already: true };
+  const invite = same.find((x) => !isReply(x)) || null;
   const approved = invite && (g.pax ?? 1) <= 1 ? true : false;
-  cur.push({ ...g, id: crypto.randomUUID(), source: "RSVP form", created_at: new Date().toISOString(), approved } as Guest);
+  const row: Guest = { ...g, id: invite?.id ?? crypto.randomUUID(), code: g.code, source: "RSVP form", created_at: new Date().toISOString(), approved } as Guest;
+  const i = cur.findIndex((x) => x.id === row.id);
+  if (i >= 0) cur[i] = row; else cur.push(row);
   localWrite("guests", cur);
   return { approved, already: false };
 }
