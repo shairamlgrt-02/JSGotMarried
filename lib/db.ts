@@ -19,7 +19,7 @@ const KEY = (t: TableName) => `jsos:${t}`;
 const EVT = "jsos:change";
 
 /** Bump when the default program/entourage/FAQ change so browsers pick up the new defaults once. */
-const SEED_VERSION = "3";
+const SEED_VERSION = "4";
 const REFRESH: TableName[] = ["schedule", "entourage", "faq", "attire"];
 function localRead<T extends TableName>(t: T): TableMap[T][] {
   if (localStorage.getItem("jsos:seedv") !== SEED_VERSION) {
@@ -72,15 +72,57 @@ export async function remove(t: TableName, id: string) {
   window.dispatchEvent(new CustomEvent(EVT, { detail: t }));
 }
 
-export async function submitRsvp(g: Omit<Guest, "id" | "source" | "created_at">) {
+export type InviteReply = {
+  name: string; attending: "yes" | "no"; pax: number; plus_one: string;
+  approved: boolean | null; dietary: string; song_request: string; message: string;
+};
+export type InviteState = { name: string; pax: number; reply: InviteReply | null };
+
+/**
+ * Open a personal invitation link: the server answers for Supabase projects, and local
+ * (browser-only) mode validates against this device's list so the couple can rehearse.
+ */
+export async function fetchInvite(code: string): Promise<InviteState | null> {
+  const cc = code.trim().toUpperCase();
+  if (cc.length < 4) return null;
+  try {
+    const r = await fetch(`/api/rsvp?code=${encodeURIComponent(cc)}`, { cache: "no-store" });
+    if (r.ok) {
+      const j = await r.json().catch(() => ({}));
+      if (j.ok) return { name: j.name as string, pax: Number(j.pax) || 1, reply: (j.reply as InviteReply) || null };
+    }
+    if (r.status !== 503) return null; // unknown / malformed code
+  } catch { /* offline — fall through to local */ }
+  const rows = localRead("guests") as Guest[];
+  const same = rows.filter((g) => (g.code || "").toUpperCase() === cc);
+  const invite = same.find((g) => g.approved === null || g.approved === undefined);
+  const reply = same.find((g) => g.approved !== null && g.approved !== undefined);
+  if (!invite && !reply) return null;
+  return {
+    name: invite?.name ?? reply!.name,
+    pax: Number(invite?.pax ?? reply?.pax) || 1,
+    reply: reply
+      ? { name: reply.name, attending: reply.attending === "no" ? "no" : "yes", pax: reply.pax, plus_one: reply.plus_one || "", approved: reply.approved ?? null, dietary: reply.dietary || "", song_request: reply.song_request || "", message: reply.message || "" }
+      : null,
+  };
+}
+
+export async function submitRsvp(g: Omit<Guest, "id" | "source" | "created_at"> & { code?: string; plus_one?: string }): Promise<{ approved: boolean | null; already: boolean }> {
   // The server saves to Supabase and e-mails the couple; the browser keeps a copy only when the server can't be reached.
   try {
     const r = await fetch("/api/rsvp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(g) });
-    if (r.ok) return;
+    if (r.status === 409) return { approved: null, already: true };
+    if (r.ok) { const j = await r.json().catch(() => ({})); return { approved: typeof j.approved === "boolean" ? j.approved : null, already: false }; }
   } catch { /* offline or dev without env — fall through */ }
-  const cur = localRead("guests");
-  cur.push({ ...g, id: crypto.randomUUID(), source: "RSVP form", created_at: new Date().toISOString() });
+  // local mode: mirror the server rules (one code, one reply; a second seat waits for review)
+  const cur = localRead("guests") as Guest[];
+  const cc = (g.code || "").toUpperCase();
+  if (cc && cur.some((x) => (x.code || "").toUpperCase() === cc && x.approved !== null && x.approved !== undefined)) return { approved: null, already: true };
+  const invite = cc ? cur.find((x) => (x.code || "").toUpperCase() === cc && (x.approved === null || x.approved === undefined)) : null;
+  const approved = invite && (g.pax ?? 1) <= 1 ? true : false;
+  cur.push({ ...g, id: crypto.randomUUID(), source: "RSVP form", created_at: new Date().toISOString(), approved } as Guest);
   localWrite("guests", cur);
+  return { approved, already: false };
 }
 
 export function resetLocal() {
