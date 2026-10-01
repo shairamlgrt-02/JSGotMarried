@@ -138,6 +138,7 @@ export function Details() {
           <div className="grid gap-4">
             <F label="Instagram"><EditText value={info.instagram} onSave={(v) => saveInfo({ instagram: v })} /></F>
             <F label="Hashtags (space separated)"><EditText value={info.hashtags.join(" ")} onSave={(v) => saveInfo({ hashtags: v.split(/\s+/).filter(Boolean).map((h) => (h.startsWith("#") ? h : `#${h}`)) })} /></F>
+            <F label="Follow &amp; tag invitation"><EditText value={info.instagram_note ?? ""} multiline rows={3} placeholder="Follow along for the countdown… then tag your photos on the day." onSave={(v) => saveInfo({ instagram_note: v })} className="text-sm" /></F>
           </div>
         </Card>
       </div>

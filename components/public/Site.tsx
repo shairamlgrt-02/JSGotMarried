@@ -5,7 +5,7 @@ import Ambience from "@/components/public/Ambience";
 import EnvelopeHero from "@/components/public/Envelope";
 import Letter from "@/components/public/Letter";
 import { ProgressBar, SmoothScroll } from "@/components/public/fx";
-import { DressCode, ElevenEleven, Entourage, FaqSection, Footer, Gallery, Invitation, PolaroidPair, RsvpNudge, SaveTheDate, SignOff, Rsvp, Schedule, Story, Venue } from "@/components/public/sections";
+import { DressCode, ElevenEleven, Entourage, FaqSection, FollowAndTag, Footer, Gallery, Invitation, PolaroidPair, RsvpNudge, SaveTheDate, SignOff, Rsvp, Schedule, Story, Venue } from "@/components/public/sections";
 import { Moments, MusicButton, SidePolaroids } from "@/components/public/photos";
 import { Postcard, Postmark, Stamp, StickOn, Sticker } from "@/components/public/stickers";
 import { fetchInvite, type InviteState } from "@/lib/db";
@@ -81,6 +81,7 @@ export default function Home({ code = "" }: { code?: string }) {
             {unlocked && <Rsvp info={info} invite={rsvpInvite} code={activeCode} onReplied={load} />}
             {unlocked && <D deco={<Deco at="tr" rotate={6}><Sticker kind="dance" /></Deco>}><FaqSection faqs={faq} /></D>}
             <Moments info={info} />
+            <FollowAndTag info={info} />
             <D className="pt-16 md:pt-8" deco={<Deco at="tl" rotate={-6}><Sticker kind="cheers" /></Deco>}><SignOff info={info} /></D>
         </Letter>
         <Footer info={info} />

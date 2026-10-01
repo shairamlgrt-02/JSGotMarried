@@ -406,6 +406,46 @@ export function Entourage({ people }: { people: EntourageMember[] }) {
   );
 }
 
+/* ─────────── FOLLOW & TAG ─────────── */
+/**
+ * "Come follow us, and tag your moments." Hidden until the couple fills in an Instagram handle
+ * in the binder (Details → Social), so the site never links to an account that doesn't exist
+ * yet — fill the handle in and the whole section appears, no deploy needed.
+ */
+export function FollowAndTag({ info }: { info: WeddingInfo }) {
+  const handle = (info.instagram || "").replace(/^@/, "").trim();
+  if (!handle) return null;
+  const tags = (info.hashtags || []).filter(Boolean);
+  return (
+    <section className="sec-sm">
+      <Reveal className="col text-center">
+        <p className="micro text-taupe">Keep in touch</p>
+        <h2 className="script text-wine text-script mt-2 text-balance">Follow our story</h2>
+        <Flourish className="w-44 md:w-56 mx-auto mt-2 text-taupe/70" />
+        <p className="font-serif italic text-body text-mocha mt-6 text-balance max-w-2xl mx-auto">
+          {info.instagram_note?.trim() || "Follow along for the countdown, the behind-the-scenes and our favourite moments — then tag your photos on the day so we can keep them forever."}
+        </p>
+        <a href={`https://instagram.com/${handle}`} target="_blank" rel="noreferrer"
+          className="micro inline-block mt-8 bg-wine text-lace rounded-full px-8 py-4 hover:bg-mocha transition-colors">
+          Follow @{handle} ↗
+        </a>
+        {tags.length > 0 && (
+          <div className="mt-10">
+            <p className="micro text-taupe">Tag your moments with</p>
+            <div className="flex flex-wrap justify-center gap-3 mt-4">
+              {tags.map((t) => (
+                <a key={t} href={`https://instagram.com/explore/tags/${t.replace("#", "")}`} target="_blank" rel="noreferrer"
+                  className="font-serif text-lead text-wine border border-wine/30 rounded-full px-5 py-2 hover:bg-wine hover:text-lace transition-colors">{t}</a>
+              ))}
+            </div>
+            <p className="micro text-taupe/70 mt-4">Tap a tag to see everyone&rsquo;s photos — we&rsquo;ll be looking for yours.</p>
+          </div>
+        )}
+      </Reveal>
+    </section>
+  );
+}
+
 /* ─────────── RSVP (reply card) ─────────── */
 export function Rsvp({ info, invite, code, onReplied }: { info: WeddingInfo; invite: InviteState; code: string; onReplied: () => void }) {
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
@@ -641,15 +681,15 @@ export function PolaroidPair({ info, from, caps }: { info: WeddingInfo; from: nu
 }
 
 export function Footer({ info }: { info: WeddingInfo }) {
-  const handle = info.instagram.replace("@", "");
+  const handle = (info.instagram || "").replace(/^@/, "").trim();
   return (
     <footer className="relative px-5 pt-12 pb-10 text-center">
       <Flourish className="w-48 md:w-56 mx-auto text-taupe/70" />
       <p className="script text-wine text-script mt-6 text-balance">{info.groom} &amp; {info.bride}</p>
       <p className="font-serif font-light text-mocha text-display mt-3 tracking-[0.12em]">{fullDate(info.date)}</p>
       <div className="flex flex-col md:flex-row justify-center gap-2 md:gap-10 mt-8 micro text-taupe">
-        <a href={`https://instagram.com/${handle}`} target="_blank" rel="noreferrer" className="hover:text-wine">{info.instagram}</a>
-        <span className="text-wine">{info.hashtags.join("  ")}</span>
+        {handle ? <a href={`https://instagram.com/${handle}`} target="_blank" rel="noreferrer" className="hover:text-wine">{info.instagram}</a> : null}
+        {info.hashtags.length > 0 && <span className="text-wine">{info.hashtags.join("  ")}</span>}
       </div>
     </footer>
   );

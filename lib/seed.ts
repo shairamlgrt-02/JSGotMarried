@@ -18,6 +18,7 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     theme_name: "Vintage Lace",
     story: "Two marketers who spent years telling other people's stories finally wrote their own. One brief, one late-night idea, one wish that came true. On 11.11 we make the wish official — and we want you there when we do.",
     instagram: "@shaiandjeg",
+    instagram_note: "Follow along for the countdown, the behind-the-scenes and our favourite moments — then tag your photos on the day so we can keep them forever.",
     hashtags: ["#JSGotMarried", "#JSWeDo", "#JSWishComeTrue"],
     total_budget: 2500,
     currency: "BHD",

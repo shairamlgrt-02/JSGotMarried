@@ -10,6 +10,8 @@ export type WeddingInfo = {
   theme_name: string;
   story: string;
   instagram: string;
+  /** The one line inviting guests to follow along and tag their moments. */
+  instagram_note?: string;
   hashtags: string[];
   total_budget: number;
   currency: string;

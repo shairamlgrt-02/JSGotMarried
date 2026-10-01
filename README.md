@@ -29,6 +29,19 @@ Guests who already replied see a sealed "welcome" card instead of the form, and 
 
 These are read from the database on every request, so edits go live without a redeploy. Uploaded banners are served through `/api/og-image` because WhatsApp/Facebook crawlers can't read images stored in the database. WhatsApp and Facebook cache link previews, so a new banner can take a few minutes to show up.
 
+## Instagram: follow us & tag your moments
+The site ends with a **Follow our story** section — a follow button for your page, and your wedding hashtags as tappable chips that open each tag on Instagram.
+
+It is driven by **Details → Social** in the binder:
+
+| Field | What it does |
+|---|---|
+| **Instagram** | the handle. The section (and the footer link) appear only when this is filled in — so while the account doesn't exist yet, leave the field empty and nothing links to a dead page. Create the account, type the handle, and the section appears instantly, no deploy needed. |
+| **Hashtags** | space separated, `#` added for you. Each one becomes a tappable tag link. |
+| **Follow & tag invitation** | the line inviting guests to follow along and tag their moments — write it however you like. |
+
+The FAQ's photo answer and the footer keep pointing at the same handle and hashtags, so everything stays in step.
+
 ## Updating the FAQ / dress-code copy
 Everything in the FAQ is editable any time in **Content → FAQ** (question, answer, order, add, delete). When the *standard* questions change in the code — the dress-code palette, the kids' policy, parking — press **Refresh wording** on that card: it rewrites the standard questions with the newest copy (and restores one you deleted) while leaving any question you wrote yourself untouched. The ordinary "Push starter data" in Settings only ever fills in missing rows, so it won't refresh wording that already exists.
 
