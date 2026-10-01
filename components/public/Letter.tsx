@@ -1,5 +1,5 @@
 "use client";
-import { animate, motion, useInView, useMotionTemplate, useMotionValue, useTransform } from "framer-motion";
+import { motion, useMotionTemplate, useScroll, useTransform } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 
 /** Faint, real-looking stains scattered down the letter. */
@@ -26,32 +26,46 @@ const FIBRE = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'
 /** One long, continuous vintage love letter — it starts rolled up like a scroll and unrolls when guests reach it. */
 export default function Letter({ children, aside }: { children: React.ReactNode; aside?: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "0px 0px -35% 0px" });
-  const y = useMotionValue(0);
+  const [full, setFull] = useState(1);
   const [done, setDone] = useState(false);
+  /* The unroll is tied to the guest's scroll: the rolled edge sits just below the viewport, so the
+     letter opens as they read downwards — and softly rolls back when they scroll up. Clip only,
+     so the page height never changes. Reduced motion → simply shown open. */
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start 92%", "end 92%"] });
+  const y = useTransform(scrollYProgress, [0, 1], [0, full]);
   const clip = useMotionTemplate`inset(-60px -400px calc(100% - ${y}px) -400px)`;
   useEffect(() => {
-    if (!inView || !ref.current) return;
-    const full = ref.current.offsetHeight + 60;
-    // jumped straight past the top (e.g. tapped "RSVP") or reduced motion → just show it
-    if (ref.current.getBoundingClientRect().top < -80 || window.matchMedia("(prefers-reduced-motion: reduce)").matches) { y.set(full); setDone(true); return; }
-    const first = Math.min(full, window.innerHeight * 1.15);
-    const c = animate(y, [0, first, full], { duration: 3.8, times: [0, 0.7, 1], ease: [[0.33, 0, 0.2, 1], [0.6, 0, 0.9, 0.6]], onComplete: () => setDone(true) });
-    return () => c.stop();
-  }, [inView, y]);
+    const el = ref.current;
+    if (!el) return;
+    const set = () => setFull(el.offsetHeight + 60);
+    set();
+    /* the letter's height changes after first paint (gated sections mount once an
+       invite resolves, fonts/images settle) — keep the roll pinned to the viewport's
+       bottom edge by re-measuring on every content size change, not just on resize */
+    const ro = new ResizeObserver(set);
+    ro.observe(el);
+    window.addEventListener("resize", set);
+    return () => { ro.disconnect(); window.removeEventListener("resize", set); };
+  }, []);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { setDone(true); return; }
+    return scrollYProgress.on("change", (v) => { if (v >= 0.999) setDone(true); });
+  }, [scrollYProgress]);
   const spin = useTransform(y, (v) => `${(v / 3) % 360}deg`);
 
   return (
-    <div ref={ref} className="relative mx-auto w-[92%] md:w-[84%] max-w-5xl mt-10 mb-24">
-      <motion.div style={{ clipPath: done ? "none" : clip, WebkitClipPath: done ? "none" : clip }} className="relative">
-        <div aria-hidden className="absolute z-[4] inset-x-2 top-12 bottom-6 bg-[#5A463A]/25 blur-2xl rounded-[30px] translate-y-3" />
+    <div ref={ref} className="relative mx-auto w-[92%] md:w-[84%] max-w-5xl mt-10 mb-14">
+      {/* soft halo: a box-shadow on the clipped wrapper instead of a full-height blur(40px)
+          layer — same look at the edges, a fraction of the paint cost. It sits inside the
+          clip, so the glow unrolls with the letter. */}
+      <motion.div style={{ clipPath: done ? "none" : clip, WebkitClipPath: done ? "none" : clip }} className="relative shadow-[0_14px_38px_6px_rgba(90,70,58,0.22)]">
         <div className="relative z-[5] deckle-long overflow-hidden" style={{ backgroundColor: "#F6F0E4", backgroundImage: `${GRAIN}, ${FIBRE}`, backgroundSize: "220px 220px, 600px 600px" }}>
           <div aria-hidden className="absolute inset-0 pointer-events-none bg-[linear-gradient(165deg,rgba(255,255,255,.35),transparent_18%,transparent_82%,rgba(120,95,75,.06))]" />
           {STAINS.map((st, i) => (
             <div key={i} aria-hidden className="absolute rounded-full pointer-events-none" style={{ top: st.top, left: st.left, width: st.size, height: st.size, background: stainBg[st.kind], transform: `rotate(${i * 37}deg) scaleX(${1 + (i % 3) * 0.12})` }} />
           ))}
           <div aria-hidden className="absolute inset-0 pointer-events-none shadow-[inset_0_0_60px_rgba(150,115,80,.16),inset_0_0_8px_rgba(150,115,80,.22)]" />
-          <div className="relative z-[1] pt-16 md:pt-24 pb-16 md:pb-24">{children}</div>
+          <div className="relative z-[1] pt-6 md:pt-10 pb-6 md:pb-10">{children}</div>
         </div>
         <div aria-hidden className="lace-trim absolute z-[7] -top-3 md:-top-4 -inset-x-1" style={{ transform: "scaleY(-1)" }} />
         <div aria-hidden className="lace-trim lace-trim-bottom absolute z-[7] -bottom-3 md:-bottom-4 -inset-x-1" />
@@ -61,7 +75,7 @@ export default function Letter({ children, aside }: { children: React.ReactNode;
       {/* the paper roll that travels down as the letter unrolls */}
       {!done && (
         <motion.div aria-hidden style={{ top: y }} className="absolute z-[9] -left-[1.5%] -right-[1.5%] -translate-y-1/2 pointer-events-none">
-          <div className="relative h-[clamp(38px,6vw,64px)] rounded-[999px] overflow-hidden shadow-[0_14px_18px_-6px_rgba(61,47,38,.45),0_3px_4px_rgba(61,47,38,.25)]"
+          <div className="relative h-[clamp(30px,5vw,54px)] rounded-[999px] overflow-hidden shadow-[0_12px_16px_-8px_rgba(61,47,38,.38),0_2px_3px_rgba(61,47,38,.2)]"
             style={{ background: "linear-gradient(180deg,#D9CCB6 0%,#F8F3EA 22%,#FFFDF8 38%,#EFE6D6 60%,#CDBDA3 85%,#B8A688 100%)" }}>
             {/* paper grain + the spiral of rolled paper sliding past */}
             <motion.div className="absolute inset-0 opacity-60" style={{ backgroundImage: "repeating-linear-gradient(90deg, rgba(120,95,75,.0) 0 22px, rgba(120,95,75,.10) 22px 23px)", backgroundPositionX: spin }} />
@@ -74,9 +88,6 @@ export default function Letter({ children, aside }: { children: React.ReactNode;
           {/* wine ribbon that tied the scroll, loosened */}
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 md:w-4 h-[115%] bg-wine/85 shadow-[0_2px_3px_rgba(61,47,38,.3)]" />
         </motion.div>
-      )}
-      {!inView && (
-        <p className="absolute left-0 right-0 top-[clamp(46px,7vw,76px)] text-center label text-wine">Keep scrolling · our letter unrolls</p>
       )}
     </div>
   );

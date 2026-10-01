@@ -58,7 +58,8 @@ export function Corner({ className = "", color = "currentColor" }: { className?:
 /** Four realistic embossed corners positioned inside a relative parent. */
 export function Corners({ className = "w-20 h-20 md:w-28 md:h-28", inset = "0.75rem" }: { className?: string; color?: string; inset?: string }) {
   const pos = [{ top: inset, left: inset }, { top: inset, right: inset, transform: "scaleX(-1)" }, { bottom: inset, left: inset, transform: "scaleY(-1)" }, { bottom: inset, right: inset, transform: "scale(-1,-1)" }];
-  return <>{pos.map((s, i) => <img key={i} src="/img/corner.webp" alt="" aria-hidden loading="lazy" className={`absolute pointer-events-none object-contain drop-shadow-[1px_3px_2px_rgba(61,47,38,.28)] ${className}`} style={s as React.CSSProperties} />)}</>;
+  // CSS backgrounds, not <img>: a missing asset degrades silently instead of showing a broken-image glyph
+  return <>{pos.map((s, i) => <div key={i} aria-hidden className={`absolute pointer-events-none bg-[url('/img/corner.webp')] bg-center bg-no-repeat bg-contain drop-shadow-[1px_3px_2px_rgba(61,47,38,.28)] ${className}`} style={s as React.CSSProperties} />)}</>;
 }
 
 /** Real lace trim strip (photographic), repeated horizontally. `flip` for a top edge. */
@@ -98,7 +99,31 @@ export function OvalFrame({ children, className = "" }: { children?: React.React
         {children}
         <div className="absolute inset-0 rounded-[50%] shadow-[inset_0_6px_18px_rgba(40,28,20,.45)] pointer-events-none" />
       </div>
-      <img src="/img/frame.webp" alt="" aria-hidden className="absolute inset-0 w-full h-full object-contain pointer-events-none drop-shadow-[4px_14px_12px_rgba(61,47,38,.35)]" />
+      <img src="/img/frame.webp" alt="" aria-hidden className="absolute inset-0 w-full h-full object-contain pointer-events-none drop-shadow-[0_2px_2px_rgba(61,47,38,.22)] drop-shadow-[0_9px_16px_rgba(61,47,38,.10)]" />
     </div>
+  );
+}
+
+/** Mix a hex toward white (t>0) or black (t<0). */
+const mix = (hex: string, t: number) => {
+  const n = parseInt(hex.slice(1), 16);
+  const f = (v: number) => Math.round(t > 0 ? v + (255 - v) * t : v * (1 + t));
+  return `#${((f((n >> 16) & 255) << 16) | (f((n >> 8) & 255) << 8) | f(n & 255)).toString(16).padStart(6, "0")}`;
+};
+
+/** A faceted jewel dot — the entourage wears gems, not flat paint. */
+export function GemDot({ hex, kind = "gem", name, className = "" }: { hex: string; kind?: "gem" | "pearl" | "onyx" | "geode"; name?: string; className?: string }) {
+  const base = kind === "pearl" ? "#F4EFE6" : hex;
+  const facets =
+    kind === "pearl"
+      ? `radial-gradient(circle at 33% 28%, rgba(255,255,255,.98) 0 8%, rgba(255,255,255,.5) 16%, transparent 30%), radial-gradient(circle at 68% 62%, rgba(255,190,210,.5), transparent 42%), radial-gradient(circle at 55% 40%, rgba(190,235,225,.45), transparent 46%), linear-gradient(160deg, #FFFFFF, #EDE4D6 55%, #D9CCBB)`
+      : kind === "onyx"
+        ? `radial-gradient(circle at 32% 26%, rgba(255,255,255,.95) 0 5%, rgba(255,255,255,.28) 10%, transparent 20%), conic-gradient(from 200deg at 50% 50%, #000000 0 12%, #2A2A2A 12% 26%, #050505 26% 44%, #383838 44% 58%, #0A0A0A 58% 78%, #232323 78% 100%)`
+        : kind === "geode"
+          ? `radial-gradient(circle at 30% 25%, rgba(255,255,255,.9) 0 6%, transparent 22%), repeating-conic-gradient(from 40deg at 50% 50%, ${mix(base, -0.35)} 0 9%, ${mix(base, 0.25)} 9% 16%, ${mix(base, -0.12)} 16% 27%)`
+          : `radial-gradient(circle at 32% 27%, rgba(255,255,255,.95) 0 6%, rgba(255,255,255,.35) 13%, transparent 24%), conic-gradient(from 210deg at 50% 50%, ${mix(base, -0.32)} 0 14%, ${mix(base, 0.22)} 14% 28%, ${mix(base, -0.12)} 28% 46%, ${mix(base, 0.3)} 46% 62%, ${mix(base, -0.22)} 62% 82%, ${mix(base, 0.12)} 82% 100%)`;
+  return (
+    <span title={name} aria-label={name} className={`inline-block rounded-full ring-2 ring-lace ${className}`}
+      style={{ backgroundColor: base, backgroundImage: facets, boxShadow: "inset 0 -3px 6px rgba(0,0,0,.35), inset 0 2px 3px rgba(255,255,255,.35), 0 2px 4px rgba(61,47,38,.35)" }} />
   );
 }
