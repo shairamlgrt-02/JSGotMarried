@@ -526,6 +526,7 @@ export function Content() {
           {info.music_url && <audio src={info.music_url} controls className="w-full mt-3" />}
         </Card>
         <Card title="Save the Date">
+          <p className="text-sm text-ink/60 mb-3">Your Save the Date graphic. It appears on the public site just under the big <b>11.11</b> date, and guests can open or download it from there.</p>
           {info.save_the_date_url ? <img src={info.save_the_date_url} alt="" className="rounded-xl w-full max-h-80 object-contain bg-ink/5" /> : <div className="h-40 rounded-xl border-2 border-dashed border-ink/15 grid place-items-center text-ink/40">No graphic yet</div>}
           <div className="flex gap-2 mt-4">
             <label className="label !text-[10px] cursor-pointer bg-wine text-lace rounded-full px-4 py-2.5">Upload<input type="file" accept="image/*" hidden onChange={async (e) => { const f = e.target.files?.[0]; if (f) saveInfo({ save_the_date_url: await fileToDataUrl(f) }); }} /></label>
@@ -595,6 +596,7 @@ export function Content() {
 
 /* ═════════════ 10. SETTINGS ═════════════ */
 export function Settings({ mode, onPrint }: { mode: string; onPrint: () => void }) {
+  const { info, saveInfo } = useInfo();
   const [msg, setMsg] = useState("");
   async function exportAll() {
     const { list } = await import("@/lib/db");
@@ -616,10 +618,49 @@ export function Settings({ mode, onPrint }: { mode: string; onPrint: () => void 
       setMsg(`Done ✓ ${r.added ? `${r.added} missing ${r.added === 1 ? "row" : "rows"} added` : "nothing was missing"} · attire refreshed from the code · your guests and your edits are untouched.`);
     } catch (e) { setMsg(`Error: ${(e as Error).message}`); }
   }
+  const sharePreview = info.share_image || "/og.jpg";
   return (
     <>
       <PageHead kicker="Housekeeping" title="Settings." />
       <div className="grid md:grid-cols-2 gap-5">
+        <Card title="Website & sharing">
+          <p className="text-sm text-ink/60 mb-4">How your site introduces itself — the browser tab, the card friends see when they share your link, and the little tab icon.</p>
+          <div className="rounded-xl border border-ink/10 overflow-hidden max-w-sm mb-5">
+            <div className="aspect-[1.91/1] bg-ink/5"><img src={sharePreview} alt="" className="w-full h-full object-cover" /></div>
+            <div className="p-3 bg-white/60">
+              <p className="label !text-[9px] text-ink/40">{location.host}</p>
+              <p className="font-semibold text-sm">{info.site_title || "Your tab title"}</p>
+              <p className="text-xs text-ink/60 line-clamp-2">{info.site_description || "The description friends read before they open your link."}</p>
+            </div>
+          </div>
+          <div className="grid gap-5">
+            <F label="Browser tab title"><EditText value={info.site_title ?? ""} placeholder="Jeger & Shaira — Wedding · 11.11.2026" onSave={(v) => saveInfo({ site_title: v })} /></F>
+            <F label="Description on shared links"><EditText value={info.site_description ?? ""} multiline rows={2} placeholder="Jeger & Shaira are getting married on 11.11.2026…" onSave={(v) => saveInfo({ site_description: v })} /></F>
+            <div>
+              <span className="label text-ink/50 block mb-1">Preview banner on shared links</span>
+              <p className="text-xs text-ink/50 mb-2">What WhatsApp, iMessage and Facebook show when someone shares your link. A 1200 × 630 image looks best.</p>
+              <div className="flex flex-wrap gap-2">
+                <label className="label !text-[10px] cursor-pointer bg-wine text-lace rounded-full px-4 py-2.5">Upload<input type="file" accept="image/*" hidden onChange={async (e) => { const f = e.target.files?.[0]; if (f) saveInfo({ share_image: await fileToDataUrl(f, 1200) }); }} /></label>
+                {info.share_image && <Btn variant="danger" onClick={() => saveInfo({ share_image: "" })}>Remove</Btn>}
+              </div>
+              <EditText value={/^https?:/i.test(info.share_image ?? "") ? info.share_image! : ""} placeholder="…or paste a link to a hosted image" onSave={(v) => v.trim() && saveInfo({ share_image: v.trim() })} className="mt-2 text-sm break-all" />
+            </div>
+            <div>
+              <span className="label text-ink/50 block mb-1">Favicon (the tab icon)</span>
+              <div className="flex items-center gap-3 mb-2">
+                <img src={info.favicon || "/favicon.png"} alt="" className="w-10 h-10 rounded-lg object-cover bg-ink/5 ring-1 ring-ink/10" />
+                <span className="text-sm text-ink/50">{info.favicon ? "Your icon" : "The default icon — upload your own"}</span>
+              </div>
+              <p className="text-xs text-ink/50 mb-2">Square works best (512 × 512 or smaller). It shows in browser tabs, bookmarks and phone home screens.</p>
+              <div className="flex flex-wrap gap-2">
+                <label className="label !text-[10px] cursor-pointer bg-wine text-lace rounded-full px-4 py-2.5">Upload<input type="file" accept="image/*" hidden onChange={async (e) => { const f = e.target.files?.[0]; if (f) saveInfo({ favicon: await fileToDataUrl(f, 256) }); }} /></label>
+                {info.favicon && <Btn variant="danger" onClick={() => saveInfo({ favicon: "" })}>Use default</Btn>}
+              </div>
+              <EditText value={/^https?:/i.test(info.favicon ?? "") ? info.favicon! : ""} placeholder="…or paste a link to a hosted icon" onSave={(v) => v.trim() && saveInfo({ favicon: v.trim() })} className="mt-2 text-sm break-all" />
+            </div>
+          </div>
+          <p className="text-xs text-ink/50 mt-4">Leave a field empty and it falls back to the starter wording. Shared-link previews are cached by WhatsApp and Facebook for a while, so a new banner can take a few minutes to appear.</p>
+        </Card>
         <Card title="Storage">
           <div className="flex items-center gap-3 mb-3"><Tag>{mode === "supabase" ? "confirmed" : "pending"}</Tag><b>{mode === "supabase" ? "Connected to Supabase" : "Local demo mode (this browser only)"}</b></div>
           {mode === "supabase" ? (

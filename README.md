@@ -17,6 +17,18 @@ Anything you edit in the Binder shows up on the public site.
 
 Guests who already replied see a sealed "welcome" card instead of the form, and the same code can't reply twice. If your list still shows doubled rows from an older build, the **Merge N duplicates** button at the top of the tab folds each household back into one row.
 
+## Website settings (tab title, share preview, favicon)
+**Settings → Website & sharing** controls how the site introduces itself, with a live mock of the shared-link card:
+
+| Field | Where it shows |
+|---|---|
+| **Browser tab title** | the browser/bookmark tab |
+| **Description on shared links** | the text under the title when the link is shared on WhatsApp, iMessage or Facebook (and in search results) |
+| **Preview banner** | the image in that shared-link card — 1200 × 630 looks best; upload one or paste a link to a hosted image |
+| **Favicon** | the little icon in the tab, bookmarks and phone home screens — square, 512 × 512 or smaller |
+
+These are read from the database on every request, so edits go live without a redeploy. Uploaded banners are served through `/api/og-image` because WhatsApp/Facebook crawlers can't read images stored in the database. WhatsApp and Facebook cache link previews, so a new banner can take a few minutes to show up.
+
 ## Updating the FAQ / dress-code copy
 Everything in the FAQ is editable any time in **Content → FAQ** (question, answer, order, add, delete). When the *standard* questions change in the code — the dress-code palette, the kids' policy, parking — press **Refresh wording** on that card: it rewrites the standard questions with the newest copy (and restores one you deleted) while leaving any question you wrote yourself untouched. The ordinary "Push starter data" in Settings only ever fills in missing rows, so it won't refresh wording that already exists.
 

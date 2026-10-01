@@ -14,6 +14,11 @@ export type WeddingInfo = {
   total_budget: number;
   currency: string;
   save_the_date_url: string;
+  /** Website & sharing, editable in the binder (Settings → Website & sharing). */
+  site_title?: string;        // the browser tab title
+  site_description?: string;  // the description friends see on a shared link
+  share_image?: string;       // the preview banner on WhatsApp / iMessage / Facebook
+  favicon?: string;           // the little icon in the browser tab
   gallery: string[];
   cover_photo?: string;
   music_url?: string;

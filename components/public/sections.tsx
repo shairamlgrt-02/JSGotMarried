@@ -82,6 +82,26 @@ export function ElevenEleven({ info }: { info: WeddingInfo }) {
   );
 }
 
+/**
+ * The couple's Save the Date graphic — appears only once one is uploaded in the binder
+ * (Content → Save the Date). Guests can open it full size or save it to their phone.
+ */
+export function SaveTheDate({ info }: { info: WeddingInfo }) {
+  const src = info.save_the_date_url;
+  if (!src) return null;
+  return (
+    <section className="sec-sm">
+      <Reveal className="col text-center">
+        <p className="micro text-wine">Save the Date</p>
+        <a href={src} target="_blank" rel="noreferrer" className="block mt-6">
+          <img src={src} alt={`Save the Date — ${info.groom} & ${info.bride}`} className="mx-auto w-auto max-h-[70vh] rounded-2xl ring-1 ring-taupe/20 shadow-[0_2px_3px_rgba(61,47,38,.15),0_40px_80px_-40px_rgba(61,47,38,.55)]" />
+        </a>
+        <a href={src} download className="micro text-taupe hover:text-wine underline underline-offset-4 mt-5 inline-block">Save it to your phone ↗</a>
+      </Reveal>
+    </section>
+  );
+}
+
 /* ─────────── THE DAY ─────────── */
 /** Line-art medallion icon chosen from the program title (sized to sit inside a 52px medallion on phones). */
 function ProgramIcon({ title }: { title: string }) {
