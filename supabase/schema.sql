@@ -16,6 +16,13 @@ create table if not exists wedding_info (
 alter table wedding_info add column if not exists cover_photo text default '';
 alter table wedding_info add column if not exists music_url text default '';
 alter table wedding_info add column if not exists rsvp_deadline text default '2026-10-25';
+-- Website & sharing (Settings → Website & sharing in the binder): the browser tab title, the
+-- description shown on shared links, the link-preview banner and the tab icon.
+alter table wedding_info add column if not exists site_title text default '';
+alter table wedding_info add column if not exists site_description text default '';
+alter table wedding_info add column if not exists share_image text default '';
+alter table wedding_info add column if not exists favicon text default '';
+alter table wedding_info add column if not exists instagram_note text default '';
 create table if not exists schedule (id text primary key default gen_random_uuid()::text, time text, title text, detail text, "order" int default 0);
 create table if not exists budget (id text primary key default gen_random_uuid()::text, category text, item text, quoted_cost numeric default 0, paid_cost numeric default 0, status text default 'pending');
 create table if not exists guests (
@@ -23,6 +30,10 @@ create table if not exists guests (
   attending text default 'pending', dietary text, message text, song_request text, source text default 'manual',
   created_at timestamptz default now()
 );
+-- One row per household: `code` is the household's personal invite key. While the row is
+-- waiting it is the invitation (approved IS NULL); when the guest replies through their link
+-- the SAME row is overwritten with the reply (approved NOT NULL), so the guest list never
+-- doubles up. approved = true → confirmed · false → waiting for the couple's review.
 alter table guests add column if not exists code text default '';
 alter table guests add column if not exists approved boolean default null;
 alter table guests add column if not exists plus_one text default '';

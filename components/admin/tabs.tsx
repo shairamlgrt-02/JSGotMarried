@@ -1,7 +1,9 @@
 "use client";
 import { Reorder, useDragControls } from "framer-motion";
 import { useMemo, useState } from "react";
-import { getMode, pushSeedSafely, resetLocal, uid } from "@/lib/db";
+import { getMode, pushSeedSafely, refreshFaqCopy, resetLocal, uid } from "@/lib/db";
+import { entourageGroups } from "@/lib/entourage";
+import { mergeHousehold, planHouseholdMerges } from "@/lib/guests";
 import { useCountdown, useTable } from "@/lib/hooks";
 import type { Attending, Attire, BudgetItem, BudgetStatus, ChecklistItem, EntourageMember, Guest, Priority, ScheduleItem, Vendor, VendorStatus } from "@/lib/types";
 import { ENTOURAGE_ROLES, TABLES } from "@/lib/types";
@@ -136,6 +138,7 @@ export function Details() {
           <div className="grid gap-4">
             <F label="Instagram"><EditText value={info.instagram} onSave={(v) => saveInfo({ instagram: v })} /></F>
             <F label="Hashtags (space separated)"><EditText value={info.hashtags.join(" ")} onSave={(v) => saveInfo({ hashtags: v.split(/\s+/).filter(Boolean).map((h) => (h.startsWith("#") ? h : `#${h}`)) })} /></F>
+            <F label="Follow &amp; tag invitation"><EditText value={info.instagram_note ?? ""} multiline rows={3} placeholder="Follow along for the countdown… then tag your photos on the day." onSave={(v) => saveInfo({ instagram_note: v })} className="text-sm" /></F>
           </div>
         </Card>
       </div>
@@ -279,10 +282,24 @@ const genCode = (rows: Guest[]) => {
     if (!rows.some((r) => r.code === c)) return c;
   }
 };
+/** The personal invitation link for one household — both …/?rsvp=JS-XXXX and …/JS-XXXX unseal the site. */
+const inviteLink = (code: string) => `${location.origin}/?rsvp=${code}`;
+/** One-tap WhatsApp share of that link (straight to the guest when we have their number). */
+const inviteHref = (code: string, phone: string, couple: string, day: string) => {
+  const digits = phone.replace(/\D/g, "");
+  const text = `You're invited ✦ ${couple} · ${day}\nOpen your personal invitation: ${inviteLink(code)}`;
+  return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
+};
 export function Guests() {
   const { rows, save, del, error } = useTable("guests", false);
+  const { info } = useInfo();
   const [filter, setFilter] = useState<"all" | Attending>("all");
   const [q, setQ] = useState("");
+  const [msg, setMsg] = useState("");
+  /** Codes owning more than one row — leftovers from the old "reply = a new row" behaviour. */
+  const merges = useMemo(() => planHouseholdMerges(rows), [rows]);
+  const couple = `${info.bride} & ${info.groom}`;
+  const day = new Date(info.date).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
   const shown = rows
     .filter((g) => filter === "all" || g.attending === filter)
     .filter((g) => !q || `${g.name} ${g.phone}`.toLowerCase().includes(q.toLowerCase()))
@@ -290,12 +307,33 @@ export function Guests() {
   const pax = rows.filter((g) => g.attending === "yes").reduce((s, g) => s + g.pax, 0);
   const pendingPax = rows.filter((g) => g.attending === "pending").reduce((s, g) => s + g.pax, 0);
   const add = () => save({ id: uid(), name: "New guest", phone: "", pax: 1, attending: "pending", dietary: "", message: "", song_request: "", source: "manual", created_at: new Date().toISOString() });
+  /** Fold every extra row of a household back into one: the reply wins, the leftovers go. */
+  async function mergeDuplicates() {
+    if (!merges.length) return;
+    if (!confirm(
+      `Merge ${merges.length} duplicated household ${merges.length === 1 ? "row" : "rows"}?\n\n` +
+      "Every invitation code keeps a single row: the guest's reply is written onto the row you typed " +
+      "(their answer wins, anything it left blank is rescued from the copy) and the leftover row is deleted. " +
+      "Nothing else in the binder is touched."
+    )) return;
+    for (const { keep, drop } of merges) {
+      await save(mergeHousehold(keep, drop));
+      for (const g of drop) await del(g.id);
+    }
+    setMsg(`Merged ✓ ${merges.length} household ${merges.length === 1 ? "row" : "rows"} — one row per invitation code again.`);
+  }
   return (
     <>
       <PageHead kicker="RSVP inbox + manual list" title="The guest list.">
         <Btn onClick={add}>+ Add guest</Btn>
         <Btn variant="ghost" onClick={() => download("guests.csv", toCsv(rows))}>Export CSV</Btn>
+        {merges.length > 0 && <Btn variant="ghost" onClick={mergeDuplicates}>Merge {merges.length} duplicate{merges.length === 1 ? "" : "s"}</Btn>}
       </PageHead>
+      {msg && <p className="mb-4 text-sm text-moss">{msg}</p>}
+      <p className="text-sm text-ink/60 mb-5 max-w-3xl">
+        Add each household once, hit <b>issue code</b>, then <b>copy link</b> or <b>send&#160;↗</b> on WhatsApp. The guest opens their personal
+        link and fills the form once — the reply is written onto <i>this same row</i>, so nobody is ever duplicated.
+      </p>
       {error && <div className="mb-4 text-red-300">{error}</div>}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-5">
         <Card className="!bg-moss !text-paper"><Stat label="Catering headcount" value={pax} sub={`+ up to ${pendingPax} pending`} /></Card>
@@ -330,7 +368,9 @@ export function Guests() {
                       ) : (
                         <>
                           <span className="label !text-[9px] text-ink/60">{g.code}</span>
-                          <button className="label !text-[9px] text-moss" onClick={() => navigator.clipboard?.writeText(`${location.origin}/?rsvp=${g.code}`)}>copy link</button>
+                          <button className="label !text-[9px] text-moss" onClick={() => navigator.clipboard?.writeText(inviteLink(g.code!))}>copy link</button>
+                          <a className="label !text-[9px] text-wine hover:text-burgundy" target="_blank" rel="noreferrer"
+                            href={inviteHref(g.code!, g.phone || "", couple, day)} title={g.phone ? "Send the invitation on WhatsApp" : "Send the invitation on WhatsApp — pick the contact there"}>send ↗</a>
                         </>
                       )}
                       {g.approved === false && (
@@ -455,9 +495,24 @@ export function Content() {
   const faq = useTable("faq");
   const ROLES = ENTOURAGE_ROLES;
   const [url, setUrl] = useState("");
+  const [msg, setMsg] = useState("");
+  /** Push the latest copy of the standard questions (dress code, kids' policy…) to the binder. */
+  async function refreshFaq() {
+    if (!confirm(
+      "Refresh the standard questions with the latest wording?\n\n" +
+      "· The standard questions (ceremony, plus-one, dress code, kids, parking, photos) are rewritten with the newest copy — use this when the dress code or the kids' policy changes.\n" +
+      "· A standard question you deleted comes back.\n" +
+      "· Questions you wrote yourself are never touched."
+    )) return;
+    try {
+      const r = await refreshFaqCopy();
+      setMsg(`FAQ refreshed ✓ ${r.rewritten} rewritten · ${r.added} added`);
+    } catch (e) { setMsg(`Error: ${(e as Error).message}`); }
+  }
   return (
     <>
       <PageHead kicker="Images, entourage & FAQ" title="Content." />
+      {msg && <p className="mb-4 text-sm text-moss">{msg}</p>}
       <div className="grid md:grid-cols-2 gap-5">
         <Card title="Cover photo (on the invitation card)">
           {info.cover_photo ? <img src={info.cover_photo} alt="" className="rounded-xl w-full max-h-80 object-contain bg-ink/5" /> : <div className="h-40 rounded-xl border-2 border-dashed border-ink/15 grid place-items-center text-ink/40">No cover photo yet — shows inside the carved oval frame</div>}
@@ -472,6 +527,7 @@ export function Content() {
           {info.music_url && <audio src={info.music_url} controls className="w-full mt-3" />}
         </Card>
         <Card title="Save the Date">
+          <p className="text-sm text-ink/60 mb-3">Your Save the Date graphic. It appears on the public site just under the big <b>11.11</b> date, and guests can open or download it from there.</p>
           {info.save_the_date_url ? <img src={info.save_the_date_url} alt="" className="rounded-xl w-full max-h-80 object-contain bg-ink/5" /> : <div className="h-40 rounded-xl border-2 border-dashed border-ink/15 grid place-items-center text-ink/40">No graphic yet</div>}
           <div className="flex gap-2 mt-4">
             <label className="label !text-[10px] cursor-pointer bg-wine text-lace rounded-full px-4 py-2.5">Upload<input type="file" accept="image/*" hidden onChange={async (e) => { const f = e.target.files?.[0]; if (f) saveInfo({ save_the_date_url: await fileToDataUrl(f) }); }} /></label>
@@ -497,19 +553,31 @@ export function Content() {
           <p className="text-xs text-ink/60 mt-3"><b>Order matters:</b> 1–4 = photo strips in Our Story · 5–8 = long photo strip · 9–12 = polaroids · 13+ = extra polaroids near the end.</p>
           <p className="text-xs text-ink/50 mt-1">Tip: photos are compressed automatically. For many large photos, host them (e.g. Supabase Storage / Cloudinary) and paste URLs.</p>
         </Card>
-        <Card title="Entourage" action={<Btn onClick={() => ent.save({ id: uid(), role: "bridesmaid", name: "Name", title: "", order: ent.rows.length + 1 })}>+ Add</Btn>}>
-          <ul className="divide-y divide-ink/10">
-            {[...ent.rows].sort((a, b) => a.order - b.order).map((p) => (
-              <li key={p.id} className="py-2 grid grid-cols-2 md:grid-cols-[165px_1fr_1fr_auto] gap-2 items-center">
-                <Select value={p.role} options={ROLES} onChange={(v) => ent.save({ ...p, role: v })} className="text-xs" />
-                <EditText value={p.name} onSave={(v) => ent.save({ ...p, name: v })} className="font-serif text-lg" />
-                <EditText value={p.title} placeholder="e.g. Sister of the bride" onSave={(v) => ent.save({ ...p, title: v })} className="text-sm" />
-                <button onClick={() => ent.del(p.id)} className="text-ink/30 hover:text-burgundy px-2">✕</button>
-              </li>
+        <Card title="Entourage" action={<Btn onClick={() => ent.save({ id: uid(), role: "bridesmaid", name: "To be announced", title: "", order: ent.rows.length + 1 })}>+ Add</Btn>}>
+          <p className="text-sm text-ink/60 mb-4">
+            Every role is a category — add as many people as you like under <b>Principal Sponsors</b>, <b>Groomsmen</b> or <b>Bridesmaids</b> and the site
+            gathers them under one heading. They always stand in this order: parents, principal sponsors, best man, groomsmen, maid of honor, bridesmaids,
+            ring bearer, flower girl, honoured guests — no matter when you add them.
+          </p>
+          <div className="space-y-5">
+            {entourageGroups(ent.rows).map((g) => (
+              <div key={g.role}>
+                <p className="label text-wine mb-1">{g.heading} · {g.people.length}</p>
+                <ul className="divide-y divide-ink/10">
+                  {g.people.map((p) => (
+                    <li key={p.id} className="py-2 grid grid-cols-2 md:grid-cols-[165px_1fr_1fr_auto] gap-2 items-center">
+                      <Select value={p.role} options={ROLES} onChange={(v) => ent.save({ ...p, role: v })} className="text-xs" />
+                      <EditText value={p.name} onSave={(v) => ent.save({ ...p, name: v })} className="font-serif text-lg" />
+                      <EditText value={p.title} placeholder="e.g. Sister of the bride" onSave={(v) => ent.save({ ...p, title: v })} className="text-sm" />
+                      <button onClick={() => ent.del(p.id)} className="text-ink/30 hover:text-burgundy px-2">✕</button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ))}
-          </ul>
+          </div>
         </Card>
-        <Card title="FAQ" action={<Btn onClick={() => faq.save({ id: uid(), question: "New question?", answer: "", order: faq.rows.length + 1 })}>+ Add</Btn>}>
+        <Card title="FAQ" action={<><Btn variant="ghost" onClick={refreshFaq}>Refresh wording</Btn><Btn onClick={() => faq.save({ id: uid(), question: "New question?", answer: "", order: faq.rows.length + 1 })}>+ Add</Btn></>}>
           <ul className="divide-y divide-ink/10">
             {[...faq.rows].sort((a, b) => a.order - b.order).map((f) => (
               <li key={f.id} className="py-2 flex gap-2">
@@ -529,6 +597,7 @@ export function Content() {
 
 /* ═════════════ 10. SETTINGS ═════════════ */
 export function Settings({ mode, onPrint }: { mode: string; onPrint: () => void }) {
+  const { info, saveInfo } = useInfo();
   const [msg, setMsg] = useState("");
   async function exportAll() {
     const { list } = await import("@/lib/db");
@@ -550,10 +619,49 @@ export function Settings({ mode, onPrint }: { mode: string; onPrint: () => void 
       setMsg(`Done ✓ ${r.added ? `${r.added} missing ${r.added === 1 ? "row" : "rows"} added` : "nothing was missing"} · attire refreshed from the code · your guests and your edits are untouched.`);
     } catch (e) { setMsg(`Error: ${(e as Error).message}`); }
   }
+  const sharePreview = info.share_image || "/og.jpg";
   return (
     <>
       <PageHead kicker="Housekeeping" title="Settings." />
       <div className="grid md:grid-cols-2 gap-5">
+        <Card title="Website & sharing">
+          <p className="text-sm text-ink/60 mb-4">How your site introduces itself — the browser tab, the card friends see when they share your link, and the little tab icon.</p>
+          <div className="rounded-xl border border-ink/10 overflow-hidden max-w-sm mb-5">
+            <div className="aspect-[1.91/1] bg-ink/5"><img src={sharePreview} alt="" className="w-full h-full object-cover" /></div>
+            <div className="p-3 bg-white/60">
+              <p className="label !text-[9px] text-ink/40">{location.host}</p>
+              <p className="font-semibold text-sm">{info.site_title || "Your tab title"}</p>
+              <p className="text-xs text-ink/60 line-clamp-2">{info.site_description || "The description friends read before they open your link."}</p>
+            </div>
+          </div>
+          <div className="grid gap-5">
+            <F label="Browser tab title"><EditText value={info.site_title ?? ""} placeholder="Jeger & Shaira — Wedding · 11.11.2026" onSave={(v) => saveInfo({ site_title: v })} /></F>
+            <F label="Description on shared links"><EditText value={info.site_description ?? ""} multiline rows={2} placeholder="Jeger & Shaira are getting married on 11.11.2026…" onSave={(v) => saveInfo({ site_description: v })} /></F>
+            <div>
+              <span className="label text-ink/50 block mb-1">Preview banner on shared links</span>
+              <p className="text-xs text-ink/50 mb-2">What WhatsApp, iMessage and Facebook show when someone shares your link. A 1200 × 630 image looks best.</p>
+              <div className="flex flex-wrap gap-2">
+                <label className="label !text-[10px] cursor-pointer bg-wine text-lace rounded-full px-4 py-2.5">Upload<input type="file" accept="image/*" hidden onChange={async (e) => { const f = e.target.files?.[0]; if (f) saveInfo({ share_image: await fileToDataUrl(f, 1200) }); }} /></label>
+                {info.share_image && <Btn variant="danger" onClick={() => saveInfo({ share_image: "" })}>Remove</Btn>}
+              </div>
+              <EditText value={/^https?:/i.test(info.share_image ?? "") ? info.share_image! : ""} placeholder="…or paste a link to a hosted image" onSave={(v) => v.trim() && saveInfo({ share_image: v.trim() })} className="mt-2 text-sm break-all" />
+            </div>
+            <div>
+              <span className="label text-ink/50 block mb-1">Favicon (the tab icon)</span>
+              <div className="flex items-center gap-3 mb-2">
+                <img src={info.favicon || "/favicon.png"} alt="" className="w-10 h-10 rounded-lg object-cover bg-ink/5 ring-1 ring-ink/10" />
+                <span className="text-sm text-ink/50">{info.favicon ? "Your icon" : "The default icon — upload your own"}</span>
+              </div>
+              <p className="text-xs text-ink/50 mb-2">Square works best (512 × 512 or smaller). It shows in browser tabs, bookmarks and phone home screens.</p>
+              <div className="flex flex-wrap gap-2">
+                <label className="label !text-[10px] cursor-pointer bg-wine text-lace rounded-full px-4 py-2.5">Upload<input type="file" accept="image/*" hidden onChange={async (e) => { const f = e.target.files?.[0]; if (f) saveInfo({ favicon: await fileToDataUrl(f, 256) }); }} /></label>
+                {info.favicon && <Btn variant="danger" onClick={() => saveInfo({ favicon: "" })}>Use default</Btn>}
+              </div>
+              <EditText value={/^https?:/i.test(info.favicon ?? "") ? info.favicon! : ""} placeholder="…or paste a link to a hosted icon" onSave={(v) => v.trim() && saveInfo({ favicon: v.trim() })} className="mt-2 text-sm break-all" />
+            </div>
+          </div>
+          <p className="text-xs text-ink/50 mt-4">Leave a field empty and it falls back to the starter wording. Shared-link previews are cached by WhatsApp and Facebook for a while, so a new banner can take a few minutes to appear.</p>
+        </Card>
         <Card title="Storage">
           <div className="flex items-center gap-3 mb-3"><Tag>{mode === "supabase" ? "confirmed" : "pending"}</Tag><b>{mode === "supabase" ? "Connected to Supabase" : "Local demo mode (this browser only)"}</b></div>
           {mode === "supabase" ? (

@@ -1,34 +1,22 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { siteMetadata } from "@/lib/site-meta";
 
-const title = "Jeger & Shaira — Wedding · 11.11.2026";
-const description = "Jeger & Shaira are getting married on 11.11.2026 at The Heaven, Damistan. You're invited. #JSWeDo";
-const shareImageAlt = "Jeger & Shaira — Save the Date, 11 November 2026 at The Heaven, Damistan";
-
-export const metadata: Metadata = {
-  metadataBase: new URL("https://jsgotmarried.vercel.app"),
-  title,
-  description,
-  openGraph: {
-    type: "website",
-    url: "/",
-    siteName: "Jeger & Shaira",
-    title: "Jeger & Shaira — 11.11.2026",
-    description: "Save the Date · #JSWeDo #JSWishComeTrue",
-    images: [{ url: "/og.jpg", width: 1200, height: 630, alt: shareImageAlt }],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title,
-    description,
-    images: ["/og.jpg"],
-  },
-};
+/**
+ * The tab title, the shared-link preview and the tab icon are read from the binder
+ * (Settings → Website & sharing) on every request, so edits go live without a redeploy.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  return siteMetadata();
+}
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
+        {/* Keep this URL exactly as-is: Google Fonts answers the WHOLE request with a 400
+            when an axis is wrong (Jost has no italic axis, so "Jost:wght@0,300…" would take
+            every font on the page down and leave the system serif/sans in its place). */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Pinyon+Script&family=Jost:wght@300;400;500&display=swap" />

@@ -2,6 +2,7 @@
 import { AnimatePresence, motion, useInView, useScroll, useSpring } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { submitRsvp, type InviteState } from "@/lib/db";
+import { entourageHeading } from "@/lib/entourage";
 import type { Attire, EntourageMember, Faq, ScheduleItem, WeddingInfo } from "@/lib/types";
 import { fullDate } from "./Envelope";
 import { EASE, EASE_OUT, Reveal, Tilt, rise } from "./fx";
@@ -77,6 +78,26 @@ export function ElevenEleven({ info }: { info: WeddingInfo }) {
           <p className="font-serif italic text-mocha text-lead mt-5">Make a wish — ours comes true.</p>
         </Reveal>
       </div>
+    </section>
+  );
+}
+
+/**
+ * The couple's Save the Date graphic — appears only once one is uploaded in the binder
+ * (Content → Save the Date). Guests can open it full size or save it to their phone.
+ */
+export function SaveTheDate({ info }: { info: WeddingInfo }) {
+  const src = info.save_the_date_url;
+  if (!src) return null;
+  return (
+    <section className="sec-sm">
+      <Reveal className="col text-center">
+        <p className="micro text-wine">Save the Date</p>
+        <a href={src} target="_blank" rel="noreferrer" className="block mt-6">
+          <img src={src} alt={`Save the Date — ${info.groom} & ${info.bride}`} className="mx-auto w-auto max-h-[70vh] rounded-2xl ring-1 ring-taupe/20 shadow-[0_2px_3px_rgba(61,47,38,.15),0_40px_80px_-40px_rgba(61,47,38,.55)]" />
+        </a>
+        <a href={src} download className="micro text-taupe hover:text-wine underline underline-offset-4 mt-5 inline-block">Save it to your phone ↗</a>
+      </Reveal>
     </section>
   );
 }
@@ -262,6 +283,7 @@ export function Entourage({ people }: { people: EntourageMember[] }) {
   const honoured = by("honored_guest");
   const others = by("other");
   const half = Math.ceil(sponsors.length / 2);
+  const honouredHalf = Math.ceil(honoured.length / 2);
   const Person = ({ p }: { p: EntourageMember }) => (
     <li><p className="font-serif text-lead md:text-h3 text-ink text-balance">{p.name}</p>{p.title && <p className="font-serif italic text-taupe text-tag md:text-fine">{p.title}</p>}</li>
   );
@@ -282,11 +304,11 @@ export function Entourage({ people }: { people: EntourageMember[] }) {
           <div className="relative grid grid-cols-2 gap-8 md:gap-0 mt-8 text-center">
             <Divider />
             <div className="px-2 md:px-12">
-              <p className="micro text-wine mb-4">Parents of the Groom</p>
+              <p className="micro text-wine mb-4">{entourageHeading("groom_family")}</p>
               <List list={groom} />
             </div>
             <div className="px-2 md:px-12">
-              <p className="micro text-wine mb-4">Parents of the Bride</p>
+              <p className="micro text-wine mb-4">{entourageHeading("bride_family")}</p>
               <List list={bride} />
             </div>
           </div>
@@ -297,7 +319,7 @@ export function Entourage({ people }: { people: EntourageMember[] }) {
       <div className="col-wide mt-8 text-center space-y-10 md:space-y-12">
         {sponsors.length > 0 && (
           <Reveal>
-            <p className="micro text-wine mb-4 text-center">Principal Sponsors</p>
+            <p className="micro text-wine mb-4 text-center">{entourageHeading("sponsor")}</p>
             {sponsors.length === 1 ? (
               <List list={sponsors} className="max-w-sm mx-auto" />
             ) : (
@@ -316,13 +338,13 @@ export function Entourage({ people }: { people: EntourageMember[] }) {
               <div className="px-2 md:px-10 space-y-10">
                 {bestMan.length > 0 && (
                   <div>
-                    <p className="micro text-wine mb-4">Best Man</p>
+                    <p className="micro text-wine mb-4">{entourageHeading("best_man")}</p>
                     <List list={bestMan} />
                   </div>
                 )}
                 {groomsmen.length > 0 && (
                   <div>
-                    <p className="micro text-wine mb-4">Groomsmen</p>
+                    <p className="micro text-wine mb-4">{entourageHeading("groomsman")}</p>
                     <List list={groomsmen} />
                   </div>
                 )}
@@ -330,13 +352,13 @@ export function Entourage({ people }: { people: EntourageMember[] }) {
               <div className="px-2 md:px-10 space-y-10">
                 {maidOfHonor.length > 0 && (
                   <div>
-                    <p className="micro text-wine mb-4">Maid of Honor</p>
+                    <p className="micro text-wine mb-4">{entourageHeading("maid_of_honor")}</p>
                     <List list={maidOfHonor} />
                   </div>
                 )}
                 {bridesmaids.length > 0 && (
                   <div>
-                    <p className="micro text-wine mb-4">Bridesmaids</p>
+                    <p className="micro text-wine mb-4">{entourageHeading("bridesmaid")}</p>
                     <List list={bridesmaids} />
                   </div>
                 )}
@@ -349,11 +371,11 @@ export function Entourage({ people }: { people: EntourageMember[] }) {
             <div className="relative grid grid-cols-2 gap-8 md:gap-0">
               <Divider />
               <div className="px-2 md:px-10">
-                <p className="micro text-wine mb-4">Ring Bearer</p>
+                <p className="micro text-wine mb-4">{entourageHeading("ring_bearer")}</p>
                 <List list={ringBearer} />
               </div>
               <div className="px-2 md:px-10">
-                <p className="micro text-wine mb-4">Flower Girl</p>
+                <p className="micro text-wine mb-4">{entourageHeading("flower_girl")}</p>
                 <List list={flowerGirl} />
               </div>
             </div>
@@ -361,17 +383,65 @@ export function Entourage({ people }: { people: EntourageMember[] }) {
         )}
         {honoured.length > 0 && (
           <Reveal>
-            <p className="micro text-wine mb-4 text-center">Our Honoured Guests</p>
-            <List list={honoured} className="max-w-sm mx-auto" />
+            <p className="micro text-wine mb-4 text-center">{entourageHeading("honored_guest")}</p>
+            {honoured.length === 1 ? (
+              <List list={honoured} className="max-w-sm mx-auto" />
+            ) : (
+              <div className="relative grid grid-cols-2 gap-8 md:gap-0 max-w-3xl mx-auto">
+                <Divider />
+                <div className="px-2 md:px-10"><List list={honoured.slice(0, honouredHalf)} /></div>
+                <div className="px-2 md:px-10"><List list={honoured.slice(honouredHalf)} /></div>
+              </div>
+            )}
           </Reveal>
         )}
         {others.length > 0 && (
           <Reveal>
-            <p className="micro text-wine mb-4 text-center">With Love</p>
+            <p className="micro text-wine mb-4 text-center">{entourageHeading("other")}</p>
             <List list={others} className="max-w-sm mx-auto" />
           </Reveal>
         )}
       </div>
+    </section>
+  );
+}
+
+/* ─────────── FOLLOW & TAG ─────────── */
+/**
+ * "Come follow us, and tag your moments." Hidden until the couple fills in an Instagram handle
+ * in the binder (Details → Social), so the site never links to an account that doesn't exist
+ * yet — fill the handle in and the whole section appears, no deploy needed.
+ */
+export function FollowAndTag({ info }: { info: WeddingInfo }) {
+  const handle = (info.instagram || "").replace(/^@/, "").trim();
+  if (!handle) return null;
+  const tags = (info.hashtags || []).filter(Boolean);
+  return (
+    <section className="sec-sm">
+      <Reveal className="col text-center">
+        <p className="micro text-taupe">Keep in touch</p>
+        <h2 className="script text-wine text-script mt-2 text-balance">Follow our story</h2>
+        <Flourish className="w-44 md:w-56 mx-auto mt-2 text-taupe/70" />
+        <p className="font-serif italic text-body text-mocha mt-6 text-balance max-w-2xl mx-auto">
+          {info.instagram_note?.trim() || "Follow along for the countdown, the behind-the-scenes and our favourite moments — then tag your photos on the day so we can keep them forever."}
+        </p>
+        <a href={`https://instagram.com/${handle}`} target="_blank" rel="noreferrer"
+          className="micro inline-block mt-8 bg-wine text-lace rounded-full px-8 py-4 hover:bg-mocha transition-colors">
+          Follow @{handle} ↗
+        </a>
+        {tags.length > 0 && (
+          <div className="mt-10">
+            <p className="micro text-taupe">Tag your moments with</p>
+            <div className="flex flex-wrap justify-center gap-3 mt-4">
+              {tags.map((t) => (
+                <a key={t} href={`https://instagram.com/explore/tags/${t.replace("#", "")}`} target="_blank" rel="noreferrer"
+                  className="font-serif text-lead text-wine border border-wine/30 rounded-full px-5 py-2 hover:bg-wine hover:text-lace transition-colors">{t}</a>
+              ))}
+            </div>
+            <p className="micro text-taupe/70 mt-4">Tap a tag to see everyone&rsquo;s photos — we&rsquo;ll be looking for yours.</p>
+          </div>
+        )}
+      </Reveal>
     </section>
   );
 }
@@ -611,15 +681,15 @@ export function PolaroidPair({ info, from, caps }: { info: WeddingInfo; from: nu
 }
 
 export function Footer({ info }: { info: WeddingInfo }) {
-  const handle = info.instagram.replace("@", "");
+  const handle = (info.instagram || "").replace(/^@/, "").trim();
   return (
     <footer className="relative px-5 pt-12 pb-10 text-center">
       <Flourish className="w-48 md:w-56 mx-auto text-taupe/70" />
       <p className="script text-wine text-script mt-6 text-balance">{info.groom} &amp; {info.bride}</p>
       <p className="font-serif font-light text-mocha text-display mt-3 tracking-[0.12em]">{fullDate(info.date)}</p>
       <div className="flex flex-col md:flex-row justify-center gap-2 md:gap-10 mt-8 micro text-taupe">
-        <a href={`https://instagram.com/${handle}`} target="_blank" rel="noreferrer" className="hover:text-wine">{info.instagram}</a>
-        <span className="text-wine">{info.hashtags.join("  ")}</span>
+        {handle ? <a href={`https://instagram.com/${handle}`} target="_blank" rel="noreferrer" className="hover:text-wine">{info.instagram}</a> : null}
+        {info.hashtags.length > 0 && <span className="text-wine">{info.hashtags.join("  ")}</span>}
       </div>
     </footer>
   );

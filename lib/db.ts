@@ -20,7 +20,7 @@ const KEY = (t: TableName) => `jsos:${t}`;
 const EVT = "jsos:change";
 
 /** Bump when the default program/entourage/FAQ change so browsers pick up the new defaults once. */
-const SEED_VERSION = "15"; // round 21: Maid of Honor, Best Man, Flower Girl, Ring Bearer & Honored Guest roles
+const SEED_VERSION = "16"; // round 22: FAQ copy refreshed — the dress-code palette and the kids' policy
 const REFRESH: TableName[] = ["schedule", "entourage", "faq", "attire"];
 function localRead<T extends TableName>(t: T): TableMap[T][] {
   if (localStorage.getItem("jsos:seedv") !== SEED_VERSION) {
@@ -80,6 +80,14 @@ export type InviteReply = {
 export type InviteState = { name: string; pax: number; reply: InviteReply | null; demo?: boolean };
 
 /**
+ * A guest row is a *reply* once `approved` is set (true = confirmed, false = waiting for the
+ * couple). Before that it is the plain invitation row the couple typed by hand. One code,
+ * one row: the reply overwrites the invitation instead of adding a second row.
+ */
+import { isReply } from "./guests";
+export { isReply };
+
+/**
  * Perpetual test invite: …/JS-DEMO (or /test) unseals the whole site and runs the full
  * RSVP journey with throwaway data — demo replies live only in the tester's browser
  * (localStorage), never reach Supabase and never e-mail the couple.
@@ -109,8 +117,8 @@ export async function fetchInvite(code: string): Promise<InviteState | null> {
   } catch { /* offline — fall through to local */ }
   const rows = localRead("guests") as Guest[];
   const same = rows.filter((g) => (g.code || "").toUpperCase() === cc);
-  const invite = same.find((g) => g.approved === null || g.approved === undefined);
-  const reply = same.find((g) => g.approved !== null && g.approved !== undefined);
+  const invite = same.find((g) => !isReply(g));
+  const reply = same.find(isReply);
   if (!invite && !reply) return null;
   return {
     name: invite?.name ?? reply!.name,
@@ -136,13 +144,17 @@ export async function submitRsvp(g: Omit<Guest, "id" | "source" | "created_at"> 
     if (r.status === 409) return { approved: null, already: true };
     if (r.ok) { const j = await r.json().catch(() => ({})); return { approved: typeof j.approved === "boolean" ? j.approved : null, already: false }; }
   } catch { /* offline or dev without env — fall through */ }
-  // local mode: mirror the server rules (one code, one reply; a second seat waits for review)
+  // local mode: mirror the server rules — one code, one row; the reply overwrites the
+  // invitation in place (same id) and a second seat waits for the couple's review.
   const cur = localRead("guests") as Guest[];
   const cc = (g.code || "").toUpperCase();
-  if (cc && cur.some((x) => (x.code || "").toUpperCase() === cc && x.approved !== null && x.approved !== undefined)) return { approved: null, already: true };
-  const invite = cc ? cur.find((x) => (x.code || "").toUpperCase() === cc && (x.approved === null || x.approved === undefined)) : null;
+  const same = cc ? cur.filter((x) => (x.code || "").toUpperCase() === cc) : [];
+  if (same.some(isReply)) return { approved: null, already: true };
+  const invite = same.find((x) => !isReply(x)) || null;
   const approved = invite && (g.pax ?? 1) <= 1 ? true : false;
-  cur.push({ ...g, id: crypto.randomUUID(), source: "RSVP form", created_at: new Date().toISOString(), approved } as Guest);
+  const row: Guest = { ...g, id: invite?.id ?? crypto.randomUUID(), code: g.code, source: "RSVP form", created_at: new Date().toISOString(), approved } as Guest;
+  const i = cur.findIndex((x) => x.id === row.id);
+  if (i >= 0) cur[i] = row; else cur.push(row);
   localWrite("guests", cur);
   return { approved, already: false };
 }
@@ -164,6 +176,25 @@ async function listStored<T extends TableName>(t: T): Promise<TableMap[T][]> {
 }
 
 export type SeedPushReport = { added: number; refreshed: string[] };
+export type FaqRefreshReport = { rewritten: number; added: number };
+/**
+ * Rewrite the standard FAQ questions with the latest wording from the code. The ordinary
+ * "push starter data" only ever fills in *missing* rows, so copy that changed after the
+ * binder was first seeded (the dress-code palette, the kids' policy…) would never reach a
+ * live project — this is the one-click way. Questions the couple wrote themselves are never
+ * touched: only the seeded ids (f0, f1, f2…) are rewritten, and a deleted one comes back.
+ */
+export async function refreshFaqCopy(): Promise<FaqRefreshReport> {
+  const seeded = SEED.faq as { id: string }[];
+  const stored = (await listStored("faq")) as { id: string }[];
+  const report: FaqRefreshReport = {
+    rewritten: seeded.filter((s) => stored.some((c) => c.id === s.id)).length,
+    added: seeded.filter((s) => !stored.some((c) => c.id === s.id)).length,
+  };
+  await upsert("faq", SEED.faq as never);
+  window.dispatchEvent(new CustomEvent(EVT, { detail: "faq" }));
+  return report;
+}
 /**
  * “Push starter data”, the gentle way:
  *  · guests — never touched: the guest list, the RSVPs and the invite codes stay exactly as they are;

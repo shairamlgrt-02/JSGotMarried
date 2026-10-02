@@ -8,8 +8,9 @@ const clip = (v: unknown, n: number) => String(v ?? "").trim().slice(0, n);
  * GET /api/rsvp?code=JS-XXXX — opens a personal invitation link.
  * Returns the household (name + seat cap) and, once the code has been used, the sealed
  * reply so the site can greet the guest and lock the form. Exact-match only; never lists
- * guests. Invitation rows carry a code with approved IS NULL; the burned reply is the row
- * with the same code and approved NOT NULL.
+ * guests. One row per household: while it is waiting the row is the invitation (approved
+ * IS NULL); once the guest replies that same row is overwritten with the reply (approved
+ * NOT NULL). Rows split in two are only ever left behind by older builds.
  */
 export async function GET(req: Request) {
   const code = (new URL(req.url).searchParams.get("code") || "").trim().toUpperCase();
@@ -52,6 +53,8 @@ export async function GET(req: Request) {
  *  · party of two       → always lands in the couple's review queue (approved=false) and
  *    requires the plus-one's name;
  *  · party of one       → auto-approved against the invited seat cap.
+ * The reply OVERWRITES the invitation row in place (same id, same code): the binder keeps
+ * one row per household, so filling in the form through a link never duplicates a guest.
  */
 export async function POST(req: Request) {
   const b = await req.json().catch(() => ({}));
@@ -71,9 +74,10 @@ export async function POST(req: Request) {
     .select("id,name,pax,approved")
     .eq("code", code);
   const all = rows || [];
-  if (all.some((r) => r.approved !== null && r.approved !== undefined))
+  const isReply = (r: { approved?: boolean | null }) => r.approved !== null && r.approved !== undefined;
+  if (all.some(isReply))
     return NextResponse.json({ error: "This invitation has already replied.", already: true }, { status: 409 });
-  const invite = all.find((r) => r.approved === null || r.approved === undefined);
+  const invite = all.find((r) => !isReply(r));
   if (!invite) return NextResponse.json({ error: "We couldn't match that invitation code." }, { status: 404 });
 
   const paxMax = Number(invite.pax) || 1;
@@ -90,9 +94,13 @@ export async function POST(req: Request) {
     song_request: clip(b.song_request, 200),
     plus_one: b.attending === "no" ? "" : plusOne,
   };
-  const { error } = await db.from("guests").insert({ ...row, id: crypto.randomUUID(), source: "RSVP form", code, approved });
+  // Overwrite the invitation itself — never a second row for the same household.
+  const { error } = await db
+    .from("guests")
+    .update({ ...row, code, source: "RSVP form", approved, created_at: new Date().toISOString() })
+    .eq("id", invite.id);
   if (error) {
-    console.error("guests insert failed:", error.message);
+    console.error("guests update failed:", error.message);
     return NextResponse.json({ error: "RSVP is not reachable right now — please try again." }, { status: 503 });
   }
 

@@ -5,7 +5,7 @@ import Ambience from "@/components/public/Ambience";
 import EnvelopeHero from "@/components/public/Envelope";
 import Letter from "@/components/public/Letter";
 import { ProgressBar, SmoothScroll } from "@/components/public/fx";
-import { DressCode, ElevenEleven, Entourage, FaqSection, Footer, Gallery, Invitation, PolaroidPair, RsvpNudge, SignOff, Rsvp, Schedule, Story, Venue } from "@/components/public/sections";
+import { DressCode, ElevenEleven, Entourage, FaqSection, FollowAndTag, Footer, Gallery, Invitation, PolaroidPair, RsvpNudge, SaveTheDate, SignOff, Rsvp, Schedule, Story, Venue } from "@/components/public/sections";
 import { Moments, MusicButton, SidePolaroids } from "@/components/public/photos";
 import { Postcard, Postmark, Stamp, StickOn, Sticker } from "@/components/public/stickers";
 import { fetchInvite, type InviteState } from "@/lib/db";
@@ -69,6 +69,7 @@ export default function Home({ code = "" }: { code?: string }) {
             {unlocked && <D deco={<Deco at="tr" rotate={7}><Stamp kind="rings" className="w-12 md:w-24" /></Deco>}><Invitation info={info} /></D>}
             <D deco={<Deco at="tl" rotate={-8}><Sticker kind="wish" className="scale-[.62] md:scale-100 origin-top-left" /></Deco>}><Story info={info} /></D>
             <D deco={<Deco at="tr" rotate={-6}><Stamp kind="date" className="w-12 md:w-24" /></Deco>}><ElevenEleven info={info} /></D>
+            <SaveTheDate info={info} />
             <PolaroidPair info={info} from={8} caps={["us", "11.11"]} />
             {unlocked && <D deco={<Deco at="tr" rotate={5}><Sticker kind="wedo" /></Deco>}><Schedule items={schedule} /></D>}
             {unlocked && <D deco={<Deco at="tl" rotate={-4}><Postmark className="w-28 md:w-48" /></Deco>}><Venue info={info} /></D>}
@@ -80,6 +81,7 @@ export default function Home({ code = "" }: { code?: string }) {
             {unlocked && <Rsvp info={info} invite={rsvpInvite} code={activeCode} onReplied={load} />}
             {unlocked && <D deco={<Deco at="tr" rotate={6}><Sticker kind="dance" /></Deco>}><FaqSection faqs={faq} /></D>}
             <Moments info={info} />
+            <FollowAndTag info={info} />
             <D className="pt-16 md:pt-8" deco={<Deco at="tl" rotate={-6}><Sticker kind="cheers" /></Deco>}><SignOff info={info} /></D>
         </Letter>
         <Footer info={info} />
