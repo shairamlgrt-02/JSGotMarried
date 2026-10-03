@@ -39,10 +39,17 @@ function localWrite<T extends TableName>(t: T, rows: TableMap[T][]) {
 }
 
 export async function list<T extends TableName>(t: T): Promise<TableMap[T][]> {
+  // Probe the mode AND request the rows at the same time — a fresh tab would otherwise
+  // wait for /api/mode before the data request even starts (two serial round trips).
+  // In local mode the stray request 503s quietly on the server; the browser never throws.
+  const remote = fetch(`/api/data/${t}`, { cache: "no-store" }).then(
+    async (r) => ({ ok: r.ok, data: await r.json().catch(() => ({})) }),
+    () => ({ ok: false, data: {} }),
+  );
   if ((await getMode()) === "local") return localRead(t);
-  const r = await fetch(`/api/data/${t}`, { cache: "no-store" });
-  if (!r.ok) throw new Error((await r.json()).error || r.statusText);
-  const rows = (await r.json()) as TableMap[T][];
+  const r = await remote;
+  if (!r.ok) throw new Error((r.data as { error?: string }).error || "failed to load");
+  const rows = r.data as TableMap[T][];
   // Empty remote table on first run → fall back to seed for public display tables
   return rows.length || t === "guests" ? rows : (SEED[t] as TableMap[T][]);
 }

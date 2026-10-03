@@ -19,12 +19,12 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     story: "Two marketers who spent years telling other people's stories finally wrote their own. One brief, one late-night idea, one wish that came true. On 11.11 we make the wish official — and we want you there when we do.",
     instagram: "@shaiandjeg",
     instagram_note: "Follow along for the countdown, the behind-the-scenes and our favourite moments — then tag your photos on the day so we can keep them forever.",
-    hashtags: ["#JSGotMarried", "#JSWeDo", "#JSWishComeTrue"],
+    hashtags: ["#JSGotMarried", "#JSSayIDo", "#JSWishComeTrue"],
     total_budget: 2500,
     currency: "BHD",
     save_the_date_url: "",
     site_title: "Jeger & Shaira — Wedding · 11.11.2026",
-    site_description: "Jeger & Shaira are getting married on 11.11.2026 at The Heaven, Damistan. You're invited. #JSWeDo",
+    site_description: "Jeger & Shaira are getting married on 11.11.2026 at The Heaven, Damistan. You're invited. #JSSayIDo",
     share_image: "/og.jpg",
     favicon: "",
     gallery: [],
@@ -36,6 +36,14 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     { id: "s1", time: "4:00 – 5:00 PM", title: "The Ceremony", detail: "An *intimate ceremony*, shared with our families, entourage and a few honoured guests. If your heart wants to witness us say “I do”, you are *warmly welcome to join* — open seating is available around our reserved rows.", order: 1 },
     { id: "s2", time: "5:00 – 6:30 PM", title: "Cocktail & Mingling Hour", detail: "*Everyone is welcome from 5 PM!* Snacks, refreshments, *photo moments* and little activities at the *majlis*, just outside the hall. This is where we’ll come find you — to hug, laugh and take pictures together.", order: 2 },
     { id: "s3", time: "7:00 PM onwards", title: "The Reception", detail: "Doors open for the celebration — *dinner*, our *film on the big screen*, *games and giveaways*, and dancing until the very end.", order: 3 },
+  ],
+
+  /** Our Story, chapter by chapter — swipeable on the site; photos upload in the binder (Content → Story chapters). */
+  story: [
+    { id: "ch1", title: "The First Hello", text: "Two marketers, one brief, one impossible deadline. We spent our days telling other people's stories — not noticing that God had quietly started writing ours.", photo: "", order: 1 },
+    { id: "ch2", title: "The 11:11 Habit", text: "Somewhere between late-night ideas and early-morning coffee, we started catching 11:11 on the clock — and wishing. Same time, same wish, neither of us brave enough to say it out loud. Little did we know, our wish had a name.", photo: "", order: 2 },
+    { id: "ch3", title: "The Ask", text: "Wishing turned into praying, and praying turned into courage. On one perfectly ordinary-extraordinary evening, he asked — and she said yes. Heaven's timing, as always, was right on time.", photo: "", order: 3 },
+    { id: "ch4", title: "Forever, Answered", text: "Ours is no longer a wish whispered at 11:11. It is the answer we walk into hand in hand on 11.11.2026 — each other's answered prayer, a wish come true. And everything, everything is from the Lord.", photo: "", order: 4 },
   ],
 
   budget: [
@@ -119,6 +127,6 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     { id: "f2", question: "What should I wear?", answer: "Black tie, in glossy greens and warm shining browns. Greens: emerald, laurel, jade, scarab, olive, peridot. Warm browns: coffee, smoky topaz, bronze, dark honey, caramel, toffee — every shade is swatched in the Dress Code section above. Kindly avoid black, white, burgundy and copper, which are reserved for our families and entourage. Do bring the shine: satin, velvet, silk, fine suit wool and liquid poly are all welcome, while tulle, chiffon and anything fully matte are best left at home.", order: 2 },
     { id: "f3", question: "Are kids welcome?", answer: "We adore your little ones — they are welcome to join the reception whenever your invitation says so. The ceremony itself is an adults-only celebration, unless they are part of our entourage: our flower girl and ring bearer hold the front row.", order: 3 },
     { id: "f4", question: "Is there parking?", answer: "Yes, parking is available at The Heaven, Damistan.", order: 4 },
-    { id: "f5", question: "Can I post photos?", answer: "Please! Tag @shaiandjeg and use #JSGotMarried — #JSWeDo and #JSWishComeTrue work beautifully too. We only ask for an unplugged ceremony.", order: 5 },
+    { id: "f5", question: "Can I post photos?", answer: "Please! Tag @shaiandjeg and use #JSGotMarried — #JSSayIDo and #JSWishComeTrue work beautifully too. We only ask for an unplugged ceremony.", order: 5 },
   ],
 };

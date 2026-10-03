@@ -4,7 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { useCountdown } from "@/lib/hooks";
 import type { WeddingInfo } from "@/lib/types";
 import { EASE, Tilt } from "./fx";
-import { OvalFrame, Paisley } from "./ornaments";
+import { OvalFrame } from "./ornaments";
+
+/** The couple's portrait, baked into the site itself (a small WebP in /public) so it paints WITH the
+ *  first frame — no waiting on the database, no empty frame. It still defers to love: a cover photo
+ *  (or first gallery photo) saved in the binder simply takes over the frame once it arrives.
+ *  Preloaded from <head> in app/layout.tsx, and rendered eager/high-priority below. */
+export const BAKED_COVER = "/img/cover.webp";
 
 export const fullDate = (iso: string) => {
   const p = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Asia/Bahrain" }).formatToParts(new Date(iso));
@@ -16,7 +22,8 @@ const timeWords = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { h
 
 function Card({ info, sealed }: { info: WeddingInfo; sealed?: boolean }) {
   const cd = useCountdown(info.date);
-  const photo = info.cover_photo || info.gallery[0] || "";
+  // binder photo when it has one, the gallery's lead photo otherwise, the baked portrait instantly
+  const photo = info.cover_photo || info.gallery[0] || BAKED_COVER;
   const lace = "absolute z-[2] inset-x-0 h-[8cqw] bg-[url('/img/lacetrim.webp')] bg-repeat-x bg-[length:auto_100%] [filter:brightness(1.04)_sepia(.08)_drop-shadow(0_-1px_.5px_rgba(61,47,38,.35))_drop-shadow(0_-2px_3px_rgba(61,47,38,.12))] bg-center pointer-events-none";
   return (
     <div className="relative w-full h-full [filter:drop-shadow(0_2px_2px_rgba(61,47,38,.18))_drop-shadow(0_20px_26px_rgba(61,47,38,.24))]">
@@ -26,12 +33,7 @@ function Card({ info, sealed }: { info: WeddingInfo; sealed?: boolean }) {
         <div aria-hidden className={`${lace} top-0`} style={{ transform: "scaleY(-1)" }} />
         <div aria-hidden className={`${lace} bottom-0`} />
         <OvalFrame className="w-[48cqw] relative mt-[2cqw]">
-          {photo ? <img src={photo} alt={`${info.groom} and ${info.bride}`} className="w-full h-full object-cover" /> : (
-            <div className="w-full h-full bg-[linear-gradient(160deg,#EFE7DB,#DDD0BE)] flex flex-col items-center justify-center text-taupe">
-              <Paisley className="w-[5cqw] h-[8cqw] opacity-50" />
-              <span className="font-serif italic mt-[1.5cqw] text-[max(3cqw,10px)]">our photo</span>
-            </div>
-          )}
+          <img src={photo} alt={`${info.groom} and ${info.bride}`} loading="eager" decoding="async" fetchPriority="high" className="w-full h-full object-cover" />
         </OvalFrame>
         <h1 className="relative font-serif font-medium text-ink text-[7cqw] mt-[2cqw] leading-none tracking-[0.12em] uppercase whitespace-nowrap">
           {info.groom} <span className="script normal-case tracking-normal text-wine text-[7.5cqw] mx-[0.4cqw]">&amp;</span> {info.bride}

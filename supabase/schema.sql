@@ -43,6 +43,8 @@ create table if not exists checklist (id text primary key default gen_random_uui
 create table if not exists attire (id text primary key default gen_random_uuid()::text, "group" text, label text, colors jsonb default '[]', reserved boolean default false, notes text, swatch_url text default '', "order" int default 0);
 create table if not exists entourage (id text primary key default gen_random_uuid()::text, role text, name text, title text, "order" int default 0);
 create table if not exists faq (id text primary key default gen_random_uuid()::text, question text, answer text, "order" int default 0);
+-- Our Story, chapter by chapter (the swipeable carousel on the public site).
+create table if not exists story (id text primary key default gen_random_uuid()::text, title text, text text, photo text default '', "order" int default 0);
 
 -- ── attire palette (round 20): the beetle becomes a greenish Scarab; weaves softened to liquid shine ──
 insert into attire (id, "group", label, colors, reserved, notes, swatch_url, "order") values
@@ -65,6 +67,7 @@ alter table checklist enable row level security;
 alter table attire enable row level security;
 alter table entourage enable row level security;
 alter table faq enable row level security;
+alter table story enable row level security;
 
 -- Seed data is loaded from the admin: Settings → "Push starter data to Supabase" (safe to press any
 -- time: guests are skipped, the attire palette is refreshed from the code, everything else only

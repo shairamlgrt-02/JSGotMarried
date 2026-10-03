@@ -7,7 +7,7 @@ import type { WeddingInfo } from "./types";
 /** Used until the couple fills the Website settings in the binder. */
 const FALLBACK = {
   title: "Jeger & Shaira — Wedding · 11.11.2026",
-  description: "Jeger & Shaira are getting married on 11.11.2026 at The Heaven, Damistan. You're invited. #JSWeDo",
+  description: "Jeger & Shaira are getting married on 11.11.2026 at The Heaven, Damistan. You're invited. #JSSayIDo",
   shareImage: "/og.jpg",
   favicon: "/favicon.png",
 };

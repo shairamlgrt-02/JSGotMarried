@@ -70,6 +70,8 @@ export const ENTOURAGE_ROLES: { value: EntourageRole; label: string }[] = [
   { value: "other", label: "Other" },
 ];
 export type Faq = { id: string; question: string; answer: string; order: number };
+/** One chapter of the couple's story — title + a little paragraph + one photo, swipeable on the site. */
+export type StoryChapter = { id: string; title: string; text: string; photo: string; order: number };
 
 export type TableMap = {
   wedding_info: WeddingInfo;
@@ -81,8 +83,9 @@ export type TableMap = {
   attire: Attire;
   entourage: EntourageMember;
   faq: Faq;
+  story: StoryChapter;
 };
 export type TableName = keyof TableMap;
-export const TABLES: TableName[] = ["wedding_info", "schedule", "budget", "guests", "vendors", "checklist", "attire", "entourage", "faq"];
+export const TABLES: TableName[] = ["wedding_info", "schedule", "budget", "guests", "vendors", "checklist", "attire", "entourage", "faq", "story"];
 /** Tables the public site may read without logging in. */
-export const PUBLIC_TABLES: TableName[] = ["wedding_info", "schedule", "attire", "entourage", "faq"];
+export const PUBLIC_TABLES: TableName[] = ["wedding_info", "schedule", "attire", "entourage", "faq", "story"];

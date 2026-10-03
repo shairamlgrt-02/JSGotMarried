@@ -41,31 +41,32 @@ const config: Config = {
       /**
        * PUBLIC-SITE TYPE SCALE — every size on the wedding page comes from this list (phone → desktop, fluid).
        * Change a number here and the whole page follows. (The admin binder keeps Tailwind's defaults.)
+       * Deliberately compact: the phone holds the fine print, the desktop stays open and airy.
        *
-       *   micro   13 → 14   uppercase labels, kickers, buttons, captions
-       *   tag     15 → 16   the time labels on the programme
-       *   fine    17 → 18   secondary lines: colour names, titles under names, hints
-       *   body    20 → 22   paragraphs, programme details, FAQ answers
-       *   lead    22 → 26   story, invitation wording, list headings
-       *   h3      26 → 34   card titles, names
-       *   display 32 → 56   couple names / venue in capitals, footer date
-       *   script-sm 34 → 48 script accents ("and", colour name, postcard)
-       *   script  44 → 64   section titles, sign-off names
-       *   year    40 → 80   the "2026" under the big date
-       *   numeral 88 → 176  the big 11.11
+       *   micro   11.5 → 13    uppercase labels, kickers, buttons, captions
+       *   tag     13.5 → 15    the time labels on the programme
+       *   fine    15 → 16.5    secondary lines: colour names, titles under names, hints
+       *   body    17 → 19.5    paragraphs, programme details, FAQ answers
+       *   lead    19 → 22.5    story, invitation wording, list headings
+       *   h3      22 → 29.5    card titles, names
+       *   display 27 → 47      couple names / venue in capitals, footer date
+       *   script-sm 29 → 42    script accents ("and", colour name, postcard)
+       *   script  37 → 55      section titles, sign-off names
+       *   year    32 → 64      the "2026" under the big date
+       *   numeral 72 → 144     the big 11.11
        */
       fontSize: {
-        micro: [fluid(13, 14), { lineHeight: "1.4" }],
-        tag: [fluid(15, 16), { lineHeight: "1.3" }],
-        fine: [fluid(17, 18), { lineHeight: "1.4" }],
-        body: [fluid(20, 22), { lineHeight: "1.55" }],
-        lead: [fluid(22, 26), { lineHeight: "1.5" }],
-        h3: [fluid(26, 34), { lineHeight: "1.15" }],
-        display: [fluid(32, 56), { lineHeight: "1.1" }],
-        "script-sm": [fluid(34, 48), { lineHeight: "1.1" }],
-        script: [fluid(44, 64), { lineHeight: "1.1" }],
-        year: [fluid(40, 80), { lineHeight: "1" }],
-        numeral: [fluid(88, 176), { lineHeight: "1" }],
+        micro: [fluid(11.5, 13), { lineHeight: "1.4" }],
+        tag: [fluid(13.5, 15), { lineHeight: "1.3" }],
+        fine: [fluid(15, 16.5), { lineHeight: "1.4" }],
+        body: [fluid(17, 19.5), { lineHeight: "1.55" }],
+        lead: [fluid(19, 22.5), { lineHeight: "1.5" }],
+        h3: [fluid(22, 29.5), { lineHeight: "1.15" }],
+        display: [fluid(27, 47), { lineHeight: "1.1" }],
+        "script-sm": [fluid(29, 42), { lineHeight: "1.1" }],
+        script: [fluid(37, 55), { lineHeight: "1.1" }],
+        year: [fluid(32, 64), { lineHeight: "1" }],
+        numeral: [fluid(72, 144), { lineHeight: "1" }],
       },
       /**
        * SECTION RHYTHM — vertical padding between blocks of the letter (phone → desktop).
@@ -73,11 +74,11 @@ const config: Config = {
        *   head    title → content    stack  gap between stacked cards
        */
       spacing: {
-        "sec-lg": fluid(80, 112),
-        sec: fluid(56, 80),
-        "sec-sm": fluid(32, 48),
-        head: fluid(40, 56),
-        stack: fluid(36, 56),
+        "sec-lg": fluid(64, 92),
+        sec: fluid(44, 66),
+        "sec-sm": fluid(26, 40),
+        head: fluid(32, 46),
+        stack: fluid(28, 44),
       },
       transitionTimingFunction: { lux: "cubic-bezier(0.76, 0, 0.24, 1)" },
     },
