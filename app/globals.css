@@ -32,7 +32,7 @@ html.lenis, html.lenis body { height: auto; }
 .caps { @apply font-serif uppercase font-light tracking-[0.18em]; }
 .script { @apply font-script font-normal; }
 
-.field { @apply w-full bg-transparent border-b border-taupe/40 py-3 font-serif text-xl text-ink placeholder:text-taupe/60 placeholder:italic outline-none transition-colors focus:border-wine; }
+.field { @apply w-full bg-transparent border-b border-taupe/40 py-2.5 font-serif text-lg text-ink placeholder:text-taupe/60 placeholder:italic outline-none transition-colors focus:border-wine; }
 
 /* ─────────── Public site: shared rhythm + column ───────────
    Sizes and spacings live in tailwind.config.ts (text-body, py-sec …). These helpers only bundle the

@@ -1,5 +1,4 @@
 "use client";
-import { useId } from "react";
 
 /** Symmetrical Victorian flourish divider. */
 export function Flourish({ className = "", color = "currentColor" }: { className?: string; color?: string }) {

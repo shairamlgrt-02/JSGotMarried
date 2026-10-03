@@ -5,7 +5,7 @@ import { getMode, pushSeedSafely, refreshFaqCopy, resetLocal, uid } from "@/lib/
 import { entourageGroups } from "@/lib/entourage";
 import { mergeHousehold, planHouseholdMerges } from "@/lib/guests";
 import { useCountdown, useTable } from "@/lib/hooks";
-import type { Attending, Attire, BudgetItem, BudgetStatus, ChecklistItem, EntourageMember, Guest, Priority, ScheduleItem, Vendor, VendorStatus } from "@/lib/types";
+import type { Attending, Attire, BudgetItem, BudgetStatus, ChecklistItem, EntourageMember, Guest, Priority, ScheduleItem, StoryChapter, Vendor, VendorStatus } from "@/lib/types";
 import { ENTOURAGE_ROLES, TABLES } from "@/lib/types";
 import { Btn, Card, Donut, EditText, PageHead, Progress, Select, Stat, Tag, download, fileToDataUrl, money, toCsv } from "./ui";
 
@@ -133,6 +133,7 @@ export function Details() {
         </Card>
         <Card title="Our story" className="md:col-span-2">
           <EditText multiline rows={5} value={info.story} onSave={(v) => saveInfo({ story: v })} className="font-serif text-2xl leading-snug" />
+          <p className="text-xs text-ink/50 mt-3">The site shows the <b>Story chapters</b> carousel (Content → Story chapters). This classic one-paragraph version only appears if every chapter is deleted — it doubles as your rough draft.</p>
         </Card>
         <Card title="Social">
           <div className="grid gap-4">
@@ -489,10 +490,37 @@ export function AttireEditor() {
 }
 
 /* ═════════════ 9. CONTENT (images, entourage, FAQ) ═════════════ */
+/* One draggable row of the Our Story carousel: photo + title + a little paragraph. */
+function StoryChapterRow({ c, onSave, onDel }: { c: StoryChapter; onSave: (c: StoryChapter) => void; onDel: () => void }) {
+  const controls = useDragControls();
+  return (
+    <Reorder.Item value={c} dragListener={false} dragControls={controls} className="bg-paper text-ink rounded-2xl p-4 md:p-5 flex gap-4 items-start shadow-lg list-none">
+      <button onPointerDown={(e) => controls.start(e)} className="cursor-grab active:cursor-grabbing text-ink/30 hover:text-wine text-xl pt-1 touch-none select-none" aria-label="Drag">⋮⋮</button>
+      <div className="w-24 shrink-0 text-center">
+        {c.photo ? <img src={c.photo} alt="" className="w-24 h-24 object-cover rounded-lg bg-ink/5" /> : (
+          <div className="w-24 h-24 rounded-lg border-2 border-dashed border-ink/15 grid place-items-center text-ink/35 text-[10px] leading-tight px-1">empty → uses<br />a gallery photo</div>
+        )}
+        <div className="mt-1.5 flex justify-center gap-2">
+          <label className="cursor-pointer text-[10px] text-wine underline underline-offset-2">upload<input type="file" accept="image/*" hidden onChange={async (e) => { const f = e.target.files?.[0]; if (f) onSave({ ...c, photo: await fileToDataUrl(f, 900) }); }} /></label>
+          {c.photo && <button onClick={() => onSave({ ...c, photo: "" })} className="text-[10px] text-ink/40 hover:text-burgundy">remove</button>}
+        </div>
+      </div>
+      <div className="flex-1 grid gap-1">
+        <EditText value={c.title} onSave={(v) => onSave({ ...c, title: v })} className="font-serif text-2xl" />
+        <EditText value={c.text} placeholder="Two or three lines for this chapter…" onSave={(v) => onSave({ ...c, text: v })} multiline rows={2} className="text-sm text-ink/70" />
+      </div>
+      <Btn variant="danger" onClick={onDel}>✕</Btn>
+    </Reorder.Item>
+  );
+}
+
 export function Content() {
   const { info, saveInfo } = useInfo();
   const ent = useTable("entourage");
   const faq = useTable("faq");
+  const story = useTable("story");
+  const storySorted = useMemo(() => [...story.rows].sort((a, b) => a.order - b.order), [story.rows]);
+  const commitStoryOrder = () => story.save(storySorted.map((s, i) => ({ ...s, order: i + 1 })));
   const ROLES = ENTOURAGE_ROLES;
   const [url, setUrl] = useState("");
   const [msg, setMsg] = useState("");
@@ -552,6 +580,17 @@ export function Content() {
           </div>
           <p className="text-xs text-ink/60 mt-3"><b>Order matters:</b> 1–4 = photo strips in Our Story · 5–8 = long photo strip · 9–12 = polaroids · 13+ = extra polaroids near the end.</p>
           <p className="text-xs text-ink/50 mt-1">Tip: photos are compressed automatically. For many large photos, host them (e.g. Supabase Storage / Cloudinary) and paste URLs.</p>
+        </Card>
+        <Card title="Story chapters (the Our Story carousel)" className="md:col-span-2" action={<Btn onClick={() => story.save({ id: uid(), title: "New chapter", text: "", photo: "", order: storySorted.length + 1 })}>+ Add chapter</Btn>}>
+          <p className="text-sm text-ink/60 mb-4">
+            Our Story as guests read it: each chapter shows a <b>title</b>, two or three lines and <b>one photo</b> in the framed photo strip —
+            guests swipe sideways or tap the dots, and the strip winds on like film. Drag ⋮⋮ to reorder the chapters.
+            A chapter with no photo borrows one from your gallery. Delete every chapter and the site falls back to the classic one-paragraph story (Details → Our story).
+          </p>
+          <Reorder.Group axis="y" values={storySorted} onReorder={(next) => story.setRows(next.map((s, i) => ({ ...s, order: i + 1 })))} className="space-y-3" onPointerUp={commitStoryOrder}>
+            {storySorted.map((c) => <StoryChapterRow key={c.id} c={c} onSave={story.save} onDel={() => story.del(c.id)} />)}
+          </Reorder.Group>
+          {storySorted.length === 0 && <p className="py-8 text-center text-ink/40 font-serif text-2xl italic">No chapters — the classic story shows instead. Add your first chapter ✦</p>}
         </Card>
         <Card title="Entourage" action={<Btn onClick={() => ent.save({ id: uid(), role: "bridesmaid", name: "To be announced", title: "", order: ent.rows.length + 1 })}>+ Add</Btn>}>
           <p className="text-sm text-ink/60 mb-4">

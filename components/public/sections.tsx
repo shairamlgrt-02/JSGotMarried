@@ -1,10 +1,12 @@
 "use client";
 import { AnimatePresence, motion, useInView, useScroll, useSpring } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { submitRsvp, type InviteState } from "@/lib/db";
 import { entourageHeading } from "@/lib/entourage";
-import type { Attire, EntourageMember, Faq, ScheduleItem, WeddingInfo } from "@/lib/types";
-import { fullDate } from "./Envelope";
+import { useCountdown } from "@/lib/hooks";
+import { downloadKeepsake } from "@/lib/keepsake";
+import type { Attire, EntourageMember, Faq, ScheduleItem, StoryChapter, WeddingInfo } from "@/lib/types";
+import { BAKED_COVER, fullDate } from "./Envelope";
 import { EASE, EASE_OUT, Reveal, Tilt, rise } from "./fx";
 import { Corners, Flourish, GemDot, LaceEdge, Paisley } from "./ornaments";
 import { PhotoStrip, Polaroid, ScratchReveal, slots } from "./photos";
@@ -42,20 +44,120 @@ export function Invitation({ info }: { info: WeddingInfo }) {
   );
 }
 
-/* ─────────── OUR STORY ─────────── */
-export function Story({ info }: { info: WeddingInfo }) {
+/* ─────────── OUR STORY — the chapter carousel ─────────── */
+/** The framed photo strip that winds on like film to the active chapter's picture. */
+function ChapterFilm({ chapters, index, info }: { chapters: StoryChapter[]; index: number; info: WeddingInfo }) {
+  const win = useRef<HTMLDivElement>(null);
+  const [h, setH] = useState(250);
+  useEffect(() => {
+    const el = win.current;
+    if (!el) return;
+    const measure = () => setH(el.getBoundingClientRect().height);
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+  return (
+    <motion.div {...rise(0, 26)} style={{ rotate: -2 }} className="relative mx-auto w-[232px] md:w-[264px]">
+      <span aria-hidden className="absolute z-10 -top-3 left-1/2 -translate-x-1/2 rotate-[3deg] h-6 w-20 bg-[#EFE4D2]/75 shadow-[0_1px_2px_rgba(61,47,38,.18)] [clip-path:polygon(3%_0,97%_4%,100%_50%,97%_96%,3%_100%,0_50%)]" />
+      <div className="relative bg-[#FBF8F2] p-[4.5%] pb-[9%] shadow-[0_1px_2px_rgba(61,47,38,.2),0_18px_30px_-12px_rgba(61,47,38,.45)]">
+        <div ref={win} className="relative h-[220px] md:h-[250px] overflow-hidden">
+          <motion.div initial={false} animate={{ y: -h * index }} transition={{ duration: 0.75, ease: EASE }}>
+            {chapters.map((c, k) => (
+              <div key={c.id} style={{ height: h }} className="pb-3">
+                <div className="w-full h-full overflow-hidden shadow-[inset_0_0_0_1px_rgba(61,47,38,.08)] bg-[linear-gradient(145deg,#E9DFD1,#D9CBB8)]">
+                  <img src={c.photo || info.gallery[k] || BAKED_COVER} alt={c.title} loading="lazy" draggable={false} className="w-full h-full object-cover [filter:sepia(.12)_saturate(.92)_contrast(1.02)]" />
+                </div>
+              </div>
+            ))}
+          </motion.div>
+        </div>
+        <p className="text-center font-serif font-medium text-micro text-mocha uppercase tracking-[0.16em] mt-3">J &amp; S · ch. {index + 1} of {chapters.length}</p>
+      </div>
+    </motion.div>
+  );
+}
+
+/** Chapter text slides sideways with the swipe; `dir` keeps enter & exit facing the same way. */
+const chapterSlide = {
+  enter: (d: number) => ({ opacity: 0, x: d * 56 }),
+  center: { opacity: 1, x: 0 },
+  exit: (d: number) => ({ opacity: 0, x: d * -56 }),
+};
+
+export function Story({ info, chapters = [] }: { info: WeddingInfo; chapters?: StoryChapter[] }) {
+  const sorted = useMemo(() => [...chapters].sort((a, b) => a.order - b.order), [chapters]);
+  const [i, setI] = useState(0);
+  const [dir, setDir] = useState(1);
+  const n = sorted.length;
+  const go = (k: number) => {
+    if (!n) return;
+    const next = ((k % n) + n) % n;
+    setDir(k === i ? dir : next > i || (i === n - 1 && next === 0) ? 1 : -1);
+    setI(next);
+  };
+
+  // every chapter deleted in the binder → fall back to the classic one-paragraph story with the strips
+  if (n === 0) {
+    return (
+      <section id="story" className="sec">
+        <div className="col-wide grid md:grid-cols-2 gap-10 md:gap-16 items-center">
+          <div className="flex justify-center gap-4 md:gap-8">
+            <PhotoStrip photos={slots(info, 0, 4)} caption={`J & S · ${fullDate(info.date)}`} rotate={-3} className="w-[46%] max-w-[200px]" />
+            <PhotoStrip photos={slots(info, 0, 4).slice(2).concat(slots(info, 0, 2))} caption="#JSGotMarried" rotate={2.5} className="w-[46%] max-w-[200px] mt-8 md:mt-10" />
+          </div>
+          <div className="text-center md:text-left">
+            <Reveal><p className="micro text-taupe">Our Story</p>
+              <h2 className="script text-wine text-script mt-2 text-balance">A wish come true</h2></Reveal>
+            <Reveal delay={0.1}><p className="font-serif text-lead text-mocha mt-6 text-pretty">{info.story}</p></Reveal>
+            <Reveal delay={0.2}><p className="micro text-wine mt-6">{info.hashtags.join("   ")}</p></Reveal>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  const ch = sorted[Math.min(i, n - 1)];
   return (
     <section id="story" className="sec">
-      <div className="col-wide grid md:grid-cols-2 gap-10 md:gap-16 items-center">
-        <div className="flex justify-center gap-4 md:gap-8">
-          <PhotoStrip photos={slots(info, 0, 4)} caption={`J & S · ${fullDate(info.date)}`} rotate={-3} className="w-[46%] max-w-[200px]" />
-          <PhotoStrip photos={slots(info, 0, 4).slice(2).concat(slots(info, 0, 2))} caption="#JSGotMarried" rotate={2.5} className="w-[46%] max-w-[200px] mt-8 md:mt-10" />
-        </div>
+      <Title kicker="Our Story" title="A wish come true" />
+      <div className="col-wide grid md:grid-cols-[280px_1fr] gap-10 md:gap-16 mt-head items-center">
+        <ChapterFilm chapters={sorted} index={i} info={info} />
         <div className="text-center md:text-left">
-          <Reveal><p className="micro text-taupe">Our Story</p>
-            <h2 className="script text-wine text-script mt-2 text-balance">A wish come true</h2></Reveal>
-          <Reveal delay={0.1}><p className="font-serif text-lead text-mocha mt-6 text-pretty">{info.story}</p></Reveal>
-          <Reveal delay={0.2}><p className="micro text-wine mt-6">{info.hashtags.join("   ")}</p></Reveal>
+          <div className="overflow-hidden min-h-[210px] md:min-h-[230px]">
+            <AnimatePresence mode="wait" custom={dir} initial={false}>
+              <motion.div
+                key={ch.id}
+                variants={chapterSlide}
+                custom={dir}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: 0.55, ease: EASE_OUT }}
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.16}
+                dragDirectionLock
+                onDragEnd={(_, o) => { if (o.offset.x < -48) go(i + 1); else if (o.offset.x > 48) go(i - 1); }}
+                className="cursor-grab active:cursor-grabbing select-none touch-pan-y"
+              >
+                <p className="micro text-taupe">Chapter {i + 1} of {n}</p>
+                <h3 className="script text-wine text-script-sm mt-1 text-balance">{ch.title}</h3>
+                <p className="font-serif text-lead text-mocha mt-4 md:mt-5 text-pretty">{ch.text}</p>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+          <div className="flex items-center justify-center md:justify-start gap-5 mt-6 md:mt-8">
+            <button type="button" onClick={() => go(i - 1)} aria-label="Previous chapter" className="w-11 h-11 rounded-full border border-wine/40 text-wine grid place-items-center text-xl leading-none hover:bg-wine hover:text-lace transition-colors">‹</button>
+            <div className="flex items-center gap-2.5">
+              {sorted.map((c, k) => (
+                <button key={c.id} type="button" onClick={() => go(k)} aria-label={`Chapter ${k + 1}: ${c.title}`}
+                  className={`rounded-full border border-wine/50 transition-all ${k === i ? "w-6 h-2.5 bg-wine" : "w-2.5 h-2.5 hover:bg-wine/40"}`} />
+              ))}
+            </div>
+            <button type="button" onClick={() => go(i + 1)} aria-label="Next chapter" className="w-11 h-11 rounded-full border border-wine/40 text-wine grid place-items-center text-xl leading-none hover:bg-wine hover:text-lace transition-colors">›</button>
+          </div>
+          <p className="micro text-wine mt-6 text-balance">swipe or tap the dots — {info.hashtags.join("   ")}</p>
         </div>
       </div>
     </section>
@@ -75,7 +177,11 @@ export function ElevenEleven({ info }: { info: WeddingInfo }) {
             <Paisley className="w-7 h-11 md:w-12 md:h-20 text-taupe/70" />
           </div>
           <p className="font-serif font-light text-wine text-year tracking-[0.18em] mt-1 md:-mt-1 pl-[0.18em] [text-shadow:0_2px_0_rgba(255,255,255,.9),0_-1px_1px_rgba(60,20,30,.3)]">{d.slice(6)}</p>
-          <p className="font-serif italic text-mocha text-lead mt-5">Make a wish — ours comes true.</p>
+          <p className="font-serif italic text-mocha text-lead mt-5 text-balance">A wish made at 11:11 — a prayer answered by God.</p>
+          <p className="micro text-taupe mt-6 tracking-[0.18em]">1 Corinthians 11:11–12</p>
+          <p className="font-serif italic text-fine text-taupe mt-2 max-w-xl mx-auto text-balance px-5">
+            “In the Lord, neither is woman independent of man, nor man of woman — for as she came from him, so he is born of her. And everything comes from God.”
+          </p>
         </Reveal>
       </div>
     </section>
@@ -103,18 +209,18 @@ export function SaveTheDate({ info }: { info: WeddingInfo }) {
 }
 
 /* ─────────── THE DAY ─────────── */
-/** Line-art medallion icon chosen from the program title (sized to sit inside a 52px medallion on phones). */
+/** Line-art medallion icon chosen from the program title (sized to sit inside a 44px medallion on phones). */
 function ProgramIcon({ title }: { title: string }) {
   const t = title.toLowerCase();
   const common = { fill: "none", stroke: "currentColor", strokeWidth: 1.4, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
-  if (t.includes("ceremony")) return <Paisley className="w-6 h-9 md:w-10 md:h-14" />;
+  if (t.includes("ceremony")) return <Paisley className="w-5 h-8 md:w-8 md:h-12" />;
   if (t.includes("cocktail") || t.includes("mingl")) return (
-    <svg viewBox="0 0 48 48" className="w-8 h-8 md:w-12 md:h-12" {...common}><path d="M10 8h12l-1.5 12a4.5 4.5 0 01-9 0zM16 25v13M11 38h10M38 8H26l1.5 12a4.5 4.5 0 009 0zM32 25v13M27 38h10M22 4l2-3M26 5l3-2M24 12h0" /><circle cx="15" cy="15" r="1" fill="currentColor" /><circle cx="33" cy="14" r="1" fill="currentColor" /></svg>
+    <svg viewBox="0 0 48 48" className="w-7 h-7 md:w-9 md:h-9" {...common}><path d="M10 8h12l-1.5 12a4.5 4.5 0 01-9 0zM16 25v13M11 38h10M38 8H26l1.5 12a4.5 4.5 0 009 0zM32 25v13M27 38h10M22 4l2-3M26 5l3-2M24 12h0" /><circle cx="15" cy="15" r="1" fill="currentColor" /><circle cx="33" cy="14" r="1" fill="currentColor" /></svg>
   );
   if (t.includes("reception") || t.includes("dinner") || t.includes("party")) return (
-    <svg viewBox="0 0 48 48" className="w-8 h-8 md:w-12 md:h-12" {...common}><circle cx="24" cy="22" r="11" /><path d="M13 22h22M24 11v22M16 14c4 3 12 3 16 0M16 30c4-3 12-3 16 0M24 5v6" /><path d="M8 40l3-3M40 40l-3-3M6 30h3M39 30h3M24 38v4" strokeWidth="1" /></svg>
+    <svg viewBox="0 0 48 48" className="w-7 h-7 md:w-9 md:h-9" {...common}><circle cx="24" cy="22" r="11" /><path d="M13 22h22M24 11v22M16 14c4 3 12 3 16 0M16 30c4-3 12-3 16 0M24 5v6" /><path d="M8 40l3-3M40 40l-3-3M6 30h3M39 30h3M24 38v4" strokeWidth="1" /></svg>
   );
-  return <svg viewBox="0 0 24 24" className="w-7 h-7 md:w-10 md:h-10" fill="currentColor"><path d="M12 2l2.6 6.6L21 9.3l-5 4.4 1.6 6.8L12 16.8 6.4 20.5 8 13.7 3 9.3l6.4-.7z" /></svg>;
+  return <svg viewBox="0 0 24 24" className="w-6 h-6 md:w-8 md:h-8" fill="currentColor"><path d="M12 2l2.6 6.6L21 9.3l-5 4.4 1.6 6.8L12 16.8 6.4 20.5 8 13.7 3 9.3l6.4-.7z" /></svg>;
 }
 
 /**
@@ -154,26 +260,26 @@ function ProgramStop({ s, i }: { s: ScheduleItem; i: number }) {
   return (
     <div ref={ref} className={`relative flex items-start mb-stack ${right ? "md:flex-row-reverse" : ""}`}>
       {/* medallion on the path (centred with a negative margin — a transform here would be overridden by the entrance animation) */}
-      <div className="relative z-[2] shrink-0 mt-7 md:mt-0 w-[52px] h-[52px] md:w-24 md:h-24 md:absolute md:left-1/2 md:-ml-12 md:top-2">
+      <div className="relative z-[2] shrink-0 mt-6 md:mt-0 w-11 h-11 md:w-20 md:h-20 md:absolute md:left-1/2 md:-ml-10 md:top-2">
         <motion.div initial={{ opacity: 0, scale: 0.85 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true, margin: "-8%" }} transition={{ duration: 0.8, ease: EASE_OUT, delay: 0.1 }}
           className="relative w-full h-full rounded-full bg-[#FBF7EF] border-2 border-wine/60 grid place-items-center text-wine shadow-[0_8px_18px_-8px_rgba(61,47,38,.55)]">
           <div className="absolute inset-1 md:inset-1.5 rounded-full border border-wine/25" />
           <ProgramIcon title={s.title} />
-          <span className="absolute -bottom-1.5 md:-bottom-2 left-1/2 -ml-3 md:-ml-3.5 bg-wine text-lace rounded-full w-6 h-6 md:w-7 md:h-7 grid place-items-center font-serif text-[13px] md:text-sm font-semibold leading-none">{i + 1}</span>
+          <span className="absolute -bottom-1.5 md:-bottom-2 left-1/2 -ml-2.5 md:-ml-3 bg-wine text-lace rounded-full w-5 h-5 md:w-6 md:h-6 grid place-items-center font-serif text-[11px] md:text-[13px] font-semibold leading-none">{i + 1}</span>
         </motion.div>
       </div>
 
       {/* the card — overlaps the medallion's edge on phones so the text column stays wide */}
-      <motion.div {...rise(0, 26)} className="relative flex-1 min-w-0 -ml-3 md:ml-0 md:flex-none md:w-[calc(50%-4.5rem)]">
+      <motion.div {...rise(0, 26)} className="relative flex-1 min-w-0 -ml-3 md:ml-0 md:flex-none md:w-[calc(50%-4rem)]">
         <div style={{ transform: `rotate(${tilt}deg)` }} className="relative [filter:drop-shadow(0_14px_14px_rgba(61,47,38,.2))]">
           {/* time tag like a luggage label — a sibling of the torn-edge card (not inside it), so the card's clip-path can never slice it */}
-          <div className="absolute z-[2] -top-4 left-4 md:left-6 w-max max-w-[calc(100%-2rem)] bg-wine text-lace pl-4 pr-7 py-1.5 [clip-path:polygon(0_0,calc(100%-11px)_0,100%_50%,calc(100%-11px)_100%,0_100%)]">
+          <div className="absolute z-[2] -top-4 left-4 md:left-6 w-max max-w-[calc(100%-2rem)] bg-wine text-lace pl-3.5 pr-6 py-1 [clip-path:polygon(0_0,calc(100%-11px)_0,100%_50%,calc(100%-11px)_100%,0_100%)]">
             <span className="block font-serif font-semibold uppercase text-tag tracking-[0.08em] leading-tight lining-nums">{s.time}</span>
           </div>
-          <div className="paper-card deckle relative px-5 md:px-8 pt-9 pb-6 md:pt-11 md:pb-8">
+          <div className="paper-card deckle relative px-4 md:px-7 pt-8 pb-5 md:pt-9 md:pb-7">
             <div className="absolute inset-2 border border-taupe/25 pointer-events-none" />
             <h3 className="font-serif text-h3 text-ink text-balance">{s.title}</h3>
-            <p className="font-serif italic text-body text-mocha mt-3"><Highlighted text={s.detail} on={seen} /></p>
+            <p className="font-serif italic text-body text-mocha mt-2"><Highlighted text={s.detail} on={seen} /></p>
           </div>
         </div>
       </motion.div>
@@ -447,7 +553,25 @@ export function FollowAndTag({ info }: { info: WeddingInfo }) {
 }
 
 /* ─────────── RSVP (reply card) ─────────── */
-export function Rsvp({ info, invite, code, onReplied }: { info: WeddingInfo; invite: InviteState; code: string; onReplied: () => void }) {
+/**
+ * The "Save your invitation card" offer — one tap draws a personal keepsake PNG in the guest's own
+ * browser (their name, seats, time, venue, programme, dress code) and saves it to their phone.
+ */
+function KeepsakeOffer({ onBuild }: { onBuild: () => Promise<unknown> }) {
+  const [busy, setBusy] = useState<"idle" | "working" | "done">("idle");
+  return (
+    <div className="mt-8 text-center">
+      <motion.button type="button" whileTap={{ scale: 0.97 }} disabled={busy === "working"}
+        onClick={async () => { setBusy("working"); await onBuild().catch(() => {}); setBusy("done"); }}
+        className="micro bg-wine text-lace rounded-full px-8 md:px-10 py-4 shadow-[0_8px_20px_-6px_rgba(110,31,46,.6)] hover:bg-mocha transition-colors disabled:opacity-60">
+        {busy === "working" ? "Drawing your card…" : busy === "done" ? "Saved to your device ✓" : "Save your invitation card"}
+      </motion.button>
+      <p className="micro text-taupe/80 mt-3 tracking-[0.14em] text-balance">your seats, the time, the venue & the dress code — in one picture for your phone</p>
+    </div>
+  );
+}
+
+export function Rsvp({ info, invite, code, onReplied, schedule, dressNote }: { info: WeddingInfo; invite: InviteState; code: string; onReplied: () => void; schedule: ScheduleItem[]; dressNote: string }) {
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
   const [err, setErr] = useState("");
   const [approved, setApproved] = useState<boolean | null>(null);
@@ -474,6 +598,19 @@ export function Rsvp({ info, invite, code, onReplied }: { info: WeddingInfo; inv
   const daysLeft = Math.max(0, Math.ceil((deadline.getTime() - Date.now()) / 86400000));
   useEffect(() => { if (state === "done") try { localStorage.setItem("jsos:rsvped", "1"); window.dispatchEvent(new Event("rsvped")); } catch {} }, [state]);
   const choice = (on: boolean) => `font-serif text-body px-6 py-2 rounded-full border transition-colors ${on ? "bg-wine text-lace border-wine" : "border-taupe/40 text-mocha hover:border-wine"}`;
+  /** Prompt the keepsake card for this guest — personal PNG with their seats and the day in short. */
+  const makeKeepsake = (guestName: string, plusOne?: string) =>
+    downloadKeepsake({
+      groom: info.groom, bride: info.bride,
+      guestName, plusOne: plusOne || undefined,
+      dateISO: info.date, venue: info.venue_name, address: info.venue_address,
+      program: [...schedule].sort((a, b) => a.order - b.order).map((s) => ({ time: s.time, title: s.title })),
+      dressNote: dressNote || "Black tie — details live in the attire guide",
+      hashtags: info.hashtags,
+      photo: info.cover_photo || info.gallery[0] || BAKED_COVER,
+    });
+  // the wax seal pops half above the card — leave it its own room so it never sits on the text (mobile)
+  const cardGap = "col mt-20 md:mt-24";
 
   /* ── a burned link: greet the guest, seal the reply ── */
   const reply = invite.reply;
@@ -490,7 +627,7 @@ export function Rsvp({ info, invite, code, onReplied }: { info: WeddingInfo; inv
           <h2 className="script text-wine text-script mt-4 text-balance">{yes ? `Welcome, ${first}` : `Thank you, ${first}`}</h2>
           <p className="micro text-taupe mt-1">{invite.name} · {yes ? `${reply.pax} seat${reply.pax > 1 ? "s" : ""} saved` : "declined with love"}</p>
         </div>
-        <div className="col mt-head">
+        <div className={cardGap}>
           <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, ease: EASE_OUT }} className="relative">
             <motion.div initial={{ scale: 1.6, opacity: 0, rotate: -24 }} animate={{ scale: 1, opacity: 1, rotate: -10 }} transition={{ delay: 0.45, duration: 0.6, ease: EASE_OUT }}
               className="absolute z-20 -top-12 md:-top-14 left-1/2 -ml-12 md:-ml-14 w-24 h-24 md:w-28 md:h-28">
@@ -527,6 +664,7 @@ export function Rsvp({ info, invite, code, onReplied }: { info: WeddingInfo; inv
                     </button>
                   )}
                 </div>
+                {yes && <KeepsakeOffer onBuild={() => makeKeepsake(reply.name, reply.plus_one || undefined)} />}
               </div>
             </div>
           </motion.div>
@@ -552,7 +690,7 @@ export function Rsvp({ info, invite, code, onReplied }: { info: WeddingInfo; inv
           </p>
         ) : <p className="micro text-wine mt-3">The deadline has passed — please message us directly</p>}
       </Reveal>
-      <div className="col mt-head">
+      <div className={cardGap}>
         <motion.div {...rise(0, 40)} className="relative">
           {state !== "done" && (
             <div aria-hidden className="absolute -inset-2 md:-inset-3 rounded-[6px] border border-wine/35 pointer-events-none" />
@@ -576,6 +714,7 @@ export function Rsvp({ info, invite, code, onReplied }: { info: WeddingInfo; inv
                   <p className="font-serif italic text-body text-mocha mt-5 text-balance">{f.attending === "yes" ? `We can't wait to celebrate with you, ${f.name.split(" ")[0]}.` : `You'll be missed, ${f.name.split(" ")[0]}. Thank you for letting us know.`}</p>
                   <p className="micro text-taupe mt-4 tracking-[0.16em]">{approved === true ? "Confirmed with your invitation — see you on the 11th!" : approved === false ? (f.pax === 2 ? "Reply received — the couple will confirm your plus-one personally." : "Reply received — it's waiting in the couple's review queue.") : ""}</p>
                   <p className="micro text-taupe mt-2 tracking-[0.16em]">Reopen this link any time — your reply will be waiting here</p>
+                  {f.attending === "yes" && <KeepsakeOffer onBuild={() => makeKeepsake(f.name, f.plus_one || undefined)} />}
                 </motion.div>
               ) : (
                 <motion.form key="form" onSubmit={submit} exit={{ opacity: 0 }} className="relative space-y-6 text-center">
@@ -677,6 +816,28 @@ export function PolaroidPair({ info, from, caps }: { info: WeddingInfo; from: nu
       <Polaroid src={a} caption={caps[0]} rotate={-5} className="w-[44%] max-w-[200px]" />
       <Polaroid src={b} caption={caps[1]} rotate={4} className="w-[44%] max-w-[200px] mt-6" />
     </div>
+  );
+}
+
+/* ─────────── COUNTING DOWN (the last beat before the footer) ─────────── */
+export function CountdownSection({ info }: { info: WeddingInfo }) {
+  const cd = useCountdown(info.date);
+  return (
+    <section className="sec-sm text-center">
+      <Reveal className="col">
+        <p className="micro text-taupe">Counting the days until</p>
+        <p className="script text-wine text-script-sm mt-2 text-balance">we say “I do”</p>
+        <div className="flex justify-center gap-6 md:gap-12 mt-6 md:mt-8 font-serif text-ink">
+          {([["Days", cd.days], ["Hours", cd.hours], ["Mins", cd.minutes], ["Secs", cd.seconds]] as const).map(([l, v]) => (
+            <div key={l} className="flex flex-col items-center">
+              <span className="text-h3 md:text-display font-medium leading-none tabular-nums lining-nums">{cd.ready ? String(v).padStart(2, "0") : "--"}</span>
+              <span className="uppercase tracking-[0.18em] text-micro font-semibold text-mocha mt-2.5">{l}</span>
+            </div>
+          ))}
+        </div>
+        <p className="caps text-mocha text-body mt-6 text-balance">{longDate(info.date)} · {info.venue_name}</p>
+      </Reveal>
+    </section>
   );
 }
 
