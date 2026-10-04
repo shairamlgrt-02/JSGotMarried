@@ -69,6 +69,24 @@ alter table entourage enable row level security;
 alter table faq enable row level security;
 alter table story enable row level security;
 
+-- ── one-off rename: the second wedding hashtag is now #JSSayIDo (was #JSWeDo) ──────────────────
+-- A project seeded before the rename still carries the old tag in its rows, and the site reads the
+-- stored row rather than the starter data — so the old tag would linger on the live site. The app
+-- repairs this on load as well (lib/content-fix.ts); running this here fixes it straight away.
+-- Idempotent: safe to re-run, and it touches nothing else.
+-- (JSWeDo → JSSayIDo matches with or without the leading #, and is safe to run twice.)
+update wedding_info set
+  hashtags         = array_replace(hashtags, '#JSWeDo', '#JSSayIDo'),
+  site_description = replace(site_description, 'JSWeDo', 'JSSayIDo'),
+  instagram_note   = replace(instagram_note,   'JSWeDo', 'JSSayIDo')
+where hashtags @> array['#JSWeDo']
+   or site_description like '%JSWeDo%'
+   or instagram_note   like '%JSWeDo%';
+update faq set
+  question = replace(question, 'JSWeDo', 'JSSayIDo'),
+  answer   = replace(answer,   'JSWeDo', 'JSSayIDo')
+where question like '%JSWeDo%' or answer like '%JSWeDo%';
+
 -- Seed data is loaded from the admin: Settings → "Push starter data to Supabase" (safe to press any
 -- time: guests are skipped, the attire palette is refreshed from the code, everything else only
 -- fills in rows that are missing — nothing the couple wrote or uploaded is overwritten).

@@ -1,5 +1,6 @@
 "use client";
 import { SEED } from "./seed";
+import { fixRows } from "./content-fix";
 import { TABLES } from "./types";
 import type { Guest, TableMap, TableName } from "./types";
 
@@ -28,10 +29,13 @@ function localRead<T extends TableName>(t: T): TableMap[T][] {
     localStorage.setItem("jsos:seedv", SEED_VERSION);
   }
   const raw = localStorage.getItem(KEY(t));
-  if (raw) try { return JSON.parse(raw); } catch {}
-  const seeded = SEED[t] as TableMap[T][];
-  localStorage.setItem(KEY(t), JSON.stringify(seeded));
-  return seeded;
+  let stored: TableMap[T][] | null = null;
+  if (raw) try { stored = JSON.parse(raw); } catch {}
+  // Wording renamed in the code (#JSWeDo → #JSSayIDo) is repaired here too, and written back once,
+  // so a browser that seeded before the rename shows the current copy without a reset.
+  const { rows, patches } = fixRows(t, stored ?? (SEED[t] as TableMap[T][]));
+  if (!stored || patches.length) localStorage.setItem(KEY(t), JSON.stringify(rows));
+  return rows;
 }
 function localWrite<T extends TableName>(t: T, rows: TableMap[T][]) {
   localStorage.setItem(KEY(t), JSON.stringify(rows));

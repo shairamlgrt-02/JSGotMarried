@@ -42,6 +42,8 @@ It is driven by **Details → Social** in the binder:
 
 The FAQ's photo answer and the footer keep pointing at the same handle and hashtags, so everything stays in step.
 
+> **Renamed a hashtag?** Because the site reads the saved row (not the starter data), a project seeded before a rename keeps the old words. The app repairs that itself: wording the code has renamed — `#JSWeDo` → `#JSSayIDo` — is fixed as the rows are read and saved back the first time the site loads, so the site, the FAQ, the share preview and the keepsake card all agree with no SQL. `supabase/schema.sql` carries the matching one-off `update` if you would rather run it in the SQL editor.
+
 ## Updating the FAQ / dress-code copy
 Everything in the FAQ is editable any time in **Content → FAQ** (question, answer, order, add, delete). When the *standard* questions change in the code — the dress-code palette, the kids' policy, parking — press **Refresh wording** on that card: it rewrites the standard questions with the newest copy (and restores one you deleted) while leaving any question you wrote yourself untouched. The ordinary "Push starter data" in Settings only ever fills in missing rows, so it won't refresh wording that already exists.
 
