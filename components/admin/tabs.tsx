@@ -118,7 +118,8 @@ export function Details() {
   const localDate = (() => { const d = new Date(info.date); const off = 3 * 60; const b = new Date(d.getTime() + off * 60000); return b.toISOString().slice(0, 16); })();
   return (
     <>
-      <PageHead kicker="Edits go live on the public site instantly" title="The details."><a href="/preview" target="_blank"><Btn variant="ghost">Preview the site ↗</Btn></a>
+      <PageHead kicker="Edits go live on the public site instantly" title="The details."><a href="/preview?all=1" target="_blank"><Btn variant="ghost">Preview the site ↗</Btn></a>
+        <a href="/preview" target="_blank"><Btn variant="ghost">See it as a guest ↗</Btn></a>
         <a href="/" target="_blank"><Btn variant="ghost">Front door ↗</Btn></a></PageHead>
       <div className="grid md:grid-cols-2 gap-5">
         <Card title="The couple & the day">
