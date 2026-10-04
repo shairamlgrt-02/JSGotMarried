@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { serverSupabase } from "./supabase-server";
+import { fixRows } from "./content-fix";
 import { SEED } from "./seed";
 import type { WeddingInfo } from "./types";
 
@@ -38,7 +39,15 @@ export async function weddingInfo(): Promise<WeddingInfo> {
   const db = serverSupabase();
   if (db) {
     const { data } = await db.from("wedding_info").select("*").eq("id", "main").maybeSingle();
-    if (data) return data as WeddingInfo;
+    if (data) {
+      // Repair wording renamed in the code (e.g. #JSWeDo → #JSSayIDo) as it is read, and save it
+      // back once — the tab title, the share preview and the site all agree from here on.
+      const { rows, patches } = fixRows("wedding_info", [data as WeddingInfo]);
+      if (patches.length) {
+        try { await db.from("wedding_info").update(patches[0].fields).eq("id", patches[0].id); } catch { /* keep serving the fixed copy */ }
+      }
+      return rows[0];
+    }
   }
   return SEED.wedding_info[0] as WeddingInfo;
 }

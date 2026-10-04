@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { COOKIE, isAuthed } from "@/lib/auth";
+import { fixRows } from "@/lib/content-fix";
 import { serverSupabase } from "@/lib/supabase-server";
 import { PUBLIC_TABLES, TABLES, TableName } from "@/lib/types";
 
@@ -21,7 +22,15 @@ export async function GET(_: NextRequest, { params }: { params: { table: string 
   if (db instanceof NextResponse) return db;
   const { data, error } = await db.from(params.table).select("*");
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  // Wording renamed in the code (#JSWeDo → #JSSayIDo) is repaired on the way out and saved back
+  // once, so a project seeded before the rename catches up without anyone opening the SQL editor.
+  const { rows, patches } = fixRows(params.table as TableName, (data ?? []) as { id?: string }[]);
+  if (patches.length) {
+    try {
+      await Promise.all(patches.map((p) => db.from(params.table).update(p.fields).eq("id", p.id)));
+    } catch { /* the fixed copy is still what we serve */ }
+  }
+  return NextResponse.json(rows);
 }
 
 /** Upsert one row or an array of rows. */
