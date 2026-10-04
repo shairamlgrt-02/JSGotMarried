@@ -75,7 +75,12 @@ function Door({ side, open, A, onOpen }: { side: "l" | "r"; open: boolean; A: nu
 
 const RATIO = 1.32; // portrait
 
-export default function EnvelopeHero({ info, sealed }: { info: WeddingInfo; sealed?: boolean }) {
+/**
+ * `home` is set on the routes reached from the front door (the preview, and any personal link):
+ * the monogram takes you back to / and, while the invitation is still sealed, the right-hand slot
+ * offers the code door instead of a jump to the reply card.
+ */
+export default function EnvelopeHero({ info, sealed, home = false }: { info: WeddingInfo; sealed?: boolean; home?: boolean }) {
   const [open, setOpen] = useState(false);
   const [dims, setDims] = useState({ W: 400, A: 150 });
   useEffect(() => {
@@ -97,9 +102,15 @@ export default function EnvelopeHero({ info, sealed }: { info: WeddingInfo; seal
   return (
     <section className="relative min-h-[100svh] flex flex-col items-center justify-center overflow-x-clip pt-20 pb-6">
       <nav className="absolute top-0 inset-x-0 flex justify-between items-center px-6 md:px-12 py-6 z-20">
-        <span className="script text-wine text-3xl">J &amp; S</span>
+        {home
+          ? <a href="/" title="Back to the front door" className="script text-wine text-3xl hover:text-mocha transition-colors">J &amp; S</a>
+          : <span className="script text-wine text-3xl">J &amp; S</span>}
         <div className="hidden md:flex gap-8 label text-taupe"><a href="#story">Our Story</a>{!sealed && <a href="#day">The Day</a>}{!sealed && <a href="#venue">Venue</a>}<a href="#dress">Attire</a></div>
-        {!sealed && <a href="#rsvp" className="label text-wine border border-wine/40 rounded-full px-5 py-2 hover:bg-wine hover:text-lace transition-colors">RSVP</a>}
+        {!sealed ? (
+          <a href="#rsvp" className="label text-wine border border-wine/40 rounded-full px-5 py-2 hover:bg-wine hover:text-lace transition-colors">RSVP</a>
+        ) : home ? (
+          <a href="/rsvp" className="label text-wine border border-wine/40 rounded-full px-5 py-2 hover:bg-wine hover:text-lace transition-colors">Have a code?</a>
+        ) : null}
       </nav>
 
       <motion.div initial={false} animate={{ opacity: open ? 0 : 1, y: open ? -10 : 0 }} transition={T(0, 0.6)} className="absolute top-[9%] text-center z-10 px-6 pointer-events-none hidden md:block">
@@ -151,9 +162,9 @@ export default function EnvelopeHero({ info, sealed }: { info: WeddingInfo; seal
           <span className="text-2xl text-wine leading-none">↑</span>
           <span className="micro text-wine bg-[#FBF8F2]/90 rounded-full px-5 py-2 shadow-[0_2px_10px_rgba(61,47,38,.12)]">Tap the seal to open</span>
         </motion.div>
-        <motion.a href={sealed ? "#story" : "#rsvp"} initial={false} animate={{ opacity: open ? 1 : 0, y: open ? 0 : 10 }} transition={T(open ? 3.6 : 0, 0.8)}
+        <motion.a href={sealed ? (home ? "/rsvp" : "#story") : "#rsvp"} initial={false} animate={{ opacity: open ? 1 : 0, y: open ? 0 : 10 }} transition={T(open ? 3.6 : 0, 0.8)}
           className={`absolute flex flex-col items-center gap-1 text-wine ${open ? "" : "pointer-events-none"}`}>
-          <span className="micro bg-[#FBF8F2]/90 rounded-full px-5 py-2 shadow-[0_2px_10px_rgba(61,47,38,.12)]">{sealed ? "Scroll to explore" : "Scroll to RSVP"}</span>
+          <span className="micro bg-[#FBF8F2]/90 rounded-full px-5 py-2 shadow-[0_2px_10px_rgba(61,47,38,.12)]">{sealed ? (home ? "Got your code? Unlock your RSVP" : "Scroll to explore") : "Scroll to RSVP"}</span>
           <svg viewBox="0 0 24 36" className="w-5 h-8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
             <path d="M12 2v28M5 23l7 8 7-8" />
           </svg>

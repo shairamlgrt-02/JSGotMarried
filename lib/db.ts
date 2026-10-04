@@ -42,11 +42,15 @@ function localWrite<T extends TableName>(t: T, rows: TableMap[T][]) {
   window.dispatchEvent(new CustomEvent(EVT, { detail: t }));
 }
 
-export async function list<T extends TableName>(t: T): Promise<TableMap[T][]> {
+export async function list<T extends TableName>(t: T, code = ""): Promise<TableMap[T][]> {
+  // The public site passes the guest's invitation code along: the server answers with the
+  // private pages (venue, programme, FAQ) only for a code it actually issued. The binder
+  // doesn't need it — its cookie already says who you are.
+  const q = code ? `?code=${encodeURIComponent(code)}` : "";
   // Probe the mode AND request the rows at the same time — a fresh tab would otherwise
   // wait for /api/mode before the data request even starts (two serial round trips).
   // In local mode the stray request 503s quietly on the server; the browser never throws.
-  const remote = fetch(`/api/data/${t}`, { cache: "no-store" }).then(
+  const remote = fetch(`/api/data/${t}${q}`, { cache: "no-store" }).then(
     async (r) => ({ ok: r.ok, data: await r.json().catch(() => ({})) }),
     () => ({ ok: false, data: {} }),
   );
@@ -88,22 +92,21 @@ export type InviteReply = {
   name: string; attending: "yes" | "no"; pax: number; plus_one: string;
   approved: boolean | null; dietary: string; song_request: string; message: string;
 };
-export type InviteState = { name: string; pax: number; reply: InviteReply | null; demo?: boolean };
+export type InviteState = { name: string; pax: number; reply: InviteReply | null; demo?: boolean;
+  /** The household's full code — what a guest typed at /rsvp is often only its last 4 characters. */
+  code?: string;
+}
 
 /**
  * A guest row is a *reply* once `approved` is set (true = confirmed, false = waiting for the
  * couple). Before that it is the plain invitation row the couple typed by hand. One code,
- * one row: the reply overwrites the invitation instead of adding a second row.
+ * one row: the reply overwrites the invitation instead of adding a second row. And the
+ * perpetual test invite JS-DEMO lives with those helpers, so the server routes and the browser
+ * agree on one code — demo replies stay in this browser only (localStorage), never reach
+ * Supabase and never e-mail the couple.
  */
-import { isReply } from "./guests";
-export { isReply };
-
-/**
- * Perpetual test invite: …/JS-DEMO (or /test) unseals the whole site and runs the full
- * RSVP journey with throwaway data — demo replies live only in the tester's browser
- * (localStorage), never reach Supabase and never e-mail the couple.
- */
-export const DEMO_CODE = "JS-DEMO";
+import { DEMO_CODE, codeMatches, hasReplied, isReply } from "./guests";
+export { DEMO_CODE, isReply };
 const DEMO_HOUSEHOLD = "The Demo Household";
 const demoReplyKey = "jsos:demo-reply";
 const readDemoReply = (): InviteReply | null => {
@@ -111,33 +114,72 @@ const readDemoReply = (): InviteReply | null => {
 };
 
 /**
- * Open a personal invitation link: the server answers for Supabase projects, and local
+ * Open a personal invitation link. The server answers for Supabase projects; local
  * (browser-only) mode validates against this device's list so the couple can rehearse.
+ * A guest may type the whole code (`JS-7KQF`) or just the last four characters of their link
+ * (`7KQF`) in any case — and the answer always carries the household's canonical code, so a
+ * reply typed at /rsvp lands on the same row the link would have used.
  */
-export async function fetchInvite(code: string): Promise<InviteState | null> {
+export type InviteFound = { state: InviteState; code: string };
+export type InviteResult = { ok: true; found: InviteFound } | { ok: false; error: string };
+
+export async function resolveInvite(code: string): Promise<InviteResult> {
   const cc = code.trim().toUpperCase();
-  if (cc.length < 4) return null;
-  if (cc === DEMO_CODE) return { name: DEMO_HOUSEHOLD, pax: 2, reply: readDemoReply(), demo: true };
+  if (cc.length < 3) return { ok: false, error: "That code is too short — check the four characters at the end of your link." };
+  if (cc === DEMO_CODE) {
+    const reply = readDemoReply();
+    return { ok: true, found: { code: DEMO_CODE, state: { name: DEMO_HOUSEHOLD, pax: 2, reply, code: DEMO_CODE, demo: true } } };
+  }
   try {
     const r = await fetch(`/api/rsvp?code=${encodeURIComponent(cc)}`, { cache: "no-store" });
-    if (r.ok) {
-      const j = await r.json().catch(() => ({}));
-      if (j.ok) return { name: j.name as string, pax: Number(j.pax) || 1, reply: (j.reply as InviteReply) || null };
-    }
-    if (r.status !== 503) return null; // unknown / malformed code
-  } catch { /* offline — fall through to local */ }
+    const j = await r.json().catch(() => ({}));
+    if (r.ok && j.ok)
+      return { ok: true, found: { code: (j.code as string) || cc, state: { name: j.name as string, pax: Number(j.pax) || 1, reply: (j.reply as InviteReply) || null, code: (j.code as string) || cc } } };
+    if (j.ambiguous) return { ok: false, error: "That code belongs to more than one invitation — open the personal link the couple sent you." };
+    if (r.status !== 503) return { ok: false, error: "We couldn't match that code to an invitation. Try the full code from your link (it looks like JS-7KQF), or ask the couple for it." };
+  } catch { /* offline — fall through to the list saved in this browser */ }
   const rows = localRead("guests") as Guest[];
-  const same = rows.filter((g) => (g.code || "").toUpperCase() === cc);
+  const hits = Array.from(new Set(rows.map((g) => (g.code || "").trim().toUpperCase()).filter((c) => c && codeMatches(c, cc))));
+  if (hits.length > 1) return { ok: false, error: "That code belongs to more than one invitation — open the personal link the couple sent you." };
+  const same = rows.filter((g) => (g.code || "").trim().toUpperCase() === hits[0]);
   const invite = same.find((g) => !isReply(g));
   const reply = same.find(isReply);
-  if (!invite && !reply) return null;
+  if (!invite && !reply) return { ok: false, error: "We couldn't match that code to an invitation on this device. Codes issued here start with JS-." };
   return {
-    name: invite?.name ?? reply!.name,
-    pax: Number(invite?.pax ?? reply?.pax) || 1,
-    reply: reply
-      ? { name: reply.name, attending: reply.attending === "no" ? "no" : "yes", pax: reply.pax, plus_one: reply.plus_one || "", approved: reply.approved ?? null, dietary: reply.dietary || "", song_request: reply.song_request || "", message: reply.message || "" }
-      : null,
+    ok: true,
+    found: {
+      code: hits[0],
+      state: {
+        name: invite?.name ?? reply!.name,
+        pax: Number(invite?.pax ?? reply?.pax) || 1,
+        // a code that has been opened is stamped, so the binder's ledger shows it as "opened"
+        code: hits[0],
+        reply: reply
+          ? { name: reply.name, attending: reply.attending === "no" ? "no" : "yes", pax: reply.pax, plus_one: reply.plus_one || "", approved: reply.approved ?? null, dietary: reply.dietary || "", song_request: reply.song_request || "", message: reply.message || "" }
+          : null,
+      },
+    },
   };
+}
+
+if (typeof window !== "undefined") {
+  // opening the link is the "they looked at it" signal in local mode too (the server stamps it
+  // on its side); written once, quietly.
+  window.addEventListener("jsos:invite-opened", ((e: CustomEvent) => {
+    const cc = String(e.detail || "");
+    const rows = localRead("guests") as Guest[];
+    const hit = rows.find((g) => codeMatches(g.code || "", cc) && !hasReplied(g) && !g.viewed_at);
+    if (!hit) return;
+    localWrite("guests", rows.map((g) => (g.id === hit.id ? { ...g, viewed_at: new Date().toISOString() } : g)));
+  }) as EventListener);
+}
+
+/** The invitation a personal link unlocks — `null` when the code isn't one the couple issued. */
+export async function fetchInvite(code: string): Promise<InviteState | null> {
+  const r = await resolveInvite(code);
+  if (!r.ok) return null;
+  if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("jsos:invite-opened", { detail: code }));
+  return r.found.state;
 }
 
 export async function submitRsvp(g: Omit<Guest, "id" | "source" | "created_at"> & { code?: string; plus_one?: string }): Promise<{ approved: boolean | null; already: boolean }> {
@@ -158,12 +200,16 @@ export async function submitRsvp(g: Omit<Guest, "id" | "source" | "created_at"> 
   // local mode: mirror the server rules — one code, one row; the reply overwrites the
   // invitation in place (same id) and a second seat waits for the couple's review.
   const cur = localRead("guests") as Guest[];
-  const cc = (g.code || "").toUpperCase();
-  const same = cc ? cur.filter((x) => (x.code || "").toUpperCase() === cc) : [];
+  const cc = (g.code || "").trim().toUpperCase();
+  const canonical = Array.from(new Set(cur.map((x) => (x.code || "").trim().toUpperCase()).filter((c) => c && codeMatches(c, cc))))[0] || cc;
+  const same = cc ? cur.filter((x) => (x.code || "").trim().toUpperCase() === canonical) : [];
   if (same.some(isReply)) return { approved: null, already: true };
   const invite = same.find((x) => !isReply(x)) || null;
-  const approved = invite && (g.pax ?? 1) <= 1 ? true : false;
-  const row: Guest = { ...g, id: invite?.id ?? crypto.randomUUID(), code: g.code, source: "RSVP form", created_at: new Date().toISOString(), approved } as Guest;
+  const declined = g.attending === "no";
+  const wantsPax = g.pax === 2 ? 2 : 1;
+  const pax = declined ? 0 : Math.min(wantsPax, Number(invite?.pax) || 1);
+  const approved = declined || pax === 1; // a second seat waits for the couple, exactly as on the server
+  const row: Guest = { ...g, pax, id: invite?.id ?? crypto.randomUUID(), code: canonical, source: "RSVP form", created_at: new Date().toISOString(), viewed_at: invite?.viewed_at ?? new Date().toISOString(), approved } as Guest;
   const i = cur.findIndex((x) => x.id === row.id);
   if (i >= 0) cur[i] = row; else cur.push(row);
   localWrite("guests", cur);
