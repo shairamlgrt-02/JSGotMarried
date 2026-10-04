@@ -2,8 +2,8 @@
 import { useMemo, useState } from "react";
 import { uid } from "@/lib/db";
 import {
-  STATUS, cleanCode, dressLine, genCode, inviteHref, inviteLink, inviteMessage, inviteSheet, inviteStatus,
-  parseGuestLines, previewLink, programmeLines, tallyInvites, type InviteStatus, type InviteText,
+  STATUS, cleanCode, genCode, inviteHref, inviteLink, inviteMessage, inviteSheet, inviteStatus,
+  parseGuestLines, previewLink, tallyInvites, whoIsItFor, type InviteStatus, type InviteText,
 } from "@/lib/guests";
 import { useTable } from "@/lib/hooks";
 import type { Guest } from "@/lib/types";
@@ -45,8 +45,6 @@ const day = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString("en
 export function InviteCodes({ go }: { go: (tab: string) => void }) {
   const { rows, save, del, error } = useTable("guests", false);
   const { rows: infoRows } = useTable("wedding_info");
-  const { rows: schedule } = useTable("schedule");
-  const { rows: attire } = useTable("attire");
   const info = infoRows[0];
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const [filter, setFilter] = useState<"all" | InviteStatus>("all");
@@ -64,29 +62,26 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
   const tally = useMemo(() => tallyInvites(rows), [rows]);
 
   /**
-   * The invitation text every household shares — the day, the venue, the pinned programme, the
-   * dress note and the reply-by date, all read from the binder so the message never goes stale.
-   * Per row, the household's own name and seats are added on top (see `textFor`).
+   * The invitation text every household shares — the couple, the date and the reply-by date, read
+   * from the binder so the message never goes stale. Per row, who the link is for and what it is
+   * reserved for are added on top (see `textFor`).
    */
   const text = useMemo<InviteText>(() => ({
     couple,
     day: dayText,
     date: info?.date,
-    venue: info ? [info.venue_name, info.venue_address].filter(Boolean).join(", ") : "",
     deadline: info?.rsvp_deadline,
-    programme: programmeLines(schedule),
-    dress: dressLine(attire),
-  }), [couple, dayText, info, schedule, attire]);
+  }), [couple, dayText, info]);
 
-  /** The same letter, addressed: the household's name and the seats kept for them. */
-  const textFor = (g: Guest): InviteText => ({ ...text, name: g.name, seats: Number(g.pax) || 0 });
+  /** The same letter, addressed: who the link is for, and the seats it is reserved for. */
+  const textFor = (g: Guest): InviteText => ({ ...text, greet: g.greet, name: g.name, seats: Number(g.pax) || 0 });
 
   const ledger = useMemo(() => {
     const withStatus = rows.map((g) => ({ g, s: inviteStatus(g) }));
     const filtered = withStatus
       .filter((x) => filter === "all" || x.s === filter)
-      .filter((x) => !q || `${x.g.name} ${x.g.phone} ${x.g.code} ${x.g.note ?? ""} ${x.g.plus_one ?? ""}`.toLowerCase().includes(q.toLowerCase()))
-      .sort((a, b) => ORDER.indexOf(a.s) - ORDER.indexOf(b.s) || a.g.name.localeCompare(b.g.name));
+      .filter((x) => !q || `${x.g.greet ?? ""} ${x.g.name} ${x.g.phone} ${x.g.code} ${x.g.note ?? ""} ${x.g.plus_one ?? ""}`.toLowerCase().includes(q.toLowerCase()))
+      .sort((a, b) => ORDER.indexOf(a.s) - ORDER.indexOf(b.s) || whoIsItFor(a.g).localeCompare(whoIsItFor(b.g)));
     return filtered;
   }, [rows, filter, q]);
 
@@ -98,18 +93,22 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
     const parsed = kind === "names" ? parseGuestLines(paste) : [];
     if (kind === "names" && !parsed.length) return flash("Nothing to add — put one household per line, e.g. “Ana & Ivan, 973 1234 5678, 2 pax”.");
     const taken = new Set(rows.map((r) => cleanCode(r.code || "")));
-    const known = new Set(rows.map((r) => r.name.trim().toLowerCase()));
+    const known = new Set(rows.map((r) => whoIsItFor(r).toLowerCase()).filter(Boolean));
     const fresh = parsed.filter((p) => !known.has(p.name.trim().toLowerCase()));
     const skipped = parsed.length - fresh.length;
-    const start = rows.length;
-    const next = (name: string, phone: string, pax: number, note: string): Guest => {
+    /**
+     * A new invitation row. What you type — or paste — becomes *who the link is for*; `name` is
+     * left blank on purpose, because that is the field the guest's reply card pre-fills, and it is
+     * theirs to write.
+     */
+    const next = (greet: string, phone: string, pax: number, note: string): Guest => {
       const code = genCode(taken);
       taken.add(code);
-      return { id: uid(), name, phone, pax, attending: "pending", dietary: "", message: "", song_request: "", note, source: "manual", code, created_at: new Date().toISOString() };
+      return { id: uid(), name: "", greet, phone, pax, attending: "pending", dietary: "", message: "", song_request: "", note, source: "manual", code, created_at: new Date().toISOString() };
     };
     const created = kind === "names"
       ? fresh.map((p) => next(p.name, p.phone, p.pax, p.note))
-      : Array.from({ length: Math.max(1, Math.min(500, Math.round(blanks) || 1)) }, (_, i) => next(`Household ${start + i + 1}`, "", seatDefault, "name to fill in"));
+      : Array.from({ length: Math.max(1, Math.min(500, Math.round(blanks) || 1)) }, () => next("", "", seatDefault, ""));
     if (created.length) await save(created);
     const links = inviteSheet(created, origin);
     if (copyAfter && links) await copyText(links);
@@ -137,7 +136,7 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
   };
 
   const rowsForCsv = ledger.map(({ g, s }) => ({
-    name: g.name, note: g.note ?? "", phone: g.phone, pax: g.pax, code: cleanCode(g.code || ""),
+    for: whoIsItFor(g), name: g.name, note: g.note ?? "", phone: g.phone, pax: g.pax, code: cleanCode(g.code || ""),
     link: g.code ? inviteLink(g.code, origin) : "", status: STATUS[s].label,
     attending: g.attending, plus_one: g.plus_one ?? "", sent: g.sent_at ? day(g.sent_at) : "",
     opened: g.viewed_at ? day(g.viewed_at) : "", replied_at: g.source === "RSVP form" ? day(g.created_at) : "",
@@ -149,9 +148,10 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
 
   /** One real household's letter, printed in the panel so you can read it before sending a hundred of them. */
   const sample = ledger.find((x) => x.g.code)?.g ?? rows.find((g) => cleanCode(g.code || ""));
+  const sampleFor = sample && whoIsItFor(sample) ? whoIsItFor(sample) : "Ana & Ivan";
   const sampleText = inviteMessage(
     sample?.code || "JS-XXXX",
-    sample ? textFor(sample) : { ...text, name: "Ana & Ivan", seats: 2 },
+    sample && whoIsItFor(sample) ? textFor(sample) : { ...text, greet: sampleFor, seats: sample ? Number(sample.pax) || 0 : 2 },
     origin
   );
 
@@ -169,6 +169,8 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
         you copy or send it (<i>sent</i>), they open it (<i>opened</i> — stamped by the server), they answer
         (<i>confirmed</i>, <i>needs review</i> or <i>declined</i>). Answered rows appear on <b>Guests &amp; RSVP</b> too.
         A guest without the link can type the last four characters at <b>{`${origin}/rsvp`}</b>.
+        Write who each link is for in the <b>Who it&apos;s for</b> column — that is the name the WhatsApp
+        letter greets, and the guest&apos;s own <b>Their name</b> field stays blank for them to fill in.
       </p>
 
       {msg && <div className="mb-5 text-sm bg-moss/10 text-moss rounded-xl px-4 py-3">{msg}</div>}
@@ -195,7 +197,7 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
             </div>
             <div>
               <h3 className="font-serif text-2xl mb-1">Or just print codes</h3>
-              <p className="text-xs text-ink/55 mb-3">A batch of blank households for a card table or a guest book — fill the names in later.</p>
+              <p className="text-xs text-ink/55 mb-3">A batch of blank invitations for a card table or a guest book — write who each one is for later.</p>
               <div className="flex items-center gap-3 flex-wrap">
                 <label className="label !text-[10px] text-ink/60">Codes
                   <input type="number" min={1} max={500} value={blanks} onChange={(e) => setBlanks(Number(e.target.value))} className="block mt-1 w-24 bg-white/60 rounded-md border border-ink/10 focus:border-wine outline-none px-3 py-2 text-base" />
@@ -216,7 +218,7 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
               <div className="mt-5 rounded-xl border border-wine/15 bg-wine/5 p-4">
                 <div className="flex items-baseline justify-between gap-3">
                   <p className="label !text-[9px] text-wine">
-                    The message they receive{sample ? ` · ${sample.name}` : " · sample"}
+                    The message they receive · {sampleFor}
                   </p>
                   <button className="label !text-[9px] text-ink/50 hover:text-wine shrink-0"
                     onClick={() => void (async () => { if (await copyText(sampleText)) mark("sample"); })()}>
@@ -225,8 +227,8 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
                 </div>
                 <pre className="mt-2 max-h-[20rem] overflow-y-auto whitespace-pre-wrap font-sans text-[12px] leading-[1.65] text-ink/75">{sampleText}</pre>
                 <p className="mt-2 text-[10px] leading-snug text-ink/45">
-                  The household's name and seats come from their row — write the names in the <b>Household</b> column and every
-                  letter is addressed. Date, venue, programme, dress code and reply-by date are read from the binder.
+                  Who it&apos;s for and how many seats come from their row — write a name in the <b>Who it&apos;s for</b> column and every
+                  letter is addressed. The date and the reply-by date are read from the binder.
                 </p>
               </div>
             </div>
@@ -252,17 +254,20 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left min-w-[1080px] text-sm">
+          <table className="w-full text-left min-w-[1240px] text-sm">
             <thead><tr className="label text-ink/50 border-b border-ink/10">
-              <th className="py-3 px-2">Household</th><th className="px-2">WhatsApp</th><th className="px-2 w-16">Seats</th>
+              <th className="py-3 px-2">Who it&apos;s for</th><th className="px-2">Their name</th><th className="px-2">WhatsApp</th><th className="px-2 w-16">Seats</th>
               <th className="px-2">Code</th><th className="px-2">Link</th><th className="px-2">Status</th><th className="px-2">Their answer</th><th />
             </tr></thead>
             <tbody className="divide-y divide-ink/10">
               {ledger.map(({ g, s }) => (
                 <tr key={g.id} className="align-top">
                   <td className="px-1 py-1 font-medium min-w-[170px]">
-                    <EditText value={g.name} onSave={(v) => save({ ...g, name: v })} />
+                    <EditText value={g.greet ?? ""} placeholder="Ana & Ivan" onSave={(v) => save({ ...g, greet: v })} />
                     <EditText value={g.note ?? ""} placeholder="note (side of the family, table…)" onSave={(v) => save({ ...g, note: v })} className="!text-[11px] text-ink/50 italic" />
+                  </td>
+                  <td className="px-1 py-1 min-w-[150px]">
+                    <EditText value={g.name} placeholder="theirs to type on the reply card" onSave={(v) => save({ ...g, name: v })} className="text-ink/60" />
                   </td>
                   <td className="px-1 min-w-[130px]">
                     <EditText value={g.phone} onSave={(v) => save({ ...g, phone: v })} />

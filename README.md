@@ -41,47 +41,67 @@ every single invitation stands.
    * **Paste your list**, one household per line — `Ana & Ivan, 973 1234 5678, 2 pax`, `Faisal`,
      `Nadia +2, 973 7777 1234, cousins`. Numbers that look like phone numbers become numbers, a
      `+2` / `2 pax` / `(3 seats)` becomes the seat cap, and anything left over becomes your note.
-     Names already on the list are skipped, so re-pasting is safe.
-   * or **add N blank codes** (labelled `Household 7`, seats 1 or 2) for a card table, and type the
-     names in later.
+     Each name lands in **Who it's for**; households already on the list are skipped, so re-pasting
+     is safe.
+   * or **add N blank codes** (seats 1 or 2) for a card table, and write who each one is for later.
    * Tick *copy every new link afterwards* and your clipboard holds one line per household:
      `name — JS-7KQF — https://your-site/JS-7KQF`. Paste into a chat, done.
-2. Per row: **copy link**, **copy message** (the WhatsApp text, ready), **send ↗** (opens WhatsApp
-   to that number), **mark sent** (or undo), **new code** (retires the old link), **issue code** for a
-   row that never had one, and **✕** to remove the household.
+2. Per row: **Who it's for** (the name the WhatsApp letter greets — `Ana & Ivan`), **Their name**
+   (left blank on purpose: it is the field the guest's reply card pre-fills, so it is theirs to type,
+   and it fills itself in when they answer), then **copy link**, **copy message** (the WhatsApp text,
+   ready), **send ↗** (opens WhatsApp to that number), **mark sent** (or undo), **new code** (retires
+   the old link), **issue code** for a row that never had one, and **✕** to remove the household.
 3. Every link you copy or send is marked `sent`; the first time the guest opens it the server stamps
    `opened`; when they answer, the row becomes `confirmed`, `needs review` (a second seat you approve
    with one click) or `declined`. Filter by any of those words, search a name or a code, and read the
    counts at the top. **Copy this view** / **Mark all sent** work on whatever the filter left showing,
-   and **Export CSV** carries name, code, link, status, sent/opened/replied timestamps, seats,
-   plus-one and message.
+   and **Export CSV** carries who it's for, name, code, link, status, sent/opened/replied timestamps,
+   seats, plus-one and message.
 4. The guest's reply is written **onto that same row**, so nobody is ever duplicated — and the row
    appears on **Guests & RSVP** (the list of people who actually answered, plus anyone you added by
    hand). Guests who already replied see a sealed "welcome" card instead of the form, and the same
    code can't reply twice. If your list still shows doubled rows from an older build, the
    **Merge N duplicates** button at the top of Guests & RSVP folds each household back into one row.
 
-`sent_at`, `viewed_at` and `note` are new columns (re-run `supabase/schema.sql`; it is idempotent). A
-project that hasn't caught up still works: those three are dropped quietly on save, and the RSVPs
-themselves never depend on them.
+`sent_at`, `viewed_at`, `note` and `greet` are new columns (re-run `supabase/schema.sql`; it is
+idempotent). A project that hasn't caught up still works: those four are dropped quietly on save, and
+the RSVPs themselves never depend on them.
 
 ### The WhatsApp message
-**copy message** and **send ↗** send the same text: a letter, not a link drop. It greets the household
-by the name on their row, names the seats you kept for them, walks them through the three things to do
-with the link, lays out the day and closes with the code as a fallback.
+**copy message** and **send ↗** send the same short letter — the couple's own wording, with three
+things filled in per household:
 
-* **Addressed by row** — the greeting is the **Household** name (`Dear Ana & Ivan,`). Card-table
-  placeholders (`Household 7`) and blank rows are greeted as `Dear friend,` instead, so a label never
-  reaches a guest.
-* **Read from the binder, so it never goes stale** — the date, the venue, the pinned **Schedule**
-  (each row prints as `✦ 4:00 – 5:00 PM · The Ceremony`), the guests' dress note from
-  **Attire & Colors**, and the reply-by date from **Settings → Website & sharing**. Leave a field empty
-  and its line simply leaves the letter.
+```
+Shaira & Jeger · 11.11.2026
+
+Dear Ana & Ivan,
+
+We're getting married on Wednesday, 11 November 2026, and the day wouldn't be the same without you there.
+
+Your invitation: https://your-site/JS-7KQF
+This link is yours alone, and it's reserved for 2 guests.
+
+Inside you'll find our story, the programme, the dress code, the venue and everything else you'll need — and you can RSVP right there on the website. Kindly reply by 25 October.
+
+We can't wait to see you there. 🤍
+
+With love,
+Shaira & Jeger
+```
+
+* **`Dear …`** is the **Who it's for** column (falling back to the row's name, for invitations made
+  before the column existed). A row with neither is greeted as `Dear friend,`, so a label like
+  `Household 7` never reaches a guest.
+* **`reserved for N guests`** is the row's **Seats** — one seat reads `1 guest`, and a row with no
+  seats simply says *This link is yours alone.*
+* **The date, the long date and the reply-by date** come from **Details** and
+  **Settings → Website & sharing**; empty the reply-by date and that sentence leaves the message.
+  Nothing about the programme, the venue or the dress code is repeated here — the letter points at
+  the website, which holds all of it behind their code.
 * **Proof before you send** — the **✦ Generate codes** panel prints one real household's letter under
   *The message they receive*, with a copy button.
-* The prose itself — the invitation paragraph, the three steps, the doors-close and majlis asides, the
-  sign-off — is written in `lib/guests.ts` (`inviteMessage`, with the asides in `ASIDES`). Edit it there
-  and every household's letter changes with it.
+* The wording itself is written in `lib/guests.ts` (`inviteMessage`). Edit it there and every
+  household's letter changes with it.
 
 ### The guest's side
 * Their link is `https://your-site/JS-7KQF`. The older `https://your-site/?rsvp=JS-7KQF` you may

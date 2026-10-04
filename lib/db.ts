@@ -95,6 +95,11 @@ export type InviteReply = {
 export type InviteState = { name: string; pax: number; reply: InviteReply | null; demo?: boolean;
   /** The household's full code — what a guest typed at /rsvp is often only its last 4 characters. */
   code?: string;
+  /**
+   * The couple's own label for this link ("Ana & Ivan") — printed above the reply card. `name` is
+   * what pre-fills the form, and it is deliberately left blank so the guest types their own.
+   */
+  label?: string;
 }
 
 /**
@@ -105,7 +110,7 @@ export type InviteState = { name: string; pax: number; reply: InviteReply | null
  * agree on one code — demo replies stay in this browser only (localStorage), never reach
  * Supabase and never e-mail the couple.
  */
-import { DEMO_CODE, codeMatches, hasReplied, isReply } from "./guests";
+import { DEMO_CODE, codeMatches, hasReplied, isReply, whoIsItFor } from "./guests";
 export { DEMO_CODE, isReply };
 const DEMO_HOUSEHOLD = "The Demo Household";
 const demoReplyKey = "jsos:demo-reply";
@@ -128,13 +133,13 @@ export async function resolveInvite(code: string): Promise<InviteResult> {
   if (cc.length < 3) return { ok: false, error: "That code is too short — check the four characters at the end of your link." };
   if (cc === DEMO_CODE) {
     const reply = readDemoReply();
-    return { ok: true, found: { code: DEMO_CODE, state: { name: DEMO_HOUSEHOLD, pax: 2, reply, code: DEMO_CODE, demo: true } } };
+    return { ok: true, found: { code: DEMO_CODE, state: { name: DEMO_HOUSEHOLD, label: DEMO_HOUSEHOLD, pax: 2, reply, code: DEMO_CODE, demo: true } } };
   }
   try {
     const r = await fetch(`/api/rsvp?code=${encodeURIComponent(cc)}`, { cache: "no-store" });
     const j = await r.json().catch(() => ({}));
     if (r.ok && j.ok)
-      return { ok: true, found: { code: (j.code as string) || cc, state: { name: j.name as string, pax: Number(j.pax) || 1, reply: (j.reply as InviteReply) || null, code: (j.code as string) || cc } } };
+      return { ok: true, found: { code: (j.code as string) || cc, state: { name: j.name as string, label: (j.label as string) || (j.name as string) || "", pax: Number(j.pax) || 1, reply: (j.reply as InviteReply) || null, code: (j.code as string) || cc } } };
     if (j.ambiguous) return { ok: false, error: "That code belongs to more than one invitation — open the personal link the couple sent you." };
     if (r.status !== 503) return { ok: false, error: "We couldn't match that code to an invitation. Try the full code from your link (it looks like JS-7KQF), or ask the couple for it." };
   } catch { /* offline — fall through to the list saved in this browser */ }
@@ -151,6 +156,7 @@ export async function resolveInvite(code: string): Promise<InviteResult> {
       code: hits[0],
       state: {
         name: invite?.name ?? reply!.name,
+        label: whoIsItFor(invite ?? reply!),
         pax: Number(invite?.pax ?? reply?.pax) || 1,
         // a code that has been opened is stamped, so the binder's ledger shows it as "opened"
         code: hits[0],

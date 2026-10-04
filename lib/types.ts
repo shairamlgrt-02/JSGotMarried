@@ -41,6 +41,12 @@ export type Guest = {
   plus_one?: string;
   /** The couple's own note on the household ("Jeg's cousins", "no kids invited"). */
   note?: string;
+  /**
+   * Who the link is for — "Ana & Ivan". The invitation letter greets this, and the guest's reply
+   * card shows it above the form; it never pre-fills their name, so `name` can stay blank until
+   * they type their own.
+   */
+  greet?: string;
   /** When the link left the binder (copy link / send ↗ / mark sent) — the `sent` stage. */
   sent_at?: string | null;
   /** First time the guest opened their personal link — the `opened` stage. */

@@ -143,33 +143,20 @@ export const previewLink = (origin = "") => `${origin}/preview`;
 
 /* ─────────── the invitation text ─────────── */
 
-/** One line of the pinned programme, as the invitation prints it. */
-export type ProgrammeLine = { time: string; title: string };
-
 /**
- * Everything the invitation message is allowed to know: the household it is going to, and the day
- * it is about. Nothing here is required — with only a code the text still reads as a proper
- * invitation, and every detail the binder can supply makes it read as *theirs*.
+ * Everything the invitation message is allowed to know: who it is going to, and the day it is
+ * about. Nothing here is required — with only a code the text still reads as a proper invitation,
+ * and every detail the binder can supply makes it read as *theirs*.
  */
 export type InviteText = {
   couple: string;                  // "Shaira & Jeger" — the header line and the signature
   day: string;                     // "11.11.2026" — the short date on the header line
-  date?: string | null;            // ISO date of the wedding, read out in full in the body
-  venue?: string;                  // "The Heaven, Damistan, Kingdom of Bahrain"
+  date?: string | null;            // ISO date of the wedding, read out in full in the opening line
+  greet?: string;                  // who the link is for — the ledger's own column, the greeting's first choice
+  name?: string;                   // the household name on the row, when the row has one
+  seats?: number;                  // what the link is reserved for
   deadline?: string | null;        // ISO reply-by date (Settings → Website & sharing)
-  programme?: ProgrammeLine[];     // the pinned schedule, in its order
-  dress?: string;                  // the guests' dress note, one line
-  name?: string;                   // the household, exactly as typed on the row
-  seats?: number;                  // the seats kept for them
 };
-
-/** The programme lines for the invitation text: the pinned schedule, in the order it is pinned. */
-export const programmeLines = (rows: { time: string; title: string; order: number }[]): ProgrammeLine[] =>
-  [...rows].sort((a, b) => a.order - b.order).map(({ time, title }) => ({ time, title }));
-
-/** The guests' dress note trimmed to its first clause — the same one line the reply card shows. */
-export const dressLine = (attire: { group: string; notes?: string }[]) =>
-  (attire.find((a) => a.group === "guests")?.notes || "").split("—")[0].replace(/\.?\s*$/, "").trim();
 
 /**
  * "2026-11-11T16:00:00+03:00" → "Wednesday, 11 November 2026". Read off the calendar day itself and
@@ -183,6 +170,14 @@ export function longDate(iso?: string | null): string {
   return at.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 }
 
+/** The branded short date on the header line: "2026-11-11T16:00:00+03:00" → "11.11.2026". */
+export function shortDate(iso?: string | null): string {
+  const d = String(iso ?? "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return "";
+  const [y, m, day] = d.split("-");
+  return `${day}.${m}.${y}`;
+}
+
 /** The reply-by date, minus the year when it falls in the wedding year: "25 October". */
 export function deadlineText(iso?: string | null, wedding?: string | null): string {
   const d = String(iso ?? "").slice(0, 10);
@@ -194,31 +189,17 @@ export function deadlineText(iso?: string | null, wedding?: string | null): stri
   return at.toLocaleDateString("en-GB", opts);
 }
 
-/** Card-table rows are labelled "Household 7" — greet those as friends, not by their label. */
+/** An empty row — or an old `Household 7` label — is greeted as a friend, never by its label. */
 const PLACEHOLDER_NAME = /^(household|guest|family|party|table|seat|new guest|tbd|to be announced|unknown)\s*#?\d*$/i;
 export function greetingFor(name?: string): string {
   const n = String(name ?? "").trim().replace(/\s+/g, " ");
   return !n || PLACEHOLDER_NAME.test(n) ? "Dear friend," : `Dear ${n},`;
 }
 
-const COUNT_WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
-
 /**
- * Written asides, matched to the programme row each belongs to — a row that isn't there takes its
- * aside with it. These are the parts of the message that are prose rather than data, so edit them
- * here (and nowhere else) if the shape of the day changes.
- */
-const ASIDES: [RegExp, string][] = [
-  [/ceremony|vows|church/i, "please be seated by 3:45 PM, the doors close then"],
-  [/cocktail|mingling|hour/i, "come and find us here for photos"],
-  [/reception|dinner|party|dance/i, "dinner, our film on the big screen, games and dancing"],
-];
-
-/**
- * The WhatsApp text a household receives — a letter, not a link drop. It greets the household by
- * the name on their row, says how many seats are theirs, walks them through the three things to do
- * with the link, lays out the day, gives the reply-by date, and keeps the code at the end in case
- * the link ever misbehaves.
+ * The WhatsApp text a household receives — short on purpose. It greets whoever the link is for,
+ * says what the link is reserved for, points at everything the website holds (the programme, the
+ * dress code, the venue) instead of repeating it, and asks for the RSVP there.
  */
 export function inviteMessage(code: string, t: InviteText, origin = ""): string {
   const c = cleanCode(code);
@@ -226,39 +207,15 @@ export function inviteMessage(code: string, t: InviteText, origin = ""): string 
   const seats = Math.max(0, Math.round(Number(t.seats) || 0));
   const byWhen = deadlineText(t.deadline, t.date);
 
-  const aboutDay = [
-    t.venue ? `✦ ${t.venue}` : "",
-    ...(t.programme ?? []).map((p) => {
-      const aside = ASIDES.find(([re]) => re.test(p.title))?.[1];
-      return `✦ ${p.time} · ${p.title}${aside ? ` — ${aside}` : ""}`;
-    }),
-    t.dress ? `✦ Dress code: ${t.dress} — every shade is swatched inside your invitation` : "",
-  ].filter(Boolean);
-
   return [
-    `✦ ${t.couple} · ${t.day}`,
-    greetingFor(t.name),
-    `We have news we've been holding on to for a while: ${when ? `on ${when}, ` : ""}we're getting married — and the day wouldn't be the same without you in the room. You've been part of how we got here, and we would love for you to be part of this too.`,
-
-    `Your invitation, made for your household:\n${inviteLink(c, origin)}`,
-
-    `What to do with it:\n` +
-    `1. Tap the link. It opens your invitation — our story, the venue and its map, the full programme, the dress code and your reply card.\n` +
-    `2. Scroll down to the reply card and answer: yes or no, who's coming with you, anything we should know about food, and one song you'd like to dance to.\n` +
-    `3. That's the whole thing. Your answer reaches us the moment you send it, and the same link stays yours — open it again any time to re-read the details or change your reply.`,
-
-    [
-      seats ? `We've kept ${seats === 1 ? "a seat" : `${COUNT_WORDS[seats] ?? seats} seats`} for you.` : "",
-      byWhen ? `Kindly reply by ${byWhen}, so we can settle the tables and the catering.` : "Kindly reply soon, so we can settle the tables and the catering.",
-      `A “no” is completely alright too — we'd much rather know, and we'd still love you.`,
-    ].filter(Boolean).join(" "),
-
-    aboutDay.length ? `About the day:\n${aboutDay.join("\n")}` : "",
-
-    `If the link ever misbehaves, open ${rsvpLink("", origin).replace("?code=", "")} and type your code: ${c}`,
-
-    `Thank you for being here for us. We cannot wait to see you there. 🤍`,
-
+    `${t.couple} · ${shortDate(t.date) || t.day}`,
+    greetingFor(t.greet || t.name),
+    `We're getting married ${when ? `on ${when}` : "soon"}, and the day wouldn't be the same without you there.`,
+    `Your invitation: ${inviteLink(c, origin)}\n` +
+    `This link is yours alone${seats ? `, and it's reserved for ${seats} guest${seats === 1 ? "" : "s"}` : ""}.`,
+    `Inside you'll find our story, the programme, the dress code, the venue and everything else you'll need` +
+    ` — and you can RSVP right there on the website.${byWhen ? ` Kindly reply by ${byWhen}.` : ""}`,
+    `We can't wait to see you there. 🤍`,
     `With love,\n${t.couple}`,
   ].filter(Boolean).join("\n\n");
 }
@@ -308,11 +265,19 @@ export function parseGuestLines(text: string): NewHousehold[] {
     .filter((h) => h.name);
 }
 
+/**
+ * Who a link is for: the ledger's own column when it is filled in, otherwise the household name on
+ * the row (older invitations only ever had that one). This is what the WhatsApp letter greets and
+ * what the guest's reply card shows above the form — never what pre-fills their name.
+ */
+export const whoIsItFor = (g: { greet?: string | null; name?: string | null }) =>
+  String(g.greet ?? "").trim() || String(g.name ?? "").trim();
+
 /** One line per household for pasting into WhatsApp or a document: `Ana & Ivan — JS-7KQF — link`. */
 export function inviteSheet(rows: Guest[], origin = ""): string {
   return rows
     .filter((g) => cleanCode(g.code || ""))
-    .map((g) => `${g.name}${g.note ? ` (${g.note})` : ""} — ${cleanCode(g.code!)} — ${inviteLink(g.code!, origin)}`)
+    .map((g) => `${whoIsItFor(g)}${g.note ? ` (${g.note})` : ""} — ${cleanCode(g.code!)} — ${inviteLink(g.code!, origin)}`)
     .join("\n");
 }
 
@@ -351,7 +316,7 @@ export function planHouseholdMerges(rows: Guest[]): HouseholdMerge[] {
 export function mergeHousehold(keep: Guest, others: Guest[]): Guest {
   return others.reduce((acc, g) => {
     const patch: Partial<Guest> = {};
-    for (const k of ["name", "phone", "dietary", "message", "song_request", "plus_one", "note"] as const)
+    for (const k of ["name", "greet", "phone", "dietary", "message", "song_request", "plus_one", "note"] as const)
       if (!acc[k] && g[k]) patch[k] = g[k];
     if (acc.attending === "pending" && g.attending !== "pending") patch.attending = g.attending;
     if (!acc.pax && g.pax) patch.pax = g.pax;

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { serverSupabase } from "@/lib/supabase-server";
 import { sendRsvpEmail } from "@/lib/notify";
-import { cleanCode, isReply } from "@/lib/guests";
+import { cleanCode, isReply, whoIsItFor } from "@/lib/guests";
 import { markViewed, matchCode, updateGuest } from "@/lib/invite-gate";
 
 const clip = (v: unknown, n: number) => String(v ?? "").trim().slice(0, n);
@@ -48,6 +48,9 @@ export async function GET(req: Request) {
     ok: true,
     code: hit.code,
     name: invite?.name ?? reply!.name,
+    // the couple's own label for the link ("Ana & Ivan") — shown above the reply card, and never
+    // used to pre-fill the guest's name, which stays theirs to type
+    label: whoIsItFor(invite ?? reply!),
     pax: Number(invite?.pax ?? reply?.pax) || 1,
     reply: reply ? shape(reply as unknown as Record<string, unknown>) : null,
   });
@@ -113,7 +116,7 @@ export async function POST(req: Request) {
 
   await sendRsvpEmail({
     ...row,
-    approval: approved ? `code ${canonical} — auto-approved (${invite.name})` : `code ${canonical} — NEEDS REVIEW (party of two)`,
+    approval: approved ? `code ${canonical} — auto-approved (${whoIsItFor(invite)})` : `code ${canonical} — NEEDS REVIEW (party of two)`,
   });
-  return NextResponse.json({ ok: true, saved: true, emailed: true, approved, code: canonical, household: invite.name, paxMax });
+  return NextResponse.json({ ok: true, saved: true, emailed: true, approved, code: canonical, household: whoIsItFor(invite), paxMax });
 }

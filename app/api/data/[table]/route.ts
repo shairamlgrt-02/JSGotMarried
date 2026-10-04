@@ -60,7 +60,7 @@ export async function POST(req: NextRequest, { params }: { params: { table: stri
   const body = await req.json();
   const { data, error } = await db.from(params.table).upsert(body).select();
   if (!error) return NextResponse.json(data);
-  // Ledger columns (note / sent_at / viewed_at) arrive with the newest schema. A project that
+  // Ledger columns (note / greet / sent_at / viewed_at) arrive with the newest schema. A project that
   // hasn't re-run supabase/schema.sql yet must still be able to save a guest, so the write is
   // retried without them — the invite codes and RSVPs themselves never depend on those fields.
   const columnError = /column|does not exist|schema cache|Could not find/i.test(error.message);
