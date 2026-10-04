@@ -2,8 +2,8 @@
 import { useMemo, useState } from "react";
 import { uid } from "@/lib/db";
 import {
-  STATUS, cleanCode, genCode, inviteHref, inviteLink, inviteMessage, inviteSheet, inviteStatus,
-  parseGuestLines, previewLink, tallyInvites, type InviteStatus,
+  STATUS, cleanCode, dressLine, genCode, inviteHref, inviteLink, inviteMessage, inviteSheet, inviteStatus,
+  parseGuestLines, previewLink, programmeLines, tallyInvites, type InviteStatus, type InviteText,
 } from "@/lib/guests";
 import { useTable } from "@/lib/hooks";
 import type { Guest } from "@/lib/types";
@@ -45,6 +45,8 @@ const day = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString("en
 export function InviteCodes({ go }: { go: (tab: string) => void }) {
   const { rows, save, del, error } = useTable("guests", false);
   const { rows: infoRows } = useTable("wedding_info");
+  const { rows: schedule } = useTable("schedule");
+  const { rows: attire } = useTable("attire");
   const info = infoRows[0];
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const [filter, setFilter] = useState<"all" | InviteStatus>("all");
@@ -60,6 +62,24 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
   const couple = info ? `${info.bride} & ${info.groom}` : "Jeger & Shaira";
   const dayText = info ? new Date(info.date).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }) : "11.11.2026";
   const tally = useMemo(() => tallyInvites(rows), [rows]);
+
+  /**
+   * The invitation text every household shares — the day, the venue, the pinned programme, the
+   * dress note and the reply-by date, all read from the binder so the message never goes stale.
+   * Per row, the household's own name and seats are added on top (see `textFor`).
+   */
+  const text = useMemo<InviteText>(() => ({
+    couple,
+    day: dayText,
+    date: info?.date,
+    venue: info ? [info.venue_name, info.venue_address].filter(Boolean).join(", ") : "",
+    deadline: info?.rsvp_deadline,
+    programme: programmeLines(schedule),
+    dress: dressLine(attire),
+  }), [couple, dayText, info, schedule, attire]);
+
+  /** The same letter, addressed: the household's name and the seats kept for them. */
+  const textFor = (g: Guest): InviteText => ({ ...text, name: g.name, seats: Number(g.pax) || 0 });
 
   const ledger = useMemo(() => {
     const withStatus = rows.map((g) => ({ g, s: inviteStatus(g) }));
@@ -127,6 +147,14 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
   const filterChips: ("all" | InviteStatus)[] = ["all", ...ORDER];
   const countFor = (f: "all" | InviteStatus) => (f === "all" ? rows.length : rows.filter((g) => inviteStatus(g) === f).length);
 
+  /** One real household's letter, printed in the panel so you can read it before sending a hundred of them. */
+  const sample = ledger.find((x) => x.g.code)?.g ?? rows.find((g) => cleanCode(g.code || ""));
+  const sampleText = inviteMessage(
+    sample?.code || "JS-XXXX",
+    sample ? textFor(sample) : { ...text, name: "Ana & Ivan", seats: 2 },
+    origin
+  );
+
   return (
     <>
       <PageHead kicker="Issue · send · track" title="The invite codes.">
@@ -184,6 +212,22 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
                 <p className="break-all">Invitation link · <b>{inviteLink("JS-XXXX", origin)}</b></p>
                 <p className="break-all mt-1">Preview link · <b>{previewLink(origin)}</b> — the site with no venue, programme or reply card</p>
                 <p className="mt-2">A guest can also open <b>{`${origin}/rsvp`}</b> and type the last four characters.</p>
+              </div>
+              <div className="mt-5 rounded-xl border border-wine/15 bg-wine/5 p-4">
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="label !text-[9px] text-wine">
+                    The message they receive{sample ? ` · ${sample.name}` : " · sample"}
+                  </p>
+                  <button className="label !text-[9px] text-ink/50 hover:text-wine shrink-0"
+                    onClick={() => void (async () => { if (await copyText(sampleText)) mark("sample"); })()}>
+                    {copied === "sample" ? "copied ✓" : "copy this text"}
+                  </button>
+                </div>
+                <pre className="mt-2 max-h-[20rem] overflow-y-auto whitespace-pre-wrap font-sans text-[12px] leading-[1.65] text-ink/75">{sampleText}</pre>
+                <p className="mt-2 text-[10px] leading-snug text-ink/45">
+                  The household's name and seats come from their row — write the names in the <b>Household</b> column and every
+                  letter is addressed. Date, venue, programme, dress code and reply-by date are read from the binder.
+                </p>
               </div>
             </div>
           </div>
@@ -247,10 +291,10 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
                         <button className="label !text-[9px] text-moss" onClick={() => void copy(g, inviteLink(g.code!, origin), g.id, true)} title={inviteLink(g.code!, origin)}>
                           {copied === g.id ? "copied ✓ sent" : "copy link"}
                         </button>
-                        <button className="label !text-[9px] text-ink/60 hover:text-wine" onClick={() => void copy(g, inviteMessage(g.code!, couple, dayText, origin), `${g.id}:msg`, true)}>copy message</button>
+                        <button className="label !text-[9px] text-ink/60 hover:text-wine" title="The whole invitation letter, addressed to this household" onClick={() => void copy(g, inviteMessage(g.code!, textFor(g), origin), `${g.id}:msg`, true)}>copy message</button>
                         <a className="label !text-[9px] text-wine hover:text-burgundy" target="_blank" rel="noreferrer"
                           onClick={() => void save({ ...g, sent_at: g.sent_at ?? new Date().toISOString() })}
-                          href={inviteHref(g.code!, g.phone || "", couple, dayText, origin)}
+                          href={inviteHref(g.code!, g.phone || "", textFor(g), origin)}
                           title={g.phone ? "Send the invitation on WhatsApp" : "Send it on WhatsApp — pick the contact there"}>send ↗</a>
                         <button className="label !text-[9px] text-ink/50 hover:text-wine" onClick={() => void save({ ...g, sent_at: g.sent_at ? null : new Date().toISOString() })}>
                           {g.sent_at ? `sent ${day(g.sent_at)} · undo` : "mark sent"}

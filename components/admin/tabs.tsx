@@ -3,7 +3,7 @@ import { Reorder, useDragControls } from "framer-motion";
 import { useMemo, useState } from "react";
 import { getMode, pushSeedSafely, refreshFaqCopy, refreshStoryCopy, resetLocal, uid } from "@/lib/db";
 import { entourageGroups } from "@/lib/entourage";
-import { STATUS, genCodeFor, inviteHref, inviteLink, inviteStatus, mergeHousehold, onGuestList, planHouseholdMerges, tallyInvites, cleanCode } from "@/lib/guests";
+import { STATUS, dressLine, genCodeFor, inviteHref, inviteLink, inviteStatus, mergeHousehold, onGuestList, planHouseholdMerges, programmeLines, tallyInvites, cleanCode, type InviteText } from "@/lib/guests";
 import { useCountdown, useTable } from "@/lib/hooks";
 import type { Attending, Attire, BudgetItem, BudgetStatus, ChecklistItem, EntourageMember, Guest, Priority, ScheduleItem, StoryChapter, Vendor, VendorStatus } from "@/lib/types";
 import { ENTOURAGE_ROLES, TABLES } from "@/lib/types";
@@ -296,6 +296,8 @@ export function Budget() {
 export function Guests({ go }: { go: (tab: string) => void }) {
   const { rows, save, del, error } = useTable("guests", false);
   const { info } = useInfo();
+  const { rows: schedule } = useTable("schedule");
+  const { rows: attire } = useTable("attire");
   const [filter, setFilter] = useState<"all" | Attending>("all");
   const [q, setQ] = useState("");
   const [msg, setMsg] = useState("");
@@ -303,6 +305,16 @@ export function Guests({ go }: { go: (tab: string) => void }) {
   const merges = useMemo(() => planHouseholdMerges(rows), [rows]);
   const couple = `${info.bride} & ${info.groom}`;
   const day = new Date(info.date).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
+  /** The invitation letter, re-sent from this list — the same text the Invite codes tab sends. */
+  const text: InviteText = {
+    couple,
+    day,
+    date: info.date,
+    venue: [info.venue_name, info.venue_address].filter(Boolean).join(", "),
+    deadline: info.rsvp_deadline,
+    programme: programmeLines(schedule),
+    dress: dressLine(attire),
+  };
   const shown = rows
     .filter(onGuestList)
     .filter((g) => filter === "all" || g.attending === filter)
@@ -376,7 +388,7 @@ export function Guests({ go }: { go: (tab: string) => void }) {
                           <span className="label !text-[9px] text-ink/60">{cleanCode(g.code)}</span>
                           <button className="label !text-[9px] text-moss" onClick={() => navigator.clipboard?.writeText(inviteLink(g.code!, location.origin))}>copy link</button>
                           <a className="label !text-[9px] text-wine hover:text-burgundy" target="_blank" rel="noreferrer"
-                            href={inviteHref(g.code!, g.phone || "", couple, day)} title={g.phone ? "Send the invitation on WhatsApp" : "Send the invitation on WhatsApp — pick the contact there"}>send ↗</a>
+                            href={inviteHref(g.code!, g.phone || "", { ...text, name: g.name, seats: Number(g.pax) || 0 })} title={g.phone ? "Send the invitation on WhatsApp" : "Send the invitation on WhatsApp — pick the contact there"}>send ↗</a>
                           <button className="label !text-[9px] text-ink/50 hover:text-wine" onClick={() => go("invites")}>ledger →</button>
                         </>
                       )}

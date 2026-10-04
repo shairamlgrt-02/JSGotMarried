@@ -65,6 +65,24 @@ every single invitation stands.
 project that hasn't caught up still works: those three are dropped quietly on save, and the RSVPs
 themselves never depend on them.
 
+### The WhatsApp message
+**copy message** and **send ↗** send the same text: a letter, not a link drop. It greets the household
+by the name on their row, names the seats you kept for them, walks them through the three things to do
+with the link, lays out the day and closes with the code as a fallback.
+
+* **Addressed by row** — the greeting is the **Household** name (`Dear Ana & Ivan,`). Card-table
+  placeholders (`Household 7`) and blank rows are greeted as `Dear friend,` instead, so a label never
+  reaches a guest.
+* **Read from the binder, so it never goes stale** — the date, the venue, the pinned **Schedule**
+  (each row prints as `✦ 4:00 – 5:00 PM · The Ceremony`), the guests' dress note from
+  **Attire & Colors**, and the reply-by date from **Settings → Website & sharing**. Leave a field empty
+  and its line simply leaves the letter.
+* **Proof before you send** — the **✦ Generate codes** panel prints one real household's letter under
+  *The message they receive*, with a copy button.
+* The prose itself — the invitation paragraph, the three steps, the doors-close and majlis asides, the
+  sign-off — is written in `lib/guests.ts` (`inviteMessage`, with the asides in `ASIDES`). Edit it there
+  and every household's letter changes with it.
+
 ### The guest's side
 * Their link is `https://your-site/JS-7KQF`. The older `https://your-site/?rsvp=JS-7KQF` you may
   already have sent still works — it lands on the same page.
