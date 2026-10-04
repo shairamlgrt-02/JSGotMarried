@@ -39,6 +39,12 @@ export type Guest = {
   approved?: boolean | null;
   /** Name of the second guest when a party of two was requested. */
   plus_one?: string;
+  /** The couple's own note on the household ("Jeg's cousins", "no kids invited"). */
+  note?: string;
+  /** When the link left the binder (copy link / send ↗ / mark sent) — the `sent` stage. */
+  sent_at?: string | null;
+  /** First time the guest opened their personal link — the `opened` stage. */
+  viewed_at?: string | null;
 };
 export type VendorStatus = "quoted" | "contacted" | "booked" | "pending";
 export type Vendor = { id: string; type: string; name: string; quote: number; contact: string; status: VendorStatus; notes: string };

@@ -37,6 +37,15 @@ create table if not exists guests (
 alter table guests add column if not exists code text default '';
 alter table guests add column if not exists approved boolean default null;
 alter table guests add column if not exists plus_one text default '';
+-- The invite-code ledger (Invite codes tab): `sent_at` is when the link left the binder (you
+-- copied or sent it), `viewed_at` is stamped by the server the first time a guest opens the
+-- link, and `note` is your own reminder about the household. All three are optional — the app
+-- drops them quietly and still saves the guest if a project hasn't re-run this file yet.
+alter table guests add column if not exists note text default '';
+alter table guests add column if not exists sent_at timestamptz;
+alter table guests add column if not exists viewed_at timestamptz;
+-- one personal code per household: lookups by code (opening a link, the /rsvp gate) stay cheap
+create index if not exists guests_code_idx on guests (upper(code));
 
 create table if not exists vendors (id text primary key default gen_random_uuid()::text, type text, name text, quote numeric default 0, contact text, status text default 'pending', notes text);
 create table if not exists checklist (id text primary key default gen_random_uuid()::text, task text, category text default 'medium', due_date date, completed boolean default false);

@@ -2,10 +2,11 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { AttireEditor, Budget, Checklist, Content, Details, Guests, Overview, PrintBinder, ScheduleBuilder, Settings, Vendors, getMode } from "@/components/admin/tabs";
+import { InviteCodes } from "@/components/admin/invites";
 
 const TABS = [
   ["overview", "Overview", "◐"], ["details", "Details", "✎"], ["schedule", "Schedule", "◷"], ["checklist", "Checklist", "☑"],
-  ["budget", "Budget", "◎"], ["guests", "Guests & RSVP", "♡"], ["vendors", "Vendors", "◇"], ["attire", "Attire & Colors", "◉"],
+  ["budget", "Budget", "◎"], ["invites", "Invite Codes", "✦"], ["guests", "Guests & RSVP", "♡"], ["vendors", "Vendors", "◇"], ["attire", "Attire & Colors", "◉"],
   ["content", "Content", "▣"], ["settings", "Settings", "⚙"],
 ] as const;
 type Tab = (typeof TABS)[number][0];
@@ -35,7 +36,8 @@ export default function Admin() {
           </nav>
           <div className="p-4 border-t border-taupe/20 space-y-2 text-xs text-taupe">
             <div className="flex items-center gap-2"><span className={`w-2 h-2 rounded-full ${mode === "supabase" ? "bg-green-400" : "bg-wine"}`} />{mode === "supabase" ? "Synced to Supabase" : "Local mode"}</div>
-            <a href="/" target="_blank" className="block hover:text-wine">View public site ↗</a>
+            <a href="/preview" target="_blank" className="block hover:text-wine">Preview the site ↗</a>
+            <a href="/" target="_blank" className="block hover:text-wine">Front door (hub) ↗</a>
           </div>
         </aside>
         {menu && <div className="fixed inset-0 bg-black/60 z-30 md:hidden" onClick={() => setMenu(false)} />}
@@ -55,7 +57,8 @@ export default function Admin() {
               {tab === "schedule" && <ScheduleBuilder />}
               {tab === "checklist" && <Checklist />}
               {tab === "budget" && <Budget />}
-              {tab === "guests" && <Guests />}
+              {tab === "invites" && <InviteCodes go={go} />}
+              {tab === "guests" && <Guests go={go} />}
               {tab === "vendors" && <Vendors />}
               {tab === "attire" && <AttireEditor />}
               {tab === "content" && <Content />}

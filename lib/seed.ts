@@ -24,7 +24,9 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     currency: "BHD",
     save_the_date_url: "",
     site_title: "Jeger & Shaira — Wedding · 11.11.2026",
-    site_description: "Jeger & Shaira are getting married on 11.11.2026 at The Heaven, Damistan. You're invited. #JSSayIDo",
+    // deliberately no venue in here: this line is what the whole world reads on a shared link,
+    // while the invitation itself stays behind each guest's code.
+    site_description: "Jeger & Shaira are getting married on 11.11.2026 in Bahrain — you're invited. #JSSayIDo",
     share_image: "/og.jpg",
     favicon: "",
     gallery: [],

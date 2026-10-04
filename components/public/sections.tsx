@@ -820,7 +820,8 @@ export function PolaroidPair({ info, from, caps }: { info: WeddingInfo; from: nu
 }
 
 /* ─────────── COUNTING DOWN (the last beat before the footer) ─────────── */
-export function CountdownSection({ info }: { info: WeddingInfo }) {
+/** `sealed` = the visitor hasn't unlocked anything yet, so the where stays off the page. */
+export function CountdownSection({ info, sealed = false }: { info: WeddingInfo; sealed?: boolean }) {
   const cd = useCountdown(info.date);
   return (
     <section className="sec-sm text-center">
@@ -835,7 +836,7 @@ export function CountdownSection({ info }: { info: WeddingInfo }) {
             </div>
           ))}
         </div>
-        <p className="caps text-mocha text-body mt-6 text-balance">{longDate(info.date)} · {info.venue_name}</p>
+        <p className="caps text-mocha text-body mt-6 text-balance">{longDate(info.date)}{!sealed && info.venue_name ? ` · ${info.venue_name}` : ""}</p>
       </Reveal>
     </section>
   );

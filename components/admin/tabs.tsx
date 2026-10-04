@@ -3,7 +3,7 @@ import { Reorder, useDragControls } from "framer-motion";
 import { useMemo, useState } from "react";
 import { getMode, pushSeedSafely, refreshFaqCopy, refreshStoryCopy, resetLocal, uid } from "@/lib/db";
 import { entourageGroups } from "@/lib/entourage";
-import { mergeHousehold, planHouseholdMerges } from "@/lib/guests";
+import { STATUS, genCodeFor, inviteHref, inviteLink, inviteStatus, mergeHousehold, onGuestList, planHouseholdMerges, tallyInvites, cleanCode } from "@/lib/guests";
 import { useCountdown, useTable } from "@/lib/hooks";
 import type { Attending, Attire, BudgetItem, BudgetStatus, ChecklistItem, EntourageMember, Guest, Priority, ScheduleItem, StoryChapter, Vendor, VendorStatus } from "@/lib/types";
 import { ENTOURAGE_ROLES, TABLES } from "@/lib/types";
@@ -32,6 +32,7 @@ export function Overview({ go }: { go: (tab: string) => void }) {
   const left = info.total_budget - allocated;
   const g = { yes: 0, pending: 0, no: 0, pax: 0 };
   guests.forEach((x) => { g[x.attending]++; if (x.attending === "yes") g.pax += x.pax; });
+  const inv = tallyInvites(guests);
   const done = tasks.filter((t) => t.completed).length;
   const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
   const upcoming = [...tasks].filter((t) => !t.completed).sort((a, b) => a.due_date.localeCompare(b.due_date)).slice(0, 6);
@@ -69,6 +70,19 @@ export function Overview({ go }: { go: (tab: string) => void }) {
             <span className="label text-moss">Headcount for catering</span><span className="display text-4xl">{g.pax}</span>
           </div>
         </Card>
+        <Card title="Invite links" className="md:col-span-1" action={<Btn variant="ghost" onClick={() => go("invites")}>Open →</Btn>}>
+          <div className="grid grid-cols-3 gap-3">
+            <Stat label="Codes" value={inv.codes} />
+            <Stat label="Waiting" value={inv.to_send + inv.sent + inv.opened + inv.no_code} />
+            <Stat label="Filled" value={inv.filled} />
+          </div>
+          <div className="mt-5 space-y-2 text-sm">
+            <div className="flex justify-between"><span className="text-ink/60">Opened but haven't replied</span><b>{inv.opened}</b></div>
+            <div className="flex justify-between"><span className="text-ink/60">Awaiting your review (plus-ones)</span><b className={inv.needs_review ? "text-amethyst" : ""}>{inv.needs_review}</b></div>
+            <div className="flex justify-between"><span className="text-ink/60">Declined</span><b>{inv.declined}</b></div>
+          </div>
+          <Btn variant="dark" className="mt-5 w-full" onClick={() => go("invites")}>Generate &amp; send codes</Btn>
+        </Card>
         <Card title="Checklist" className="md:col-span-2" action={<Btn variant="ghost" onClick={() => go("checklist")}>Open →</Btn>}>
           <div className="flex items-baseline justify-between mb-3"><span className="display text-5xl">{pct}%</span><span className="text-sm text-ink/60">{done} of {tasks.length} done</span></div>
           <Progress value={pct} />
@@ -104,7 +118,8 @@ export function Details() {
   const localDate = (() => { const d = new Date(info.date); const off = 3 * 60; const b = new Date(d.getTime() + off * 60000); return b.toISOString().slice(0, 16); })();
   return (
     <>
-      <PageHead kicker="Edits go live on the public site instantly" title="The details."><a href="/" target="_blank"><Btn variant="ghost">View site ↗</Btn></a></PageHead>
+      <PageHead kicker="Edits go live on the public site instantly" title="The details."><a href="/preview" target="_blank"><Btn variant="ghost">Preview the site ↗</Btn></a>
+        <a href="/" target="_blank"><Btn variant="ghost">Front door ↗</Btn></a></PageHead>
       <div className="grid md:grid-cols-2 gap-5">
         <Card title="The couple & the day">
           <div className="grid gap-4">
@@ -273,25 +288,11 @@ export function Budget() {
   );
 }
 
-/* ═════════════ 6. GUESTS ═════════════ */
-/** Collision-checked household invite code, e.g. JS-7KQF. */
-const genCode = (rows: Guest[]) => {
-  const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-  for (;;) {
-    const bytes = crypto.getRandomValues(new Uint8Array(4));
-    const c = "JS-" + Array.from(bytes).map((b) => alphabet[b % alphabet.length]).join("");
-    if (!rows.some((r) => r.code === c)) return c;
-  }
-};
-/** The personal invitation link for one household — both …/?rsvp=JS-XXXX and …/JS-XXXX unseal the site. */
-const inviteLink = (code: string) => `${location.origin}/?rsvp=${code}`;
-/** One-tap WhatsApp share of that link (straight to the guest when we have their number). */
-const inviteHref = (code: string, phone: string, couple: string, day: string) => {
-  const digits = phone.replace(/\D/g, "");
-  const text = `You're invited ✦ ${couple} · ${day}\nOpen your personal invitation: ${inviteLink(code)}`;
-  return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
-};
-export function Guests() {
+/* ═════════════ 6. GUESTS & RSVP ═════════════
+   The list of people: every household whose link has been filled in, plus anyone you added by
+   hand. The links themselves — issuing them, sending them, who has opened what — live on the
+   Invite codes tab, and both read the same rows, so nothing is ever entered twice. */
+export function Guests({ go }: { go: (tab: string) => void }) {
   const { rows, save, del, error } = useTable("guests", false);
   const { info } = useInfo();
   const [filter, setFilter] = useState<"all" | Attending>("all");
@@ -302,6 +303,7 @@ export function Guests() {
   const couple = `${info.bride} & ${info.groom}`;
   const day = new Date(info.date).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
   const shown = rows
+    .filter(onGuestList)
     .filter((g) => filter === "all" || g.attending === filter)
     .filter((g) => !q || `${g.name} ${g.phone}`.toLowerCase().includes(q.toLowerCase()))
     .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
@@ -325,15 +327,17 @@ export function Guests() {
   }
   return (
     <>
-      <PageHead kicker="RSVP inbox + manual list" title="The guest list.">
+      <PageHead kicker="Everyone who has answered" title="The guest list.">
+        <Btn variant="ghost" onClick={() => go("invites")}>Invite codes →</Btn>
         <Btn onClick={add}>+ Add guest</Btn>
         <Btn variant="ghost" onClick={() => download("guests.csv", toCsv(rows))}>Export CSV</Btn>
         {merges.length > 0 && <Btn variant="ghost" onClick={mergeDuplicates}>Merge {merges.length} duplicate{merges.length === 1 ? "" : "s"}</Btn>}
       </PageHead>
       {msg && <p className="mb-4 text-sm text-moss">{msg}</p>}
       <p className="text-sm text-ink/60 mb-5 max-w-3xl">
-        Add each household once, hit <b>issue code</b>, then <b>copy link</b> or <b>send&#160;↗</b> on WhatsApp. The guest opens their personal
-        link and fills the form once — the reply is written onto <i>this same row</i>, so nobody is ever duplicated.
+        This is the list itself: every household that has <b>filled in its link</b>, plus anyone you added by hand (a phone RSVP, a walk-in).
+        To hand links out — or chase the people who haven't answered — use <button className="underline text-wine" onClick={() => go("invites")}>Invite codes</button>;
+        a reply is written onto <i>the same row</i> you invited, so nobody is ever duplicated.
       </p>
       {error && <div className="mb-4 text-red-300">{error}</div>}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-5">
@@ -362,16 +366,17 @@ export function Guests() {
                   <td className="px-1 max-w-[260px]"><EditText value={g.message} onSave={(v) => save({ ...g, message: v })} /></td>
                   <td className="px-2 py-2"><Tag>{g.source === "RSVP form" ? "quoted" : "pending"}</Tag><div className="text-[10px] text-ink/40 mt-1">{g.source}</div></td>
                   <td className="px-2 py-2 whitespace-nowrap">
-                    {g.approved === false ? <Tag>needs review</Tag> : g.approved === true ? <Tag>confirmed</Tag> : g.code ? <Tag>invited</Tag> : <span className="text-ink/30 text-[10px]">—</span>}
+                    <Tag>{STATUS[inviteStatus(g)].label}</Tag>
                     <div className="flex flex-wrap gap-x-2 gap-y-1 mt-1 max-w-[150px]">
                       {!g.code ? (
-                        <button className="label !text-[9px] text-wine hover:text-burgundy" onClick={() => save({ ...g, code: genCode(rows) })}>issue code</button>
+                        <button className="label !text-[9px] text-wine hover:text-burgundy" onClick={() => save({ ...g, code: genCodeFor(rows) })}>issue code</button>
                       ) : (
                         <>
-                          <span className="label !text-[9px] text-ink/60">{g.code}</span>
-                          <button className="label !text-[9px] text-moss" onClick={() => navigator.clipboard?.writeText(inviteLink(g.code!))}>copy link</button>
+                          <span className="label !text-[9px] text-ink/60">{cleanCode(g.code)}</span>
+                          <button className="label !text-[9px] text-moss" onClick={() => navigator.clipboard?.writeText(inviteLink(g.code!, location.origin))}>copy link</button>
                           <a className="label !text-[9px] text-wine hover:text-burgundy" target="_blank" rel="noreferrer"
                             href={inviteHref(g.code!, g.phone || "", couple, day)} title={g.phone ? "Send the invitation on WhatsApp" : "Send the invitation on WhatsApp — pick the contact there"}>send ↗</a>
+                          <button className="label !text-[9px] text-ink/50 hover:text-wine" onClick={() => go("invites")}>ledger →</button>
                         </>
                       )}
                       {g.approved === false && (
@@ -695,7 +700,15 @@ export function Settings({ mode, onPrint }: { mode: string; onPrint: () => void 
           </div>
           <div className="grid gap-5">
             <F label="Browser tab title"><EditText value={info.site_title ?? ""} placeholder="Jeger & Shaira — Wedding · 11.11.2026" onSave={(v) => saveInfo({ site_title: v })} /></F>
-            <F label="Description on shared links"><EditText value={info.site_description ?? ""} multiline rows={2} placeholder="Jeger & Shaira are getting married on 11.11.2026…" onSave={(v) => saveInfo({ site_description: v })} /></F>
+            <F label="Description on shared links"><EditText value={info.site_description ?? ""} multiline rows={2} placeholder="Jeger & Shaira are getting married on 11.11.2026…" onSave={(v) => saveInfo({ site_description: v })} />
+              {info.site_description?.toLowerCase().includes((info.venue_name || "").toLowerCase()) && (
+                <p className="text-[11px] text-burgundy/80 mt-1.5 leading-snug">
+                  Heads-up: this line repeats your venue&apos;s name, and it is <b>public</b> — it is the text people read on the
+                  shared link (and in search) before they unlock anything. The preview page hides the venue, so you may want to
+                  write this one without it.
+                </p>
+              )}
+            </F>
             <div>
               <span className="label text-ink/50 block mb-1">Preview banner on shared links</span>
               <p className="text-xs text-ink/50 mb-2">What WhatsApp, iMessage and Facebook show when someone shares your link. A 1200 × 630 image looks best.</p>

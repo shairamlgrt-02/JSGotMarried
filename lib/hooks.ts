@@ -4,16 +4,21 @@ import { CHANGE_EVENT, list, remove, upsert } from "./db";
 import { SEED } from "./seed";
 import type { TableMap, TableName } from "./types";
 
-/** Live table hook: loads rows, re-loads on any change (incl. other tabs in local mode). */
-export function useTable<T extends TableName>(t: T, fallbackToSeed = true) {
+/**
+ * Live table hook: loads rows, re-loads on any change (incl. other tabs in local mode).
+ * `code` is the guest's invitation code: the public site passes it along so the server hands
+ * over the private pages (venue, programme, FAQ) for a code it issued and withholds them
+ * otherwise. The binder leaves it empty — its admin cookie already unlocks everything.
+ */
+export function useTable<T extends TableName>(t: T, fallbackToSeed = true, code = "") {
   const [rows, setRows] = useState<TableMap[T][]>(fallbackToSeed ? (SEED[t] as TableMap[T][]) : []);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
-    try { setRows(await list(t)); setError(null); } catch (e) { setError((e as Error).message); }
+    try { setRows(await list(t, code)); setError(null); } catch (e) { setError((e as Error).message); }
     finally { setLoading(false); }
-  }, [t]);
+  }, [t, code]);
 
   useEffect(() => {
     reload();
@@ -22,7 +27,7 @@ export function useTable<T extends TableName>(t: T, fallbackToSeed = true) {
     window.addEventListener(CHANGE_EVENT, onChange);
     window.addEventListener("storage", onStorage);
     return () => { window.removeEventListener(CHANGE_EVENT, onChange); window.removeEventListener("storage", onStorage); };
-  }, [t, reload]);
+  }, [t, code, reload]);
 
   const save = useCallback(async (row: TableMap[T] | TableMap[T][]) => {
     // optimistic
