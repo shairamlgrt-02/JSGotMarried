@@ -16,7 +16,7 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     venue_map_link: "https://maps.google.com/?q=The+Heaven+Damistan+Bahrain",
     venue_map_embed: "https://maps.google.com/maps?q=Damistan%20Bahrain&z=14&output=embed",
     theme_name: "Vintage Lace",
-    story: "Two marketers who spent years telling other people's stories finally wrote their own. One brief, one late-night idea, one wish that came true. On 11.11 we make the wish official — and we want you there when we do.",
+    story: "We met serving at an inter-church youth camp, and three years of friendship, longer glances and quiet admiration followed. Jeg confessed in the IKEA parking lot on October 29, 2020, and four months later that wish was answered on our first official date at the Amwaj Lagoon, on March 14, 2021. Five years of ups and downs and a ring under the blue skies of Gudauri later, we get married on 11.11.2026, because in the Lord neither of us is whole without the other.",
     instagram: "@shaiandjeg",
     instagram_note: "Follow along for the countdown, the behind-the-scenes and our favourite moments — then tag your photos on the day so we can keep them forever.",
     hashtags: ["#JSGotMarried", "#JSSayIDo", "#JSWishComeTrue"],
@@ -38,12 +38,20 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     { id: "s3", time: "7:00 PM onwards", title: "The Reception", detail: "Doors open for the celebration — *dinner*, our *film on the big screen*, *games and giveaways*, and dancing until the very end.", order: 3 },
   ],
 
-  /** Our Story, chapter by chapter — swipeable on the site; photos upload in the binder (Content → Story chapters). */
+  /**
+   * Our Story, chapter by chapter — swipeable on the site; photos upload in the binder (Content → Story chapters).
+   * Five chapters — the glances, the parking lot and the lagoon, the five years, Gudauri, the invitation — told as
+   * the couple telling it themselves: "we" for everything shared, Shai or Jeg by name where a moment belongs to one of
+   * them, and never an "I", so neither of them reads as the sole narrator. Short plain sentences, one real detail per
+   * beat (camp 2018 · IKEA car park Oct 29 2020 · Amwaj Lagoon Mar 14 2021 · five years · Gudauri Feb 20 2026 ·
+   * 11.11.2026). The last line hands it to 1 Corinthians 11:11, which the 11.11 interlude right after quotes in full (KJV).
+   */
   story: [
-    { id: "ch1", title: "The First Hello", text: "Two marketers, one brief, one impossible deadline. We spent our days telling other people's stories — not noticing that God had quietly started writing ours.", photo: "", order: 1 },
-    { id: "ch2", title: "The 11:11 Habit", text: "Somewhere between late-night ideas and early-morning coffee, we started catching 11:11 on the clock — and wishing. Same time, same wish, neither of us brave enough to say it out loud. Little did we know, our wish had a name.", photo: "", order: 2 },
-    { id: "ch3", title: "The Ask", text: "Wishing turned into praying, and praying turned into courage. On one perfectly ordinary-extraordinary evening, he asked — and she said yes. Heaven's timing, as always, was right on time.", photo: "", order: 3 },
-    { id: "ch4", title: "Forever, Answered", text: "Ours is no longer a wish whispered at 11:11. It is the answer we walk into hand in hand on 11.11.2026 — each other's answered prayer, a wish come true. And everything, everything is from the Lord.", photo: "", order: 4 },
+    { id: "ch1", title: "She Fell First", text: "We met serving at an inter-church youth camp, and three years of friendship followed. The glances got a little longer, the conversations a little later, and the quiet admiration kept getting deeper. Ours is a classic story: she fell first, and he fell… harder. 😉", photo: "", order: 1 },
+    { id: "ch2", title: "From a Parking Lot to a Lagoon", text: "On October 29, 2020, Jeg confessed in the huge, half-empty IKEA parking lot. He had practised a whole speech and lost every word of it on the way. Four months later that wish was answered, on our first official date at the Amwaj Lagoon. March 14, 2021 became our official day.", photo: "", order: 2 },
+    { id: "ch3", title: "Five Years Up and Down", text: "Five years since that day, and we tumbled down and rose back up again more than once. God moulded us and refined us. We still get a little flutter from time to time. But the joy we hold on to is the life waiting ahead: loving God together, and loving each other through it.", photo: "", order: 3 },
+    { id: "ch4", title: "Blue Skies in Gudauri", text: "On February 20, 2026, Gudauri gave us snowy mountains and wide blue skies. Right there, on that mountain, Jeg put a ring on Shai's finger. The future suddenly looked brighter and far more colourful. We could hardly wait to make it official for good, with our families and friends behind us.", photo: "", order: 4 },
+    { id: "ch5", title: "So, Come", text: "On November 11, 2026 we get married, and we want you there: our families, our friends, everyone who prayed for us before we knew it was coming. We are each other's answered prayer, and in the Lord neither of us is whole without the other.", photo: "", order: 5 },
   ],
 
   budget: [

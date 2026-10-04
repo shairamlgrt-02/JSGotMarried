@@ -21,9 +21,12 @@ export type KeepsakeData = {
   photo?: string;      // data URL / same-origin path (external links are skipped so the file stays downloadable)
 };
 
+/* 1 Corinthians 11:11 in the KJV, and only verse 11 — the creation-order clause of verse 12 stays out,
+   so the card says what the couple want it to say: neither of us is without the other, in the Lord.
+   Same verse the Our Story carousel closes on (lib/seed.ts → story, ch5). */
 const VERSE =
-  "“In the Lord, neither is woman independent of man, nor man of woman — for as she came from him, so he is born of her. And everything comes from God.”";
-const VERSE_REF = "1 CORINTHIANS 11:11–12";
+  "“Nevertheless neither is the man without the woman, neither the woman without the man, in the Lord.”";
+const VERSE_REF = "1 CORINTHIANS 11:11";
 const ARRIVAL_NOTE = "Entourage & family, kindly arrive by 3:30 PM · Guests from 5:00 PM";
 
 const W = 1200;
