@@ -44,6 +44,9 @@ alter table guests add column if not exists plus_one text default '';
 alter table guests add column if not exists note text default '';
 alter table guests add column if not exists sent_at timestamptz;
 alter table guests add column if not exists viewed_at timestamptz;
+-- Who the link is for ("Ana & Ivan"): the WhatsApp invitation greets this and the guest's reply
+-- card shows it above the form, while `name` stays blank until the guest types their own.
+alter table guests add column if not exists greet text default '';
 -- one personal code per household: lookups by code (opening a link, the /rsvp gate) stay cheap
 create index if not exists guests_code_idx on guests (upper(code));
 

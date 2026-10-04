@@ -141,19 +141,107 @@ export const rsvpLink = (code: string, origin = "") => `${origin}/rsvp?code=${cl
 /** The sealed preview anyone can look at — no venue, no programme, no reply card. */
 export const previewLink = (origin = "") => `${origin}/preview`;
 
-/** The WhatsApp text a household receives: the link, plus the code in case they lose it. */
-export function inviteMessage(code: string, couple: string, day: string, origin = "") {
-  const c = cleanCode(code);
-  return (
-    `You're invited ✦ ${couple} · ${day}\n` +
-    `Open your personal invitation: ${inviteLink(c, origin)}\n` +
-    `(Prefer the short way? ${rsvpLink("", origin).replace("?code=", "")} and type your code: ${c})`
-  );
+/* ─────────── the invitation text ─────────── */
+
+/**
+ * Everything the invitation message is allowed to know: who it is going to, and the day it is
+ * about. Nothing here is required — with only a code the text still reads as a proper invitation,
+ * and every detail the binder can supply makes it read as *theirs*.
+ */
+export type InviteText = {
+  couple: string;                  // "Shaira & Jeger" — the header line and the signature
+  day: string;                     // "11.11.2026" — the short date on the header line
+  date?: string | null;            // ISO date of the wedding, read out in full in the opening line
+  greet?: string;                  // who the link is for — the ledger's own column, the greeting's first choice
+  name?: string;                   // the household name on the row, when the row has one
+  seats?: number;                  // what the link is reserved for
+  deadline?: string | null;        // ISO reply-by date (Settings → Website & sharing)
+};
+
+/**
+ * "2026-11-11T16:00:00+03:00" → "Wednesday, 11 November 2026". Read off the calendar day itself and
+ * formatted in UTC, so a binder open in another timezone never shifts the wedding by a day.
+ */
+export function longDate(iso?: string | null): string {
+  const d = String(iso ?? "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return "";
+  const at = new Date(`${d}T12:00:00Z`);
+  if (Number.isNaN(at.getTime())) return "";
+  return at.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 }
+
+/** The branded short date on the header line: "2026-11-11T16:00:00+03:00" → "11.11.2026". */
+export function shortDate(iso?: string | null): string {
+  const d = String(iso ?? "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return "";
+  const [y, m, day] = d.split("-");
+  return `${day}.${m}.${y}`;
+}
+
+/** The reply-by date, minus the year when it falls in the wedding year: "25 October". */
+export function deadlineText(iso?: string | null, wedding?: string | null): string {
+  const d = String(iso ?? "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return "";
+  const at = new Date(`${d}T12:00:00Z`);
+  if (Number.isNaN(at.getTime())) return "";
+  const opts: Intl.DateTimeFormatOptions = { day: "numeric", month: "long", timeZone: "UTC" };
+  if (String(wedding ?? "").slice(0, 4) !== d.slice(0, 4)) opts.year = "numeric";
+  return at.toLocaleDateString("en-GB", opts);
+}
+
+/** An empty row — or an old `Household 7` label — is greeted as a friend, never by its label. */
+const PLACEHOLDER_NAME = /^(household|guest|family|party|table|seat|new guest|tbd|to be announced|unknown)\s*#?\d*$/i;
+export function greetingFor(name?: string): string {
+  const n = String(name ?? "").trim().replace(/\s+/g, " ");
+  return !n || PLACEHOLDER_NAME.test(n) ? "Dear friend," : `Dear ${n},`;
+}
+
+/**
+ * The seats line, kept soft: it says the seats are theirs rather than announcing a quota.
+ * "A seat at our table is yours." · "Two seats at our table are yours."
+ */
+const COUNT_WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
+export function seatLine(seats: number): string {
+  const n = Math.max(0, Math.round(Number(seats) || 0));
+  if (!n) return "";
+  if (n === 1) return "A seat at our table is yours.";
+  const word = COUNT_WORDS[n] ?? String(n);
+  return `${word[0].toUpperCase()}${word.slice(1)} seats at our table are yours.`;
+}
+
+/**
+ * The WhatsApp text a household receives — short and warm. It greets whoever the link is for,
+ * tells them the seats are theirs, points at everything the website holds (the programme, the
+ * dress code, the venue) instead of repeating it, and asks for the RSVP there.
+ *
+ * ── THIS IS THE MESSAGE TEMPLATE ──
+ * Every line below is the wording your guests read. Change a line here and every household's
+ * invitation changes with it (Binder → Settings → The WhatsApp invitation points here too).
+ * The pieces that fill themselves in: `couple`, `date`, `greet`, `seats` and `deadline`.
+ */
+export function inviteMessage(code: string, t: InviteText, origin = ""): string {
+  const c = cleanCode(code);
+  const when = longDate(t.date) || t.day;
+  const byWhen = deadlineText(t.deadline, t.date);
+
+  return [
+    `${t.couple} · ${shortDate(t.date) || t.day}`,
+    greetingFor(t.greet || t.name),
+    `We're getting married —\n${when ? `on ${when}.` : "and we would love you there."}`,
+    `You've been part of our story from the very beginning,\nand the day wouldn't be the same without you there.`,
+    `Your invitation, made just for you:\n${inviteLink(c, origin)}`,
+    seatLine(t.seats ?? 0),
+    `Inside, you'll find everything —\nour story, the programme, the dress code and the venue.\nYou can RSVP right there on the website.`,
+    byWhen ? `Kindly let us know by ${byWhen}.` : "",
+    `We can't wait to celebrate with you. 🤍`,
+    `With love,\n${t.couple}`,
+  ].filter(Boolean).join("\n\n");
+}
+
 /** One-tap WhatsApp share, straight to the guest when we have their number. */
-export function inviteHref(code: string, phone: string, couple: string, day: string, origin = location.origin) {
+export function inviteHref(code: string, phone: string, t: InviteText, origin = location.origin) {
   const digits = phone.replace(/\D/g, "");
-  return `https://wa.me/${digits}?text=${encodeURIComponent(inviteMessage(code, couple, day, origin))}`;
+  return `https://wa.me/${digits}?text=${encodeURIComponent(inviteMessage(code, t, origin))}`;
 }
 
 /* ─────────── bulk paste → households ─────────── */
@@ -195,11 +283,19 @@ export function parseGuestLines(text: string): NewHousehold[] {
     .filter((h) => h.name);
 }
 
+/**
+ * Who a link is for: the ledger's own column when it is filled in, otherwise the household name on
+ * the row (older invitations only ever had that one). This is what the WhatsApp letter greets and
+ * what the guest's reply card shows above the form — never what pre-fills their name.
+ */
+export const whoIsItFor = (g: { greet?: string | null; name?: string | null }) =>
+  String(g.greet ?? "").trim() || String(g.name ?? "").trim();
+
 /** One line per household for pasting into WhatsApp or a document: `Ana & Ivan — JS-7KQF — link`. */
 export function inviteSheet(rows: Guest[], origin = ""): string {
   return rows
     .filter((g) => cleanCode(g.code || ""))
-    .map((g) => `${g.name}${g.note ? ` (${g.note})` : ""} — ${cleanCode(g.code!)} — ${inviteLink(g.code!, origin)}`)
+    .map((g) => `${whoIsItFor(g)}${g.note ? ` (${g.note})` : ""} — ${cleanCode(g.code!)} — ${inviteLink(g.code!, origin)}`)
     .join("\n");
 }
 
@@ -238,7 +334,7 @@ export function planHouseholdMerges(rows: Guest[]): HouseholdMerge[] {
 export function mergeHousehold(keep: Guest, others: Guest[]): Guest {
   return others.reduce((acc, g) => {
     const patch: Partial<Guest> = {};
-    for (const k of ["name", "phone", "dietary", "message", "song_request", "plus_one", "note"] as const)
+    for (const k of ["name", "greet", "phone", "dietary", "message", "song_request", "plus_one", "note"] as const)
       if (!acc[k] && g[k]) patch[k] = g[k];
     if (acc.attending === "pending" && g.attending !== "pending") patch.attending = g.attending;
     if (!acc.pax && g.pax) patch.pax = g.pax;

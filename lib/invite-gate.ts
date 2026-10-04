@@ -78,7 +78,7 @@ export function redactSealed(table: string, rows: Record<string, unknown>[]): Re
  * project. An older database must still take RSVPs, so these are written first and dropped
  * quietly if Postgres says the column isn't there yet.
  */
-export const OPTIONAL_GUEST_COLS = ["note", "sent_at", "viewed_at"] as const;
+export const OPTIONAL_GUEST_COLS = ["note", "greet", "sent_at", "viewed_at"] as const;
 
 const isColumnError = (e: unknown) => /column|does not exist|schema cache|Could not find/i.test(String((e as { message?: unknown })?.message ?? e ?? ""));
 

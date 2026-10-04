@@ -578,6 +578,8 @@ export function Rsvp({ info, invite, code, onReplied, schedule, dressNote }: { i
   const [f, setF] = useState({ name: invite.name, phone: "", attending: "yes" as "yes" | "no", pax: 1, dietary: "", message: "", song_request: "", plus_one: "" });
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
   const seatCap = invite.pax || 1;
+  /** The couple's label for this link — shown, never typed into the guest's name field. */
+  const household = invite.label || invite.name;
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!f.name.trim()) return;
@@ -625,7 +627,7 @@ export function Rsvp({ info, invite, code, onReplied, schedule, dressNote }: { i
             <span className="micro">Your reply is sealed</span>
           </motion.div>
           <h2 className="script text-wine text-script mt-4 text-balance">{yes ? `Welcome, ${first}` : `Thank you, ${first}`}</h2>
-          <p className="micro text-taupe mt-1">{invite.name} · {yes ? `${reply.pax} seat${reply.pax > 1 ? "s" : ""} saved` : "declined with love"}</p>
+          <p className="micro text-taupe mt-1">{household ? `${household} · ` : ""}{yes ? `${reply.pax} seat${reply.pax > 1 ? "s" : ""} saved` : "declined with love"}</p>
         </div>
         <div className={cardGap}>
           <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, ease: EASE_OUT }} className="relative">
@@ -718,7 +720,7 @@ export function Rsvp({ info, invite, code, onReplied, schedule, dressNote }: { i
                 </motion.div>
               ) : (
                 <motion.form key="form" onSubmit={submit} exit={{ opacity: 0 }} className="relative space-y-6 text-center">
-                  <p className="micro text-moss tracking-[0.18em]">Invitation — {invite.name} · up to {seatCap} seat{seatCap > 1 ? "s" : ""}</p>
+                  <p className="micro text-moss tracking-[0.18em]">Invitation{household ? ` — ${household}` : ""} · up to {seatCap} seat{seatCap > 1 ? "s" : ""}</p>
                   <p className="font-serif italic text-body text-mocha text-balance">Fill this in now — it takes less than a minute.</p>
                   <input className="field text-center" placeholder="Your full name" required value={f.name} onChange={set("name")} maxLength={120} />
                   <input className="field text-center" placeholder="WhatsApp number" type="tel" value={f.phone} onChange={set("phone")} maxLength={40} />
