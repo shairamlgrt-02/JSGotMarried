@@ -1,7 +1,7 @@
 "use client";
 import { Reorder, useDragControls } from "framer-motion";
 import { useMemo, useState } from "react";
-import { getMode, pushSeedSafely, refreshFaqCopy, resetLocal, uid } from "@/lib/db";
+import { getMode, pushSeedSafely, refreshFaqCopy, refreshStoryCopy, resetLocal, uid } from "@/lib/db";
 import { entourageGroups } from "@/lib/entourage";
 import { mergeHousehold, planHouseholdMerges } from "@/lib/guests";
 import { useCountdown, useTable } from "@/lib/hooks";
@@ -537,6 +537,19 @@ export function Content() {
       setMsg(`FAQ refreshed ✓ ${r.rewritten} rewritten · ${r.added} added`);
     } catch (e) { setMsg(`Error: ${(e as Error).message}`); }
   }
+  /** Push the latest wording of the five story chapters (the copy that ends on 1 Cor 11:11). */
+  async function refreshStory() {
+    if (!confirm(
+      "Refresh the story chapters with the latest wording?\n\n" +
+      "· The five chapters (ch1–ch5) are rewritten with the newest copy — their photos stay put.\n" +
+      "· A chapter you deleted comes back.\n" +
+      "· Chapters you wrote yourself are never touched."
+    )) return;
+    try {
+      const r = await refreshStoryCopy();
+      setMsg(`Story refreshed ✓ ${r.rewritten} rewritten · ${r.added} added`);
+    } catch (e) { setMsg(`Error: ${(e as Error).message}`); }
+  }
   return (
     <>
       <PageHead kicker="Images, entourage & FAQ" title="Content." />
@@ -578,14 +591,21 @@ export function Content() {
             <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="…or paste an image URL" className="flex-1 min-w-[160px] bg-white/60 rounded-full px-4 text-sm border border-ink/10 outline-none focus:border-wine" />
             <Btn variant="dark" onClick={() => { if (url) { saveInfo({ gallery: [...info.gallery, url] }); setUrl(""); } }}>Add</Btn>
           </div>
-          <p className="text-xs text-ink/60 mt-3"><b>Order matters:</b> 1–4 = photo strips in Our Story · 5–8 = long photo strip · 9–12 = polaroids · 13+ = extra polaroids near the end.</p>
+          <p className="text-xs text-ink/60 mt-3"><b>Order matters:</b> 1–5 = photo strips in Our Story (one per chapter) · 5–8 = long photo strip · 9–12 = polaroids · 13+ = extra polaroids near the end.</p>
+          <p className="text-xs text-ink/50 mt-1">A chapter with no photo of its own borrows the gallery slot of the same number — so gallery #5 also opens the long strip until you upload one for Chapter 5.</p>
           <p className="text-xs text-ink/50 mt-1">Tip: photos are compressed automatically. For many large photos, host them (e.g. Supabase Storage / Cloudinary) and paste URLs.</p>
         </Card>
-        <Card title="Story chapters (the Our Story carousel)" className="md:col-span-2" action={<Btn onClick={() => story.save({ id: uid(), title: "New chapter", text: "", photo: "", order: storySorted.length + 1 })}>+ Add chapter</Btn>}>
+        <Card title="Story chapters (the Our Story carousel)" className="md:col-span-2" action={
+          <div className="flex items-center gap-2 shrink-0">
+            <Btn variant="ghost" onClick={refreshStory}>Refresh story copy</Btn>
+            <Btn onClick={() => story.save({ id: uid(), title: "New chapter", text: "", photo: "", order: storySorted.length + 1 })}>+ Add chapter</Btn>
+          </div>
+        }>
           <p className="text-sm text-ink/60 mb-4">
             Our Story as guests read it: each chapter shows a <b>title</b>, two or three lines and <b>one photo</b> in the framed photo strip —
             guests swipe sideways or tap the dots, and the strip winds on like film. Drag ⋮⋮ to reorder the chapters.
             A chapter with no photo borrows one from your gallery. Delete every chapter and the site falls back to the classic one-paragraph story (Details → Our story).
+            The <b>“Refresh story copy”</b> button rewrites the five standard chapters (ch1–ch5) with the newest wording from the code — your photos, and any chapter you wrote yourself, are kept.
           </p>
           <Reorder.Group axis="y" values={storySorted} onReorder={(next) => story.setRows(next.map((s, i) => ({ ...s, order: i + 1 })))} className="space-y-3" onPointerUp={commitStoryOrder}>
             {storySorted.map((c) => <StoryChapterRow key={c.id} c={c} onSave={story.save} onDel={() => story.del(c.id)} />)}

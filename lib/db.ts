@@ -19,9 +19,9 @@ export function getMode(): Promise<Mode> {
 const KEY = (t: TableName) => `jsos:${t}`;
 const EVT = "jsos:change";
 
-/** Bump when the default program/entourage/FAQ change so browsers pick up the new defaults once. */
-const SEED_VERSION = "16"; // round 22: FAQ copy refreshed — the dress-code palette and the kids' policy
-const REFRESH: TableName[] = ["schedule", "entourage", "faq", "attire"];
+/** Bump when the default program/entourage/FAQ/story change so browsers pick up the new defaults once. */
+const SEED_VERSION = "17"; // round 23: Our Story rewritten — five chapters on the real timeline, landing on 1 Cor 11:11
+const REFRESH: TableName[] = ["schedule", "entourage", "faq", "attire", "story"];
 function localRead<T extends TableName>(t: T): TableMap[T][] {
   if (localStorage.getItem("jsos:seedv") !== SEED_VERSION) {
     REFRESH.forEach((r) => localStorage.removeItem(KEY(r)));
@@ -183,7 +183,15 @@ async function listStored<T extends TableName>(t: T): Promise<TableMap[T][]> {
 }
 
 export type SeedPushReport = { added: number; refreshed: string[] };
-export type FaqRefreshReport = { rewritten: number; added: number };
+/** What a copy refresh did: standard rows rewritten in place, plus any that had been deleted and came back. */
+export type CopyRefreshReport = { rewritten: number; added: number };
+
+function copyReport(seeded: { id: string }[], stored: { id: string }[]): CopyRefreshReport {
+  return {
+    rewritten: seeded.filter((s) => stored.some((c) => c.id === s.id)).length,
+    added: seeded.filter((s) => !stored.some((c) => c.id === s.id)).length,
+  };
+}
 /**
  * Rewrite the standard FAQ questions with the latest wording from the code. The ordinary
  * "push starter data" only ever fills in *missing* rows, so copy that changed after the
@@ -191,16 +199,23 @@ export type FaqRefreshReport = { rewritten: number; added: number };
  * live project — this is the one-click way. Questions the couple wrote themselves are never
  * touched: only the seeded ids (f0, f1, f2…) are rewritten, and a deleted one comes back.
  */
-export async function refreshFaqCopy(): Promise<FaqRefreshReport> {
-  const seeded = SEED.faq as { id: string }[];
-  const stored = (await listStored("faq")) as { id: string }[];
-  const report: FaqRefreshReport = {
-    rewritten: seeded.filter((s) => stored.some((c) => c.id === s.id)).length,
-    added: seeded.filter((s) => !stored.some((c) => c.id === s.id)).length,
-  };
+export async function refreshFaqCopy(): Promise<CopyRefreshReport> {
+  const stored = await listStored("faq");
   await upsert("faq", SEED.faq as never);
   window.dispatchEvent(new CustomEvent(EVT, { detail: "faq" }));
-  return report;
+  return copyReport(SEED.faq as { id: string }[], stored as { id: string }[]);
+}
+/**
+ * Latest wording of the five Our Story chapters — titles and text only. A chapter's photo is the
+ * couple's own upload, so it is carried across instead of being blanked by the starter row.
+ */
+export async function refreshStoryCopy(): Promise<CopyRefreshReport> {
+  type Row = { id: string; photo: string };
+  const stored = (await listStored("story")) as Row[];
+  const merged = (SEED.story as Row[]).map((s) => ({ ...s, photo: stored.find((c) => c.id === s.id)?.photo || s.photo }));
+  await upsert("story", merged as never);
+  window.dispatchEvent(new CustomEvent(EVT, { detail: "story" }));
+  return copyReport(SEED.story as Row[], stored);
 }
 /**
  * “Push starter data”, the gentle way:
