@@ -197,25 +197,43 @@ export function greetingFor(name?: string): string {
 }
 
 /**
- * The WhatsApp text a household receives — short on purpose. It greets whoever the link is for,
- * says what the link is reserved for, points at everything the website holds (the programme, the
+ * The seats line, kept soft: it says the seats are theirs rather than announcing a quota.
+ * "A seat at our table is yours." · "Two seats at our table are yours."
+ */
+const COUNT_WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
+export function seatLine(seats: number): string {
+  const n = Math.max(0, Math.round(Number(seats) || 0));
+  if (!n) return "";
+  if (n === 1) return "A seat at our table is yours.";
+  const word = COUNT_WORDS[n] ?? String(n);
+  return `${word[0].toUpperCase()}${word.slice(1)} seats at our table are yours.`;
+}
+
+/**
+ * The WhatsApp text a household receives — short and warm. It greets whoever the link is for,
+ * tells them the seats are theirs, points at everything the website holds (the programme, the
  * dress code, the venue) instead of repeating it, and asks for the RSVP there.
+ *
+ * ── THIS IS THE MESSAGE TEMPLATE ──
+ * Every line below is the wording your guests read. Change a line here and every household's
+ * invitation changes with it (Binder → Settings → The WhatsApp invitation points here too).
+ * The pieces that fill themselves in: `couple`, `date`, `greet`, `seats` and `deadline`.
  */
 export function inviteMessage(code: string, t: InviteText, origin = ""): string {
   const c = cleanCode(code);
   const when = longDate(t.date) || t.day;
-  const seats = Math.max(0, Math.round(Number(t.seats) || 0));
   const byWhen = deadlineText(t.deadline, t.date);
 
   return [
     `${t.couple} · ${shortDate(t.date) || t.day}`,
     greetingFor(t.greet || t.name),
-    `We're getting married ${when ? `on ${when}` : "soon"}, and the day wouldn't be the same without you there.`,
-    `Your invitation: ${inviteLink(c, origin)}\n` +
-    `This link is yours alone${seats ? `, and it's reserved for ${seats} guest${seats === 1 ? "" : "s"}` : ""}.`,
-    `Inside you'll find our story, the programme, the dress code, the venue and everything else you'll need` +
-    ` — and you can RSVP right there on the website.${byWhen ? ` Kindly reply by ${byWhen}.` : ""}`,
-    `We can't wait to see you there. 🤍`,
+    `We're getting married —\n${when ? `on ${when}.` : "and we would love you there."}`,
+    `You've been part of our story from the very beginning,\nand the day wouldn't be the same without you there.`,
+    `Your invitation, made just for you:\n${inviteLink(c, origin)}`,
+    seatLine(t.seats ?? 0),
+    `Inside, you'll find everything —\nour story, the programme, the dress code and the venue.\nYou can RSVP right there on the website.`,
+    byWhen ? `Kindly let us know by ${byWhen}.` : "",
+    `We can't wait to celebrate with you. 🤍`,
     `With love,\n${t.couple}`,
   ].filter(Boolean).join("\n\n");
 }

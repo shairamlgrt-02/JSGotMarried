@@ -63,7 +63,7 @@ export default function Admin() {
               {tab === "vendors" && <Vendors />}
               {tab === "attire" && <AttireEditor />}
               {tab === "content" && <Content />}
-              {tab === "settings" && <Settings mode={mode} onPrint={() => window.print()} />}
+              {tab === "settings" && <Settings mode={mode} onPrint={() => window.print()} go={go} />}
             </motion.div>
           </AnimatePresence>
         </main>

@@ -3,7 +3,7 @@ import { Reorder, useDragControls } from "framer-motion";
 import { useMemo, useState } from "react";
 import { getMode, pushSeedSafely, refreshFaqCopy, refreshStoryCopy, resetLocal, uid } from "@/lib/db";
 import { entourageGroups } from "@/lib/entourage";
-import { STATUS, genCodeFor, inviteHref, inviteLink, inviteStatus, mergeHousehold, onGuestList, planHouseholdMerges, tallyInvites, cleanCode, type InviteText } from "@/lib/guests";
+import { STATUS, genCodeFor, inviteHref, inviteLink, inviteMessage, inviteStatus, mergeHousehold, onGuestList, planHouseholdMerges, tallyInvites, cleanCode, whoIsItFor, type InviteText } from "@/lib/guests";
 import { useCountdown, useTable } from "@/lib/hooks";
 import type { Attending, Attire, BudgetItem, BudgetStatus, ChecklistItem, EntourageMember, Guest, Priority, ScheduleItem, StoryChapter, Vendor, VendorStatus } from "@/lib/types";
 import { ENTOURAGE_ROLES, TABLES } from "@/lib/types";
@@ -663,9 +663,24 @@ export function Content() {
 }
 
 /* ═════════════ 10. SETTINGS ═════════════ */
-export function Settings({ mode, onPrint }: { mode: string; onPrint: () => void }) {
+export function Settings({ mode, onPrint, go }: { mode: string; onPrint: () => void; go: (tab: string) => void }) {
   const { info, saveInfo } = useInfo();
+  const { rows: guests } = useTable("guests", false);
   const [msg, setMsg] = useState("");
+  /** The WhatsApp letter, rendered here so the wording is always in front of you — see the note below. */
+  const inviteSample = useMemo(() => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const row = guests.find((g) => cleanCode(g.code || ""));
+    const t: InviteText = {
+      couple: `${info.bride} & ${info.groom}`,
+      day: new Date(info.date).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }),
+      date: info.date,
+      deadline: info.rsvp_deadline,
+      greet: row && whoIsItFor(row) ? whoIsItFor(row) : "Ana & Ivan",
+      seats: row ? Number(row.pax) || 0 : 2,
+    };
+    return inviteMessage(row?.code || "JS-XXXX", t, origin);
+  }, [guests, info]);
   async function exportAll() {
     const { list } = await import("@/lib/db");
     const all: Record<string, unknown> = {};
@@ -736,6 +751,25 @@ export function Settings({ mode, onPrint }: { mode: string; onPrint: () => void 
             </div>
           </div>
           <p className="text-xs text-ink/50 mt-4">Leave a field empty and it falls back to the starter wording. Shared-link previews are cached by WhatsApp and Facebook for a while, so a new banner can take a few minutes to appear.</p>
+        </Card>
+        <Card title="The WhatsApp invitation">
+          <p className="text-sm text-ink/60 mb-4">
+            What your guests read when you send their link. It writes itself from the binder: who each
+            link is for and how many seats it holds (<b>Invite Codes</b>), the wedding <b>date</b>{` `}
+            (<b>Details</b>) and the <b>reply-by date</b> (Website &amp; sharing, above).
+          </p>
+          <pre className="max-h-72 overflow-y-auto whitespace-pre-wrap rounded-xl bg-oat/60 p-4 font-sans text-[12px] leading-[1.65] text-ink/75">{inviteSample}</pre>
+          <Btn variant="ghost" className="mt-4" onClick={() => go("invites")}>Proof it per household on Invite codes →</Btn>
+          <div className="mt-4 rounded-xl border border-wine/15 bg-wine/5 p-4">
+            <p className="label !text-[9px] text-wine mb-1.5">Where the wording lives</p>
+            <p className="text-xs leading-5 text-ink/60">
+              The message template is one function in the code: <code className="rounded bg-ink/10 px-1">lib/guests.ts</code> →{` `}
+              <code className="rounded bg-ink/10 px-1">inviteMessage</code>, under the{` `}
+              <code className="rounded bg-ink/10 px-1">── THIS IS THE MESSAGE TEMPLATE ──</code> heading. Edit those lines — or
+              ask for the change — and the next deploy carries the new wording to every household,
+              including the invitations you have already sent (their link reads the same site).
+            </p>
+          </div>
         </Card>
         <Card title="Storage">
           <div className="flex items-center gap-3 mb-3"><Tag>{mode === "supabase" ? "confirmed" : "pending"}</Tag><b>{mode === "supabase" ? "Connected to Supabase" : "Local demo mode (this browser only)"}</b></div>

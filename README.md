@@ -68,7 +68,7 @@ idempotent). A project that hasn't caught up still works: those four are dropped
 the RSVPs themselves never depend on them.
 
 ### The WhatsApp message
-**copy message** and **send ↗** send the same short letter — the couple's own wording, with three
+**copy message** and **send ↗** send the same short letter — the couple's own wording, with four
 things filled in per household:
 
 ```
@@ -76,14 +76,24 @@ Shaira & Jeger · 11.11.2026
 
 Dear Ana & Ivan,
 
-We're getting married on Wednesday, 11 November 2026, and the day wouldn't be the same without you there.
+We're getting married —
+on Wednesday, 11 November 2026.
 
-Your invitation: https://your-site/JS-7KQF
-This link is yours alone, and it's reserved for 2 guests.
+You've been part of our story from the very beginning,
+and the day wouldn't be the same without you there.
 
-Inside you'll find our story, the programme, the dress code, the venue and everything else you'll need — and you can RSVP right there on the website. Kindly reply by 25 October.
+Your invitation, made just for you:
+https://your-site/JS-7KQF
 
-We can't wait to see you there. 🤍
+Two seats at our table are yours.
+
+Inside, you'll find everything —
+our story, the programme, the dress code and the venue.
+You can RSVP right there on the website.
+
+Kindly let us know by 25 October.
+
+We can't wait to celebrate with you. 🤍
 
 With love,
 Shaira & Jeger
@@ -92,16 +102,18 @@ Shaira & Jeger
 * **`Dear …`** is the **Who it's for** column (falling back to the row's name, for invitations made
   before the column existed). A row with neither is greeted as `Dear friend,`, so a label like
   `Household 7` never reaches a guest.
-* **`reserved for N guests`** is the row's **Seats** — one seat reads `1 guest`, and a row with no
-  seats simply says *This link is yours alone.*
-* **The date, the long date and the reply-by date** come from **Details** and
-  **Settings → Website & sharing**; empty the reply-by date and that sentence leaves the message.
-  Nothing about the programme, the venue or the dress code is repeated here — the letter points at
-  the website, which holds all of it behind their code.
-* **Proof before you send** — the **✦ Generate codes** panel prints one real household's letter under
-  *The message they receive*, with a copy button.
-* The wording itself is written in `lib/guests.ts` (`inviteMessage`). Edit it there and every
-  household's letter changes with it.
+* **`Two seats at our table are yours.`** is the row's **Seats** — one seat reads *A seat at our
+  table is yours.*, and a row with no seats leaves the line out.
+* **The date and the reply-by date** come from **Details** and **Settings → Website & sharing**;
+  empty the reply-by date and that line leaves the message. Nothing about the programme, the venue
+  or the dress code is repeated here — the letter points at the website, which holds all of it
+  behind their code.
+* **Proof before you send** — the **✦ Generate codes** panel prints one real household's letter
+  under *The message they receive*, and **Settings → The WhatsApp invitation** keeps the wording in
+  view with a note on where to change it.
+* **Changing the wording** — the template is one function: `lib/guests.ts` → `inviteMessage`, under
+  the `── THIS IS THE MESSAGE TEMPLATE ──` heading. Edit those lines and the next deploy carries the
+  new wording to every household.
 
 ### The guest's side
 * Their link is `https://your-site/JS-7KQF`. The older `https://your-site/?rsvp=JS-7KQF` you may
