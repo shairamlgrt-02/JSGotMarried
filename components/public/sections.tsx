@@ -178,9 +178,9 @@ export function ElevenEleven({ info }: { info: WeddingInfo }) {
           </div>
           <p className="font-serif font-light text-wine text-year tracking-[0.18em] mt-1 md:-mt-1 pl-[0.18em] [text-shadow:0_2px_0_rgba(255,255,255,.9),0_-1px_1px_rgba(60,20,30,.3)]">{d.slice(6)}</p>
           <p className="font-serif italic text-mocha text-lead mt-5 text-balance">A wish made at 11:11 — a prayer answered by God.</p>
-          <p className="micro text-taupe mt-6 tracking-[0.18em]">1 Corinthians 11:11–12</p>
+          <p className="micro text-taupe mt-6 tracking-[0.18em]">1 Corinthians 11:11</p>
           <p className="font-serif italic text-fine text-taupe mt-2 max-w-xl mx-auto text-balance px-5">
-            “In the Lord, neither is woman independent of man, nor man of woman — for as she came from him, so he is born of her. And everything comes from God.”
+            “Nevertheless neither is the man without the woman, neither the woman without the man, in the Lord.”
           </p>
         </Reveal>
       </div>
