@@ -36,7 +36,8 @@ export default function Admin() {
           </nav>
           <div className="p-4 border-t border-taupe/20 space-y-2 text-xs text-taupe">
             <div className="flex items-center gap-2"><span className={`w-2 h-2 rounded-full ${mode === "supabase" ? "bg-green-400" : "bg-wine"}`} />{mode === "supabase" ? "Synced to Supabase" : "Local mode"}</div>
-            <a href="/preview" target="_blank" className="block hover:text-wine">Preview the site ↗</a>
+            <a href="/preview?all=1" target="_blank" className="block hover:text-wine">Preview the site ↗</a>
+            <a href="/preview" target="_blank" className="block hover:text-wine">See it as a guest ↗</a>
             <a href="/" target="_blank" className="block hover:text-wine">Front door (hub) ↗</a>
           </div>
         </aside>

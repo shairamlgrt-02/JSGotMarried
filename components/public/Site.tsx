@@ -23,8 +23,10 @@ import { useTable } from "@/lib/hooks";
  * and FAQ — stay sealed, and a used code turns the reply card into a sealed welcome card.
  *
  * `variant="preview"` is the shareable …/preview page: sealed on purpose, with a line pointing at
- * the code door. Only a logged-in binder sees the finished site here (that's `preview` below),
- * and the server withholds the venue/programme/FAQ fields for every sealed visitor anyway.
+ * the code door. It reads as a guest's even for the signed-in binder — the couple opts into the
+ * finished site with …/preview?all=1 (that's `preview` below, kept separate from `admin` so the
+ * plain preview still shows the sealed notice), and the server withholds the venue/programme/FAQ
+ * fields for every sealed visitor anyway.
  */
 export default function Home({ code = "", variant = "guest" }: { code?: string; variant?: "guest" | "preview" }) {
   const activeCode = useMemo(() => {
@@ -47,10 +49,18 @@ export default function Home({ code = "", variant = "guest" }: { code?: string; 
 
   const [invite, setInvite] = useState<InviteState | null>(null);
   const [codeState, setCodeState] = useState<"none" | "checking" | "ok" | "bad">(activeCode ? "checking" : "none");
+  const [admin, setAdmin] = useState(false);
   const [preview, setPreview] = useState(false);
   useEffect(() => {
     if (activeCode) return;
-    fetch("/api/mode", { cache: "no-store" }).then((r) => r.json()).then((j) => setPreview(!!j.admin)).catch(() => {});
+    fetch("/api/mode", { cache: "no-store" }).then((r) => r.json()).then((j) => {
+      const signedIn = !!j.admin;
+      setAdmin(signedIn);
+      // …/preview stays the sealed guest view even for the binder; the couple opts into the
+      // finished site — venue, programme, reply card — with ?all=1 (or ?admin=1).
+      const search = new URLSearchParams(window.location.search);
+      setPreview(signedIn && (search.has("all") || search.has("admin")));
+    }).catch(() => {});
   }, [activeCode]);
   const load = useMemo(() => () => {
     if (!activeCode) { setCodeState("none"); return; }
@@ -84,7 +94,8 @@ export default function Home({ code = "", variant = "guest" }: { code?: string; 
         <EnvelopeHero info={info} sealed={!unlocked} home />
         <Letter aside={<SidePolaroids info={info} />}>
             {preview ? (
-              <p className="micro text-moss text-center tracking-[0.16em] px-6 pt-10 md:pt-14 text-balance">Admin preview — you see everything; guests unseal this with their personal invitation link.</p>
+              <p className="micro text-moss text-center tracking-[0.16em] px-6 pt-10 md:pt-14 text-balance">Admin preview — you see everything; guests unseal this with their personal invitation link.{" "}
+                <a href="/preview" className="underline decoration-moss/40 underline-offset-4 hover:text-wine transition-colors">See it as a guest →</a></p>
             ) : !unlocked ? (
               <div className="text-center px-6 pt-10 md:pt-14 space-y-4">
                 <p className="micro text-taupe tracking-[0.16em] text-balance">
@@ -97,6 +108,13 @@ export default function Home({ code = "", variant = "guest" }: { code?: string; 
                 <a href="/rsvp" className="inline-block micro bg-wine text-lace rounded-full px-8 py-3.5 hover:bg-mocha transition-colors tracking-[0.18em]">
                   Have an invitation code? Unlock your RSVP →
                 </a>
+                {admin && (
+                  <p className="micro tracking-[0.16em]">
+                    <a href="/preview?all=1" className="inline-block text-taupe underline decoration-taupe/40 underline-offset-4 hover:text-wine transition-colors">
+                      Open the whole site, venue and all →
+                    </a>
+                  </p>
+                )}
               </div>
             ) : null}
             {unlocked && <D deco={<Deco at="tr" rotate={7}><Stamp kind="rings" className="w-12 md:w-24" /></Deco>}><Invitation info={info} /></D>}
