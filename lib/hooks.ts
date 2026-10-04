@@ -39,7 +39,12 @@ export function useTable<T extends TableName>(t: T, fallbackToSeed = true, code 
       }
       return next;
     });
-    try { await upsert(t, row); } catch (e) { setError((e as Error).message); reload(); }
+    try { await upsert(t, row); } catch (e) {
+      const message = (e as Error).message;
+      await reload();
+      // Keep the save error visible after the reload restores the last persisted value.
+      setError(message);
+    }
   }, [t, reload]);
 
   const del = useCallback(async (id: string) => {

@@ -676,7 +676,7 @@ export function Settings({ mode, onPrint, go }: { mode: string; onPrint: () => v
       day: new Date(info.date).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }),
       date: info.date,
       deadline: info.rsvp_deadline,
-      greet: row && whoIsItFor(row) ? whoIsItFor(row) : "Ana & Ivan",
+      greet: row ? whoIsItFor(row) || undefined : undefined,
       seats: row ? Number(row.pax) || 0 : 2,
     };
     return inviteMessage(row?.code || "JS-XXXX", t, origin);

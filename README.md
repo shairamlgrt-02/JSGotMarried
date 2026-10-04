@@ -63,9 +63,10 @@ every single invitation stands.
    code can't reply twice. If your list still shows doubled rows from an older build, the
    **Merge N duplicates** button at the top of Guests & RSVP folds each household back into one row.
 
-`sent_at`, `viewed_at`, `note` and `greet` are new columns (re-run `supabase/schema.sql`; it is
-idempotent). A project that hasn't caught up still works: those four are dropped quietly on save, and
-the RSVPs themselves never depend on them.
+`greet` and `note` are required for the **Who it's for** and notes fields to persist. On a project
+created before those columns were added, re-run `supabase/schema.sql` in Supabase → SQL Editor (it is
+idempotent). The Binder now shows a clear migration error instead of claiming those edits were saved.
+The activity timestamps `sent_at` and `viewed_at` remain optional and can be omitted on older projects.
 
 ### The WhatsApp message
 **copy message** and **send ↗** send the same short letter — the couple's own wording, with four

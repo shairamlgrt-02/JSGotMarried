@@ -74,11 +74,10 @@ export function redactSealed(table: string, rows: Record<string, unknown>[]): Re
 }
 
 /**
- * Ledger columns that only exist once the newest `supabase/schema.sql` has been run on the
- * project. An older database must still take RSVPs, so these are written first and dropped
- * quietly if Postgres says the column isn't there yet.
+ * Best-effort activity timestamps. RSVP writes and invite-label/note edits must not be silently
+ * discarded; only these timestamps may be omitted on older databases.
  */
-export const OPTIONAL_GUEST_COLS = ["note", "greet", "sent_at", "viewed_at"] as const;
+export const OPTIONAL_GUEST_COLS = ["sent_at", "viewed_at"] as const;
 
 const isColumnError = (e: unknown) => /column|does not exist|schema cache|Could not find/i.test(String((e as { message?: unknown })?.message ?? e ?? ""));
 

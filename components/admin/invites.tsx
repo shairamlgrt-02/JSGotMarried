@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import { uid } from "@/lib/db";
 import {
-  STATUS, cleanCode, genCode, inviteHref, inviteLink, inviteMessage, inviteSheet, inviteStatus,
+  STATUS, cleanCode, cleanInviteNote, genCode, inviteHref, inviteLink, inviteMessage, inviteSheet, inviteStatus,
   parseGuestLines, previewLink, tallyInvites, whoIsItFor, type InviteStatus, type InviteText,
 } from "@/lib/guests";
 import { useTable } from "@/lib/hooks";
@@ -80,7 +80,7 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
     const withStatus = rows.map((g) => ({ g, s: inviteStatus(g) }));
     const filtered = withStatus
       .filter((x) => filter === "all" || x.s === filter)
-      .filter((x) => !q || `${x.g.greet ?? ""} ${x.g.name} ${x.g.phone} ${x.g.code} ${x.g.note ?? ""} ${x.g.plus_one ?? ""}`.toLowerCase().includes(q.toLowerCase()))
+      .filter((x) => !q || `${x.g.greet ?? ""} ${x.g.name} ${x.g.phone} ${x.g.code} ${cleanInviteNote(x.g.note)} ${x.g.plus_one ?? ""}`.toLowerCase().includes(q.toLowerCase()))
       .sort((a, b) => ORDER.indexOf(a.s) - ORDER.indexOf(b.s) || whoIsItFor(a.g).localeCompare(whoIsItFor(b.g)));
     return filtered;
   }, [rows, filter, q]);
@@ -91,7 +91,7 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
   /** Issue a code per household and (optionally) hand you every link at once, ready to paste. */
   async function generate(kind: "names" | "blanks") {
     const parsed = kind === "names" ? parseGuestLines(paste) : [];
-    if (kind === "names" && !parsed.length) return flash("Nothing to add — put one household per line, e.g. “Ana & Ivan, 973 1234 5678, 2 pax”.");
+    if (kind === "names" && !parsed.length) return flash("Nothing to add — enter guest names, one household per line. Phone numbers and seat counts are optional.");
     const taken = new Set(rows.map((r) => cleanCode(r.code || "")));
     const known = new Set(rows.map((r) => whoIsItFor(r).toLowerCase()).filter(Boolean));
     const fresh = parsed.filter((p) => !known.has(p.name.trim().toLowerCase()));
@@ -136,7 +136,7 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
   };
 
   const rowsForCsv = ledger.map(({ g, s }) => ({
-    for: whoIsItFor(g), name: g.name, note: g.note ?? "", phone: g.phone, pax: g.pax, code: cleanCode(g.code || ""),
+    for: whoIsItFor(g), name: g.name, note: cleanInviteNote(g.note), phone: g.phone, pax: g.pax, code: cleanCode(g.code || ""),
     link: g.code ? inviteLink(g.code, origin) : "", status: STATUS[s].label,
     attending: g.attending, plus_one: g.plus_one ?? "", sent: g.sent_at ? day(g.sent_at) : "",
     opened: g.viewed_at ? day(g.viewed_at) : "", replied_at: g.source === "RSVP form" ? day(g.created_at) : "",
@@ -148,10 +148,10 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
 
   /** One real household's letter, printed in the panel so you can read it before sending a hundred of them. */
   const sample = ledger.find((x) => x.g.code)?.g ?? rows.find((g) => cleanCode(g.code || ""));
-  const sampleFor = sample && whoIsItFor(sample) ? whoIsItFor(sample) : "Ana & Ivan";
+  const sampleFor = sample ? whoIsItFor(sample) : "";
   const sampleText = inviteMessage(
     sample?.code || "JS-XXXX",
-    sample && whoIsItFor(sample) ? textFor(sample) : { ...text, greet: sampleFor, seats: sample ? Number(sample.pax) || 0 : 2 },
+    sample ? textFor(sample) : { ...text, seats: 2 },
     origin
   );
 
@@ -174,7 +174,7 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
       </p>
 
       {msg && <div className="mb-5 text-sm bg-moss/10 text-moss rounded-xl px-4 py-3">{msg}</div>}
-      {error && <div className="mb-4 text-red-300">{error}</div>}
+      {error && <div role="alert" className="mb-5 rounded-xl border border-burgundy/25 bg-burgundy/5 px-4 py-3 text-sm text-burgundy">{error}</div>}
 
       {panel && (
         <Card className="mb-5">
@@ -184,7 +184,7 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
               <p className="text-xs text-ink/55 mb-3">One household per line. A phone number and a seat count are picked up automatically.</p>
               <textarea
                 value={paste} onChange={(e) => setPaste(e.target.value)} rows={9} spellCheck={false}
-                placeholder={"Ana & Ivan, 973 1234 5678, 2 pax\nFaisal\nNadia +2, 973 7777 1234, cousins\n# lines starting with # are ignored"}
+                placeholder={"Guest names, phone number, seat count\nOne household per line\n# lines starting with # are ignored"}
                 className="w-full bg-white/60 rounded-xl border border-ink/10 focus:border-wine outline-none p-4 font-mono text-[13px] leading-6 resize-y"
               />
               <div className="flex flex-wrap items-center gap-3 mt-3">
@@ -218,7 +218,7 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
               <div className="mt-5 rounded-xl border border-wine/15 bg-wine/5 p-4">
                 <div className="flex items-baseline justify-between gap-3">
                   <p className="label !text-[9px] text-wine">
-                    The message they receive · {sampleFor}
+                    The message they receive{sampleFor ? ` · ${sampleFor}` : ""}
                   </p>
                   <button className="label !text-[9px] text-ink/50 hover:text-wine shrink-0"
                     onClick={() => void (async () => { if (await copyText(sampleText)) mark("sample"); })()}>
@@ -263,11 +263,11 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
               {ledger.map(({ g, s }) => (
                 <tr key={g.id} className="align-top">
                   <td className="px-1 py-1 font-medium min-w-[170px]">
-                    <EditText value={g.greet ?? ""} placeholder="Ana & Ivan" onSave={(v) => save({ ...g, greet: v })} />
-                    <EditText value={g.note ?? ""} placeholder="note (side of the family, table…)" onSave={(v) => save({ ...g, note: v })} className="!text-[11px] text-ink/50 italic" />
+                    <EditText value={g.greet ?? ""} placeholder="Names of invited guests" onSave={(v) => save({ ...g, greet: v })} />
+                    <EditText value={cleanInviteNote(g.note)} placeholder="Notes (side of the family, table, etc.)" onSave={(v) => save({ ...g, note: v })} className="!text-[11px] text-ink/50 italic" />
                   </td>
                   <td className="px-1 py-1 min-w-[150px]">
-                    <EditText value={g.name} placeholder="theirs to type on the reply card" onSave={(v) => save({ ...g, name: v })} className="text-ink/60" />
+                    <EditText value={g.name} onSave={(v) => save({ ...g, name: v })} className="text-ink/60" />
                   </td>
                   <td className="px-1 min-w-[130px]">
                     <EditText value={g.phone} onSave={(v) => save({ ...g, phone: v })} />

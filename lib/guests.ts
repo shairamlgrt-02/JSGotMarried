@@ -291,11 +291,17 @@ export function parseGuestLines(text: string): NewHousehold[] {
 export const whoIsItFor = (g: { greet?: string | null; name?: string | null }) =>
   String(g.greet ?? "").trim() || String(g.name ?? "").trim();
 
-/** One line per household for pasting into WhatsApp or a document: `Ana & Ivan — JS-7KQF — link`. */
+/** Hide a literal instruction accidentally saved by an older Invite Codes screen as note data. */
+export function cleanInviteNote(note?: string | null): string {
+  const value = String(note ?? "");
+  return /^name to fill in$/i.test(value.trim()) ? "" : value;
+}
+
+/** One line per household for pasting into WhatsApp or a document: `guest name(s) — JS-7KQF — link`. */
 export function inviteSheet(rows: Guest[], origin = ""): string {
   return rows
     .filter((g) => cleanCode(g.code || ""))
-    .map((g) => `${whoIsItFor(g)}${g.note ? ` (${g.note})` : ""} — ${cleanCode(g.code!)} — ${inviteLink(g.code!, origin)}`)
+    .map((g) => `${whoIsItFor(g)}${cleanInviteNote(g.note) ? ` (${cleanInviteNote(g.note)})` : ""} — ${cleanCode(g.code!)} — ${inviteLink(g.code!, origin)}`)
     .join("\n");
 }
 
