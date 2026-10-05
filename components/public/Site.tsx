@@ -119,7 +119,7 @@ export default function Home({ code = "", variant = "guest" }: { code?: string; 
                 )}
               </div>
             ) : null}
-            <ElevenEleven info={info} />
+            <ElevenEleven info={info} code={activeCode} sealed={!unlocked} />
             {unlocked && <Postcard info={info} photo={info.cover_photo || info.gallery[0] || BAKED_COVER} />}
             <ScrollContinue />
             <D deco={<Deco at="tl" rotate={-8}><Sticker kind="wish" className="scale-[.62] md:scale-100 origin-top-left" /></Deco>}><Story info={info} chapters={storyChapters} /></D>
