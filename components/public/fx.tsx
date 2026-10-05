@@ -1,5 +1,5 @@
 "use client";
-import { motion, useScroll, useSpring, useTransform } from "framer-motion";
+import { motion, useReducedMotion, useScroll, useSpring, useTransform } from "framer-motion";
 import Lenis from "lenis";
 import { useEffect, useRef } from "react";
 
@@ -58,6 +58,21 @@ export function Reveal({ children, delay = 0, className = "" }: { children: Reac
     <motion.div className={className} {...rise(delay, 22)}>
       {children}
     </motion.div>
+  );
+}
+
+/** A delicate section divider that keeps the gentle animated down cue for natural scrolling. */
+export function ScrollContinue() {
+  const reduceMotion = useReducedMotion();
+  return (
+    <div className="mx-auto my-4 flex w-full max-w-sm items-center justify-center gap-3 px-6 py-2 md:my-6 md:gap-4">
+      <span aria-hidden="true" className="h-px flex-1 bg-gradient-to-r from-transparent to-taupe/45" />
+      <span className="flex shrink-0 items-center gap-2 whitespace-nowrap text-wine/75">
+        <motion.span aria-hidden="true" animate={reduceMotion ? undefined : { y: [-2, 3, -2] }} transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }} className="leading-none">↓</motion.span>
+        <span className="font-serif text-xs italic">Scroll to continue</span>
+      </span>
+      <span aria-hidden="true" className="h-px flex-1 bg-gradient-to-l from-transparent to-taupe/45" />
+    </div>
   );
 }
 

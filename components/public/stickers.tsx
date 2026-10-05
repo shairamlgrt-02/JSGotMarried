@@ -1,6 +1,8 @@
 "use client";
 import { motion } from "framer-motion";
 import { useState } from "react";
+import type { WeddingInfo } from "@/lib/types";
+import { fullDate } from "./Envelope";
 import { EASE, EASE_OUT, rise } from "./fx";
 import { Paisley as Rings } from "./ornaments";
 
@@ -60,7 +62,7 @@ export function Stamp({ kind = "rings", className = "" }: { kind?: StampKind; cl
       {kind === "date" && (<>
         <text x="50" y="56" textAnchor="middle" fontFamily="Cormorant Garamond, serif" fontSize="26" fill={fg} fontWeight="500">11.11</text>
         <text x="50" y="74" textAnchor="middle" fontFamily="Cormorant Garamond, serif" fontSize="13" fill={fg} letterSpacing="3">2026</text>
-        <text x="50" y="96" textAnchor="middle" fontFamily="Pinyon Script, cursive" fontSize="13" fill={fg}>make a wish</text>
+        <text x="50" y="96" textAnchor="middle" fontFamily="Pinyon Script, cursive" fontSize="13" fill={fg}>made by two</text>
       </>)}
     </svg>
   );
@@ -91,8 +93,8 @@ export function Sticker({ kind, className = "" }: { kind: StickerKind; className
       return (
         <span className={`${base} rounded-full bg-[#F4E6DA] text-wine w-24 h-24 md:w-28 md:h-28 flex-col ${className}`}>
           <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor"><path d="M12 2l2.6 6.6L21 9.3l-5 4.4 1.6 6.8L12 16.8 6.4 20.5 8 13.7 3 9.3l6.4-.7z" /></svg>
-          <span className="script text-2xl leading-none mt-1">make a wish</span>
-          <span className="font-serif font-semibold text-sm tracking-[0.2em]">11:11</span>
+          <span className="script text-2xl leading-none mt-1">our wish</span>
+          <span className="font-serif font-semibold text-[10px] tracking-[0.12em]">made by two</span>
         </span>
       );
     case "ido":
@@ -138,53 +140,52 @@ export function useFlip() {
   return { flip, toggle };
 }
 
-/**
- * A personal vintage postcard you can flip — front: your photo + "Wish you were here", back: a handwritten note.
- * Both faces share one grid cell, so the card is always as tall as its content needs (never smaller than 5:4 on a
- * phone / 3:2 on wide screens) and the text can stay at a readable size.
- */
-export function Postcard({ from, venue, date, photo }: { from: string; venue: string; date: string; photo?: string }) {
+/** A vintage two-sided photo postcard with a compact handwritten reverse. */
+export function Postcard({ info, photo }: { info: WeddingInfo; photo?: string }) {
   const { flip, toggle } = useFlip();
-  const face = "[grid-area:1/1] [backface-visibility:hidden] bg-[#FBF7EF] shadow-[0_2px_3px_rgba(61,47,38,.2),0_24px_40px_-18px_rgba(61,47,38,.5)] p-4 md:p-6 grid gap-4 md:gap-6";
+  const from = `${info.groom} & ${info.bride}`;
+  const face = "[grid-area:1/1] [backface-visibility:hidden] bg-[#FBF7EF] shadow-[0_2px_3px_rgba(61,47,38,.2),0_24px_40px_-18px_rgba(61,47,38,.5)] p-3 md:p-6 grid gap-3 md:gap-5";
   return (
-    <section className="sec-sm">
+    <section className="sec-sm pt-0">
       <motion.div {...rise(0, 28)} style={{ rotate: -1.5 }} className="col [perspective:1600px]">
-        <button type="button" onClick={toggle} aria-label="Flip the postcard" className="relative block w-full text-left">
+        <button type="button" onClick={toggle} aria-label={flip ? "Turn postcard back to the photo message" : "Flip postcard to the Dear you note"} className="relative block w-full text-left">
           <motion.div animate={flip ? { rotateY: 180 } : { rotateY: 0 }} transition={{ duration: 1.1, ease: EASE }} className="grid aspect-[5/4] md:aspect-[3/2] [transform-style:preserve-3d]">
-            {/* FRONT */}
-            <div className={`${face} grid-cols-[0.9fr_1.1fr] md:grid-cols-[1fr_1.1fr]`}>
-              <div className="relative bg-[#EDE3D4] shadow-[inset_0_0_0_1px_rgba(61,47,38,.1)] -rotate-2 min-h-[10rem]">
-                <div className="absolute inset-2 md:inset-3 overflow-hidden">
-                  {photo ? <img src={photo} alt="" className="w-full h-full object-cover [filter:sepia(.25)_contrast(1.02)]" /> : (
-                    <div className="w-full h-full bg-[linear-gradient(160deg,#EFE7DB,#DDD0BE)] grid place-items-center"><Rings className="w-10 h-14 text-taupe/50" /></div>
+            {/* FRONT — the photo postcard message from reference image 2 */}
+            <div className={`${face} grid-cols-[0.85fr_1.15fr] md:grid-cols-[1fr_1.2fr]`}>
+              <div className="relative min-h-[10rem] -rotate-2 bg-[#EDE3D4] shadow-[inset_0_0_0_1px_rgba(61,47,38,.1)]">
+                <div className="absolute inset-2 overflow-hidden md:inset-3">
+                  {photo ? <img src={photo} alt="" className="h-full w-full object-cover [filter:sepia(.25)_contrast(1.02)]" /> : (
+                    <div className="grid h-full w-full place-items-center bg-[linear-gradient(160deg,#EFE7DB,#DDD0BE)]"><Rings className="h-10 w-14 text-taupe/50" /></div>
                   )}
                 </div>
-                <span className="absolute -top-2 left-1/2 -translate-x-1/2 h-5 w-16 bg-[#EFE4D2]/80 shadow-sm rotate-3" />
+                <span aria-hidden className="absolute -top-2 left-1/2 h-5 w-16 -translate-x-1/2 rotate-3 bg-[#EFE4D2]/80 shadow-sm" />
               </div>
-              <div className="relative flex flex-col justify-center text-center">
-                <p className="script text-wine text-script-sm">Wish you<br />were here</p>
-                <p className="font-serif italic text-mocha text-fine md:text-body mt-3">…and you will be.</p>
-                <p className="micro text-taupe mt-3 text-balance tracking-[0.12em]">with love, {from} · {date}</p>
+              <div className="flex min-w-0 flex-col justify-center px-1 text-center sm:px-2 md:px-5">
+                <p className="script text-[clamp(1.85rem,6.8vw,3.25rem)] leading-[.98] text-wine text-balance">Wish you<br />were here</p>
+                <p className="mt-3 font-serif text-[15px] italic leading-snug text-mocha sm:text-base md:text-lg">...and you will be.</p>
+                <p className="mt-4 font-serif text-[11px] font-semibold uppercase leading-relaxed tracking-[.12em] text-wine text-balance sm:text-xs md:text-sm">
+                  WITH LOVE, {info.groom.toUpperCase()}<br />&amp; {info.bride.toUpperCase()} · {fullDate(info.date)}
+                </p>
               </div>
             </div>
-            {/* BACK */}
+            {/* BACK — compact postcard note and address side from reference image 3 */}
             <div className={`${face} [transform:rotateY(180deg)] grid-cols-[1.5fr_1fr] md:grid-cols-[1.25fr_1fr]`}>
-              <div className="border-r border-taupe/40 pr-4 md:pr-6 flex flex-col justify-center">
-                <p className="script text-wine text-script-sm">Dear you,</p>
-                <p className="font-serif italic text-mocha text-fine md:text-body leading-snug mt-3">We can&apos;t wait to celebrate with you at {venue}. Come early, stay late, hug us often. Save us a dance — and a seat by the snacks.</p>
-                <p className="script text-wine text-h3 mt-3 text-balance">— {from}</p>
+              <div className="flex min-w-0 flex-col justify-center border-r border-taupe/40 pr-3 sm:pr-4 md:pr-6">
+                <p className="script text-[clamp(1.8rem,5.5vw,2.8rem)] leading-none text-wine">Dear you,</p>
+                <p className="mt-2 font-serif text-[16px] leading-[1.34] italic text-mocha sm:text-lg md:text-xl">We can&apos;t wait to celebrate with you at {info.venue_name}. Come early, stay late, hug us often. Save us a dance — and a seat by the snacks.</p>
+                <p className="script mt-2 text-[clamp(1.5rem,4.8vw,2.4rem)] leading-none text-wine text-balance">— {from}</p>
               </div>
-              <div className="relative flex flex-col justify-end pb-1 md:pb-3 min-h-[11rem]">
-                <div className="absolute top-0 right-0 w-[34%]"><Stamp kind="initials" className="w-full" /></div>
-                <Postmark className="absolute top-[4%] right-[18%] w-[70%]" top="WITH LOVE · J & S" />
-                {["To: our favourite people", "wherever you are", "see you on 11.11"].map((l) => (
-                  <p key={l} className="font-serif italic text-mocha text-fine md:text-body leading-snug border-b border-taupe/50 pb-1 mt-3">{l}</p>
+              <div className="relative flex min-w-0 flex-col justify-end pb-1 md:pb-3 min-h-[11rem]">
+                <div className="absolute right-0 top-0 w-[34%]"><Stamp kind="initials" className="w-full" /></div>
+                <Postmark className="absolute right-[18%] top-[4%] w-[70%]" top="WITH LOVE · J & S" />
+                {["To: our favourite people", "wherever you are", "see you on 11.11"].map((line) => (
+                  <p key={line} className="mt-3 border-b border-taupe/50 pb-1 font-serif text-[15px] leading-snug italic text-mocha sm:text-[17px] md:text-[19px]">{line}</p>
                 ))}
               </div>
             </div>
           </motion.div>
         </button>
-        <div className="text-center mt-6"><button type="button" onClick={toggle}><FlipHint label={flip ? "Tap to turn over again" : "Tap to turn over"} /></button></div>
+        <div className="text-center mt-4"><button type="button" onClick={toggle}><FlipHint label={flip ? "Tap to turn over again" : "Tap to turn over"} /></button></div>
       </motion.div>
     </section>
   );
