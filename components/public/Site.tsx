@@ -4,9 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import Ambience from "@/components/public/Ambience";
 import EnvelopeHero, { BAKED_COVER } from "@/components/public/Envelope";
 import Letter from "@/components/public/Letter";
-import { ProgressBar, SmoothScroll } from "@/components/public/fx";
-import { CountdownSection, DressCode, ElevenEleven, Entourage, FaqSection, FollowAndTag, Footer, Gallery, Invitation, PolaroidPair, RsvpNudge, SaveTheDate, SignOff, Rsvp, Schedule, Story, Venue } from "@/components/public/sections";
+import { ProgressBar, ScrollContinue, SmoothScroll } from "@/components/public/fx";
+import { CountdownSection, DressCode, ElevenEleven, Entourage, FaqSection, FollowAndTag, Footer, Gallery, PolaroidPair, RsvpNudge, SignOff, Rsvp, Schedule, Story, Venue } from "@/components/public/sections";
 import { Moments, MusicButton, SidePolaroids } from "@/components/public/photos";
+import VoiceGuestbook from "@/components/public/VoiceGuestbook";
 import { Postcard, Postmark, Stamp, StickOn, Sticker } from "@/components/public/stickers";
 import { fetchInvite, type InviteState } from "@/lib/db";
 
@@ -44,6 +45,7 @@ export default function Home({ code = "", variant = "guest" }: { code?: string; 
   const { rows: faq } = useTable("faq", true, activeCode);
   const { rows: storyChapters } = useTable("story");
   const info = infoRows[0];
+  const hasInstagram = !!(info?.instagram || "").replace(/^@/, "").trim();
   /** The dress-code in one breath for printed/keepsake summaries ("Black tie in glossy greens and warm shining browns"). */
   const dressNote = useMemo(() => (attire.find((a) => a.group === "guests")?.notes || "").split("—")[0].replace(/\.?\s*$/, "").trim(), [attire]);
 
@@ -117,22 +119,39 @@ export default function Home({ code = "", variant = "guest" }: { code?: string; 
                 )}
               </div>
             ) : null}
-            {unlocked && <D deco={<Deco at="tr" rotate={7}><Stamp kind="rings" className="w-12 md:w-24" /></Deco>}><Invitation info={info} /></D>}
+            <ElevenEleven info={info} />
+            {unlocked && <Postcard info={info} photo={info.cover_photo || info.gallery[0] || BAKED_COVER} />}
+            <ScrollContinue />
             <D deco={<Deco at="tl" rotate={-8}><Sticker kind="wish" className="scale-[.62] md:scale-100 origin-top-left" /></Deco>}><Story info={info} chapters={storyChapters} /></D>
-            <D deco={<Deco at="tr" rotate={-6}><Stamp kind="date" className="w-12 md:w-24" /></Deco>}><ElevenEleven info={info} /></D>
-            <SaveTheDate info={info} />
+            <ScrollContinue />
+            <VoiceGuestbook code={unlocked ? replyCode : ""} />
             <PolaroidPair info={info} from={8} caps={["us", "11.11"]} />
-            {unlocked && <D deco={<Deco at="tr" rotate={5}><Sticker kind="wedo" /></Deco>}><Schedule items={schedule} /></D>}
-            {unlocked && <D deco={<Deco at="tl" rotate={-4}><Postmark className="w-28 md:w-48" /></Deco>}><Venue info={info} /></D>}
-            {unlocked && <Postcard from={`${info.groom} & ${info.bride}`} venue={info.venue_name} date="11.11.2026" photo={info.cover_photo || info.gallery[0] || BAKED_COVER} />}
+            <ScrollContinue />
+            {unlocked && <>
+              <D className="pt-6 md:pt-8" deco={<Deco at="tr" rotate={5} className="!top-1 md:!top-4 scale-[.75] origin-top-right"><Sticker kind="wedo" /></Deco>}><Schedule /></D>
+              <ScrollContinue />
+              <D deco={<Deco at="tl" rotate={-4}><Postmark className="w-28 md:w-48" /></Deco>}><Venue info={info} /></D>
+            </>}
             <Gallery info={info} />
-            <D deco={<Deco at="tr" rotate={-10}><Sticker kind="ido" className="block scale-[.62] md:scale-100 origin-top-right" /></Deco>}><DressCode attire={attire} /></D>
+            <ScrollContinue />
+            <D deco={<Deco at="tr" rotate={-10}><Sticker kind="ido" className="block scale-[.62] md:scale-100 origin-top-right" /></Deco>}><DressCode attire={attire} info={info} /></D>
             <PolaroidPair info={info} from={10} caps={["always", "forever"]} />
-            {entourage.length > 0 && <D deco={<Deco at="tl" rotate={-7}><Stamp kind="initials" className="w-12 md:w-24" /></Deco>}><Entourage people={entourage} /></D>}
-            {unlocked && <Rsvp info={info} invite={rsvpInvite} code={replyCode} onReplied={load} schedule={schedule} dressNote={dressNote} />}
-            {unlocked && <D deco={<Deco at="tr" rotate={6}><Sticker kind="dance" /></Deco>}><FaqSection faqs={faq} /></D>}
+            <ScrollContinue />
+            {entourage.length > 0 && <>
+              <D deco={<Deco at="tl" rotate={-7}><Stamp kind="initials" className="w-12 md:w-24" /></Deco>}><Entourage people={entourage} /></D>
+              <ScrollContinue />
+            </>}
+            {unlocked && <>
+              <Rsvp info={info} invite={rsvpInvite} code={replyCode} onReplied={load} schedule={schedule} dressNote={dressNote} />
+              <ScrollContinue />
+              <D deco={<Deco at="tr" rotate={6}><Sticker kind="dance" /></Deco>}><FaqSection faqs={faq} /></D>
+            </>}
             <Moments info={info} />
-            <FollowAndTag info={info} />
+            <ScrollContinue />
+            {hasInstagram && <>
+              <FollowAndTag info={info} />
+              <ScrollContinue />
+            </>}
             <D className="pt-16 md:pt-8" deco={<Deco at="tl" rotate={-6}><Sticker kind="cheers" /></Deco>}><SignOff info={info} /></D>
             <CountdownSection info={info} sealed={!unlocked} />
         </Letter>

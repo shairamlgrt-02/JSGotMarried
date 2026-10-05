@@ -3,10 +3,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { AttireEditor, Budget, Checklist, Content, Details, Guests, Overview, PrintBinder, ScheduleBuilder, Settings, Vendors, getMode } from "@/components/admin/tabs";
 import { InviteCodes } from "@/components/admin/invites";
+import { AudioGuestbook } from "@/components/admin/guestbook";
 
 const TABS = [
   ["overview", "Overview", "◐"], ["details", "Details", "✎"], ["schedule", "Schedule", "◷"], ["checklist", "Checklist", "☑"],
-  ["budget", "Budget", "◎"], ["invites", "Invite Codes", "✦"], ["guests", "Guests & RSVP", "♡"], ["vendors", "Vendors", "◇"], ["attire", "Attire & Colors", "◉"],
+  ["budget", "Budget", "◎"], ["invites", "Invite Codes", "✦"], ["guests", "Guests & RSVP", "♡"], ["audio", "Audio Guestbook", "☎"], ["vendors", "Vendors", "◇"], ["attire", "Attire & Colors", "◉"],
   ["content", "Content", "▣"], ["settings", "Settings", "⚙"],
 ] as const;
 type Tab = (typeof TABS)[number][0];
@@ -60,6 +61,7 @@ export default function Admin() {
               {tab === "budget" && <Budget />}
               {tab === "invites" && <InviteCodes go={go} />}
               {tab === "guests" && <Guests go={go} />}
+              {tab === "audio" && <AudioGuestbook />}
               {tab === "vendors" && <Vendors />}
               {tab === "attire" && <AttireEditor />}
               {tab === "content" && <Content />}

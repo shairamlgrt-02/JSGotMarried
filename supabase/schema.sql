@@ -58,6 +58,32 @@ create table if not exists faq (id text primary key default gen_random_uuid()::t
 -- Our Story, chapter by chapter (the swipeable carousel on the public site).
 create table if not exists story (id text primary key default gen_random_uuid()::text, title text, text text, photo text default '', "order" int default 0);
 
+-- ── anonymous audio guestbook ─────────────────────────────────────────────────────────────────────
+-- Audio itself lives in a private Storage bucket. This table contains no guest name, invite code,
+-- transcript or IP address — only the random object path and the minimum playback metadata.
+create table if not exists public.guestbook_messages (
+  id uuid primary key default gen_random_uuid(),
+  storage_path text not null unique,
+  content_type text not null check (content_type in ('audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg')),
+  file_size_bytes int not null check (file_size_bytes between 1 and 524288),
+  duration_ms int not null check (duration_ms between 500 and 20000),
+  created_at timestamptz not null default now()
+);
+create index if not exists guestbook_messages_created_at_idx on public.guestbook_messages (created_at desc);
+alter table public.guestbook_messages enable row level security;
+revoke all on public.guestbook_messages from anon, authenticated;
+grant all on public.guestbook_messages to service_role;
+
+-- Service-role API routes are the only way to read/write this private bucket. Do not add public
+-- Storage policies: guests upload through /api/guestbook after their invitation code is validated.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('guestbook-audio', 'guestbook-audio', false, 524288, array['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg'])
+on conflict (id) do update set
+  name = excluded.name,
+  public = false,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
 -- ── attire palette (round 20): the beetle becomes a greenish Scarab; weaves softened to liquid shine ──
 insert into attire (id, "group", label, colors, reserved, notes, swatch_url, "order") values
   ('a3', 'shai_family', 'Shai''s Family', '[{"name":"Copper","hex":"#8C3617"}]'::jsonb, true, '', '', 3),

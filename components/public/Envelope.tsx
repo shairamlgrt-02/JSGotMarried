@@ -105,7 +105,7 @@ export default function EnvelopeHero({ info, sealed, home = false }: { info: Wed
         {home
           ? <a href="/" title="Back to the front door" className="script text-wine text-3xl hover:text-mocha transition-colors">J &amp; S</a>
           : <span className="script text-wine text-3xl">J &amp; S</span>}
-        <div className="hidden md:flex gap-8 label text-taupe"><a href="#story">Our Story</a>{!sealed && <a href="#day">The Day</a>}{!sealed && <a href="#venue">Venue</a>}<a href="#dress">Attire</a></div>
+        <div className="hidden md:flex gap-8 label text-taupe"><a href="#story">Our Story</a>{!sealed && <a href="#program">Program</a>}{!sealed && <a href="#venue">Venue</a>}<a href="#dress">Attire</a></div>
         {!sealed ? (
           <a href="#rsvp" className="label text-wine border border-wine/40 rounded-full px-5 py-2 hover:bg-wine hover:text-lace transition-colors">RSVP</a>
         ) : home ? (

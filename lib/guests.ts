@@ -193,26 +193,19 @@ export function deadlineText(iso?: string | null, wedding?: string | null): stri
 const PLACEHOLDER_NAME = /^(household|guest|family|party|table|seat|new guest|tbd|to be announced|unknown)\s*#?\d*$/i;
 export function greetingFor(name?: string): string {
   const n = String(name ?? "").trim().replace(/\s+/g, " ");
-  return !n || PLACEHOLDER_NAME.test(n) ? "Dear friend," : `Dear ${n},`;
+  return !n || PLACEHOLDER_NAME.test(n) ? "Hi there!" : `Hi ${n}!`;
 }
 
-/**
- * The seats line, kept soft: it says the seats are theirs rather than announcing a quota.
- * "A seat at our table is yours." · "Two seats at our table are yours."
- */
-const COUNT_WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
+/** The reserved-seat line, with the singular/plural matching each household's invitation. */
 export function seatLine(seats: number): string {
   const n = Math.max(0, Math.round(Number(seats) || 0));
   if (!n) return "";
-  if (n === 1) return "A seat at our table is yours.";
-  const word = COUNT_WORDS[n] ?? String(n);
-  return `${word[0].toUpperCase()}${word.slice(1)} seats at our table are yours.`;
+  return `We’ve saved ${n} seat${n === 1 ? "" : "s"} just for you.`;
 }
 
 /**
- * The WhatsApp text a household receives — short and warm. It greets whoever the link is for,
- * tells them the seats are theirs, points at everything the website holds (the programme, the
- * dress code, the venue) instead of repeating it, and asks for the RSVP there.
+ * The WhatsApp text a household receives — short and warm. It greets the name on the invitation,
+ * states the exact number of reserved seats, points to the personal link and asks for an RSVP.
  *
  * ── THIS IS THE MESSAGE TEMPLATE ──
  * Every line below is the wording your guests read. Change a line here and every household's
@@ -225,15 +218,15 @@ export function inviteMessage(code: string, t: InviteText, origin = ""): string 
   const byWhen = deadlineText(t.deadline, t.date);
 
   return [
-    `${t.couple} · ${shortDate(t.date) || t.day}`,
-    greetingFor(t.greet || t.name),
-    `We're getting married —\n${when ? `on ${when}.` : "and we would love you there."}`,
-    `You've been part of our story from the very beginning,\nand the day wouldn't be the same without you there.`,
-    `Your invitation, made just for you:\n${inviteLink(c, origin)}`,
+    `*${t.couple} · ${shortDate(t.date) || t.day}*`,
+    `${greetingFor(t.greet || t.name)} 🥰`,
+    `We’re getting married! 💍${when ? `\n${when}.` : ""}`,
+    `You’ve been part of our lives in your own special way, and we’d be so happy to celebrate this day with you.`,
+    `*Here’s an invitation made especially for you:*\n${inviteLink(c, origin)}`,
     seatLine(t.seats ?? 0),
-    `Inside, you'll find everything —\nour story, the programme, the dress code and the venue.\nYou can RSVP right there on the website.`,
-    byWhen ? `Kindly let us know by ${byWhen}.` : "",
-    `We can't wait to celebrate with you. 🤍`,
+    `Everything you need is on the website—our story, the programme, dress code and venue. You can RSVP there too.`,
+    byWhen ? `Please let us know by ${byWhen}.` : "",
+    `We can’t wait to celebrate with you! ❤️`,
     `With love,\n${t.couple}`,
   ].filter(Boolean).join("\n\n");
 }
@@ -241,7 +234,9 @@ export function inviteMessage(code: string, t: InviteText, origin = ""): string 
 /** One-tap WhatsApp share, straight to the guest when we have their number. */
 export function inviteHref(code: string, phone: string, t: InviteText, origin = location.origin) {
   const digits = phone.replace(/\D/g, "");
-  return `https://wa.me/${digits}?text=${encodeURIComponent(inviteMessage(code, t, origin))}`;
+  // URLSearchParams encodes the message body as UTF-8, including emoji, for WhatsApp's link handoff.
+  const query = new URLSearchParams({ text: inviteMessage(code, t, origin) });
+  return `https://wa.me/${digits}?${query.toString()}`;
 }
 
 /* ─────────── bulk paste → households ─────────── */

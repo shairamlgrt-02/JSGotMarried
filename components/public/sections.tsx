@@ -1,5 +1,5 @@
 "use client";
-import { AnimatePresence, motion, useInView, useScroll, useSpring } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { submitRsvp, type InviteState } from "@/lib/db";
 import { entourageHeading } from "@/lib/entourage";
@@ -11,68 +11,108 @@ import { EASE, EASE_OUT, Reveal, Tilt, rise } from "./fx";
 import { Corners, Flourish, GemDot, LaceEdge, Paisley } from "./ornaments";
 import { PhotoStrip, Polaroid, ScratchReveal, slots } from "./photos";
 import { AttireGuide } from "./attire";
+import VenueMapPreview from "./VenueMapPreview";
 
 const longDate = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Bahrain" });
 
-function Title({ kicker, title }: { kicker: string; title: string }) {
+function Title({ kicker, title }: { kicker?: string; title: string }) {
   return (
     <Reveal className="text-center">
-      <p className="micro text-taupe">{kicker}</p>
-      <h2 className="script text-wine text-script mt-2 text-balance">{title}</h2>
+      {kicker && <p className="micro text-taupe">{kicker}</p>}
+      <h2 className={`script text-wine text-script ${kicker ? "mt-2" : ""} text-balance`}>{title}</h2>
       <Flourish className="w-44 md:w-56 mx-auto mt-2 text-taupe/70" />
     </Reveal>
   );
 }
 
-/* ─────────── INVITATION WORDING ─────────── */
-export function Invitation({ info }: { info: WeddingInfo }) {
-  return (
-    <section className="sec-lg text-center">
-      <Reveal>
-        <p className="font-serif italic text-taupe text-lead">Together with their families</p>
-        <h2 className="caps text-mocha text-display mt-6 md:mt-8">
-          {info.groom}<span className="block script normal-case tracking-normal text-wine text-script-sm my-1">and</span>{info.bride}
-        </h2>
-        <p className="font-serif italic text-mocha text-lead mt-8 max-w-xl mx-auto text-balance">
-          request the pleasure of your company<br />at the celebration of their marriage
-        </p>
-        <Flourish className="w-48 md:w-56 mx-auto my-8 text-taupe/70" />
-        <p className="caps text-mocha text-body text-balance">{longDate(info.date)}</p>
-        <p className="font-serif italic text-taupe text-body mt-2 text-balance">{info.venue_name}, {info.venue_address}</p>
-      </Reveal>
-    </section>
-  );
+/* ─────────── OUR STORY — the chapter carousel ─────────── */
+/** Repeating perforations are part of each moving film frame, not a fixed overlay. */
+function FilmSprockets() {
+  const style = {
+    backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='12' viewBox='0 0 20 12'%3E%3Crect x='5' y='2' width='10' height='8' rx='2' fill='%23F3E8D6'/%3E%3C/svg%3E\")",
+    backgroundSize: "20px 12px",
+    backgroundRepeat: "repeat-x" as const,
+    backgroundPosition: "center",
+  };
+  return <div aria-hidden className="h-3 w-full shrink-0 bg-[#211E1B] md:h-3.5" style={style} />;
 }
 
-/* ─────────── OUR STORY — the chapter carousel ─────────── */
-/** The framed photo strip that winds on like film to the active chapter's picture. */
-function ChapterFilm({ chapters, index, info }: { chapters: StoryChapter[]; index: number; info: WeddingInfo }) {
+/** Three copies of the reel let the five chapter frames loop seamlessly in both directions. */
+function ChapterFilm({ chapters, stripIndex, snapping, info, reduceMotion, onNavigate, onAnimationComplete }: {
+  chapters: StoryChapter[];
+  stripIndex: number;
+  snapping: boolean;
+  info: WeddingInfo;
+  reduceMotion: boolean | null;
+  onNavigate: (direction: number) => void;
+  onAnimationComplete: () => void;
+}) {
   const win = useRef<HTMLDivElement>(null);
-  const [h, setH] = useState(250);
+  const startX = useRef<number | null>(null);
+  const [w, setW] = useState(300);
   useEffect(() => {
     const el = win.current;
     if (!el) return;
-    const measure = () => setH(el.getBoundingClientRect().height);
+    const measure = () => setW(Math.max(1, el.clientWidth));
     measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
   }, []);
+
+  // Multiples of the sprocket-hole pitch keep the cloned joins visually seamless.
+  const frameWidth = Math.max(160, Math.min(200, Math.round((w * 0.72) / 20) * 20));
+  // Symmetric side padding keeps the active photo centered, with neighboring frames peeking at both sides.
+  const sidePadding = Math.max(0, (w - frameWidth) / 2);
+  const filmFrames = [...chapters, ...chapters, ...chapters];
+  const stripWidth = filmFrames.length * frameWidth + sidePadding * 2;
+
   return (
-    <motion.div {...rise(0, 26)} style={{ rotate: -2 }} className="relative mx-auto w-[232px] md:w-[264px]">
-      <span aria-hidden className="absolute z-10 -top-3 left-1/2 -translate-x-1/2 rotate-[3deg] h-6 w-20 bg-[#EFE4D2]/75 shadow-[0_1px_2px_rgba(61,47,38,.18)] [clip-path:polygon(3%_0,97%_4%,100%_50%,97%_96%,3%_100%,0_50%)]" />
-      <div className="relative bg-[#FBF8F2] p-[4.5%] pb-[9%] shadow-[0_1px_2px_rgba(61,47,38,.2),0_18px_30px_-12px_rgba(61,47,38,.45)]">
-        <div ref={win} className="relative h-[220px] md:h-[250px] overflow-hidden">
-          <motion.div initial={false} animate={{ y: -h * index }} transition={{ duration: 0.75, ease: EASE }}>
-            {chapters.map((c, k) => (
-              <div key={c.id} style={{ height: h }} className="pb-3">
-                <div className="w-full h-full overflow-hidden shadow-[inset_0_0_0_1px_rgba(61,47,38,.08)] bg-[linear-gradient(145deg,#E9DFD1,#D9CBB8)]">
-                  <img src={c.photo || info.gallery[k] || BAKED_COVER} alt={c.title} loading="lazy" draggable={false} className="w-full h-full object-cover [filter:sepia(.12)_saturate(.92)_contrast(1.02)]" />
+    <motion.div {...rise(0, 26)} style={{ rotate: -1.5 }} className="relative mx-auto w-full max-w-[336px] lg:w-[336px] lg:max-w-none">
+      <div
+        ref={win}
+        role="group"
+        aria-label="Swipe the filmstrip to move through the story chapters"
+        className="relative h-[152px] overflow-hidden rounded-[3px] border-2 border-[#171311] bg-[#211E1B] shadow-[0_5px_12px_rgba(30,22,18,.34)] lg:h-[164px] cursor-grab select-none touch-pan-y active:cursor-grabbing"
+        onPointerDown={(e) => { if (e.pointerType !== "mouse" || e.button === 0) { startX.current = e.clientX; e.currentTarget.setPointerCapture(e.pointerId); } }}
+        onPointerUp={(e) => {
+          if (startX.current === null) return;
+          const delta = e.clientX - startX.current;
+          startX.current = null;
+          if (Math.abs(delta) > 36) onNavigate(delta < 0 ? 1 : -1);
+        }}
+        onPointerCancel={() => { startX.current = null; }}
+      >
+        <motion.div
+          initial={false}
+          animate={{ x: -frameWidth * stripIndex }}
+          transition={{ duration: snapping ? 0 : 0.7, ease: EASE }}
+          onAnimationComplete={onAnimationComplete}
+          className="absolute inset-y-0 left-0 flex bg-[#211E1B]"
+          style={{ width: stripWidth, paddingLeft: sidePadding, paddingRight: sidePadding }}
+        >
+          {filmFrames.map((c, frame) => {
+            const chapterPhoto = frame % chapters.length;
+            const isClone = frame < chapters.length || frame >= chapters.length * 2;
+            return (
+              <div key={`${frame}-${c.id}`} style={{ width: frameWidth }} aria-hidden={isClone} className="flex h-full shrink-0 flex-col bg-[#211E1B]">
+                <FilmSprockets />
+                <div className="min-h-0 flex-1 p-1">
+                  <div className="h-full w-full overflow-hidden border border-[#6B5747]/70 bg-[linear-gradient(145deg,#E9DFD1,#D9CBB8)]">
+                    <img src={c.photo || info.gallery[chapterPhoto] || BAKED_COVER} alt={isClone ? "" : c.title} loading="lazy" draggable={false} className="h-full w-full object-cover object-center [filter:sepia(.12)_saturate(.92)_contrast(1.02)]" />
+                  </div>
                 </div>
+                <FilmSprockets />
               </div>
-            ))}
-          </motion.div>
+            );
+          })}
+        </motion.div>
+        <div className="absolute left-1 top-1/2 z-20 -translate-y-1/2">
+          <StoryArrowButton direction="previous" onClick={() => onNavigate(-1)} reduceMotion={reduceMotion} />
         </div>
-        <p className="text-center font-serif font-medium text-micro text-mocha uppercase tracking-[0.16em] mt-3">J &amp; S · ch. {index + 1} of {chapters.length}</p>
+        <div className="absolute right-1 top-1/2 z-20 -translate-y-1/2">
+          <StoryArrowButton direction="next" onClick={() => onNavigate(1)} reduceMotion={reduceMotion} />
+        </div>
       </div>
     </motion.div>
   );
@@ -85,32 +125,85 @@ const chapterSlide = {
   exit: (d: number) => ({ opacity: 0, x: d * -56 }),
 };
 
+/** Bold page-turn buttons sit close to the film edges; motion points gently in each direction. */
+function StoryArrowButton({ direction, onClick, reduceMotion }: {
+  direction: "previous" | "next";
+  onClick: () => void;
+  reduceMotion: boolean | null;
+}) {
+  const previous = direction === "previous";
+  return (
+    <motion.button
+      type="button"
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={onClick}
+      aria-label={previous ? "Previous story chapter" : "Next story chapter"}
+      initial={false}
+      animate={reduceMotion ? undefined : { x: previous ? [0, -4, 0] : [0, 4, 0] }}
+      transition={{ duration: 2.2, repeat: Infinity, repeatDelay: 0.9, ease: "easeInOut" }}
+      whileHover={reduceMotion ? undefined : { scale: 1.12, rotate: previous ? -5 : 5, transition: { duration: 0.18 } }}
+      whileTap={reduceMotion ? undefined : { scale: 0.9 }}
+      className="relative z-10 grid h-9 w-9 shrink-0 place-items-center rounded-full border-2 border-[#B99D7D] bg-wine text-lace shadow-[0_4px_12px_rgba(110,31,46,.3)] ring-2 ring-[#FBF7EF] transition-colors hover:bg-mocha focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-wine sm:h-10 sm:w-10 lg:h-11 lg:w-11"
+    >
+      <span aria-hidden="true" className="absolute inset-[3px] rounded-full border border-lace/25" />
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="relative h-5 w-5 sm:h-6 sm:w-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        {previous ? <path d="M14.5 5.5 8 12l6.5 6.5M8 12h10" /> : <path d="m9.5 5.5 6.5 6.5-6.5 6.5M16 12H6" />}
+      </svg>
+    </motion.button>
+  );
+}
+
 export function Story({ info, chapters = [] }: { info: WeddingInfo; chapters?: StoryChapter[] }) {
   const sorted = useMemo(() => [...chapters].sort((a, b) => a.order - b.order), [chapters]);
+  const n = sorted.length;
   const [i, setI] = useState(0);
   const [dir, setDir] = useState(1);
-  const n = sorted.length;
+  const [filmIndex, setFilmIndex] = useState(n);
+  const [snappingFilm, setSnappingFilm] = useState(false);
+  const filmReset = useRef<number | null>(null);
+  const reduceMotion = useReducedMotion();
+
+  useEffect(() => {
+    filmReset.current = null;
+    setI(0);
+    setFilmIndex(n);
+    setSnappingFilm(true);
+    const frame = requestAnimationFrame(() => setSnappingFilm(false));
+    return () => cancelAnimationFrame(frame);
+  }, [n]);
+
   const go = (k: number) => {
-    if (!n) return;
+    if (n < 2) return;
     const next = ((k % n) + n) % n;
-    setDir(k === i ? dir : next > i || (i === n - 1 && next === 0) ? 1 : -1);
+    if (next === i) return;
+    const wrapForward = i === n - 1 && k > i;
+    const wrapBackward = i === 0 && k < 0;
+    filmReset.current = wrapForward ? n : wrapBackward ? 2 * n - 1 : null;
+    setSnappingFilm(false);
+    setDir(wrapForward ? 1 : wrapBackward ? -1 : next > i ? 1 : -1);
     setI(next);
+    setFilmIndex(wrapForward ? 2 * n : wrapBackward ? n - 1 : n + next);
   };
 
-  // every chapter deleted in the binder → fall back to the classic one-paragraph story with the strips
+  const finishFilmMove = () => {
+    const resetTo = filmReset.current;
+    if (resetTo === null) return;
+    filmReset.current = null;
+    setSnappingFilm(true);
+    setFilmIndex(resetTo);
+    requestAnimationFrame(() => setSnappingFilm(false));
+  };
+
+  // If every chapter is deleted in the binder, keep the fallback story just as compact as the carousel.
   if (n === 0) {
     return (
       <section id="story" className="sec">
-        <div className="col-wide grid md:grid-cols-2 gap-10 md:gap-16 items-center">
-          <div className="flex justify-center gap-4 md:gap-8">
-            <PhotoStrip photos={slots(info, 0, 4)} caption={`J & S · ${fullDate(info.date)}`} rotate={-3} className="w-[46%] max-w-[200px]" />
-            <PhotoStrip photos={slots(info, 0, 4).slice(2).concat(slots(info, 0, 2))} caption="#JSGotMarried" rotate={2.5} className="w-[46%] max-w-[200px] mt-8 md:mt-10" />
-          </div>
+        <Title kicker="Our Story" title="A wish come true" />
+        <div className="col-wide grid md:grid-cols-[280px_1fr] gap-4 md:gap-16 mt-5 md:mt-head items-center">
+          <PhotoStrip photos={slots(info, 0, 4)} caption={`J & S · ${fullDate(info.date)}`} horizontal className="w-full max-w-sm mx-auto" />
           <div className="text-center md:text-left">
-            <Reveal><p className="micro text-taupe">Our Story</p>
-              <h2 className="script text-wine text-script mt-2 text-balance">A wish come true</h2></Reveal>
-            <Reveal delay={0.1}><p className="font-serif text-lead text-mocha mt-6 text-pretty">{info.story}</p></Reveal>
-            <Reveal delay={0.2}><p className="micro text-wine mt-6">{info.hashtags.join("   ")}</p></Reveal>
+            <p className="font-serif text-fine md:text-lead text-mocha text-pretty">{info.story}</p>
+            {info.hashtags.length > 0 && <p className="micro text-taupe mt-3">{info.hashtags.join("   ")}</p>}
           </div>
         </div>
       </section>
@@ -121,10 +214,10 @@ export function Story({ info, chapters = [] }: { info: WeddingInfo; chapters?: S
   return (
     <section id="story" className="sec">
       <Title kicker="Our Story" title="A wish come true" />
-      <div className="col-wide grid md:grid-cols-[280px_1fr] gap-10 md:gap-16 mt-head items-center">
-        <ChapterFilm chapters={sorted} index={i} info={info} />
-        <div className="text-center md:text-left">
-          <div className="overflow-hidden min-h-[210px] md:min-h-[230px]">
+      <div className="col-wide grid lg:grid-cols-[336px_1fr] gap-4 lg:gap-10 mt-5 lg:mt-head items-center">
+        <ChapterFilm chapters={sorted} stripIndex={filmIndex} snapping={snappingFilm} info={info} reduceMotion={reduceMotion} onNavigate={(direction) => go(i + direction)} onAnimationComplete={finishFilmMove} />
+        <div className="text-center lg:text-left">
+          <div className="h-[216px] max-[360px]:h-[254px] overflow-hidden sm:h-[184px] md:h-[166px] lg:h-[276px]">
             <AnimatePresence mode="wait" custom={dir} initial={false}>
               <motion.div
                 key={ch.id}
@@ -139,182 +232,199 @@ export function Story({ info, chapters = [] }: { info: WeddingInfo; chapters?: S
                 dragElastic={0.16}
                 dragDirectionLock
                 onDragEnd={(_, o) => { if (o.offset.x < -48) go(i + 1); else if (o.offset.x > 48) go(i - 1); }}
-                className="cursor-grab active:cursor-grabbing select-none touch-pan-y"
+                className="cursor-grab select-none touch-pan-y active:cursor-grabbing"
               >
-                <p className="micro text-taupe">Chapter {i + 1} of {n}</p>
-                <h3 className="script text-wine text-script-sm mt-1 text-balance">{ch.title}</h3>
-                <p className="font-serif text-lead text-mocha mt-4 md:mt-5 text-pretty">{ch.text}</p>
+                <p className="micro text-center text-taupe">Chapter {i + 1} of {n}</p>
+                <h3 className="script mt-1 text-center text-[clamp(1.6rem,7vw,2.1rem)] leading-[1.02] text-wine text-balance lg:text-script-sm">{ch.title}</h3>
+                <p className="mt-2 font-serif text-center text-fine leading-[1.35] text-mocha text-pretty lg:mt-3 lg:text-left lg:text-lead lg:leading-[1.4]">{ch.text}</p>
               </motion.div>
             </AnimatePresence>
           </div>
-          <div className="flex items-center justify-center md:justify-start gap-5 mt-6 md:mt-8">
-            <button type="button" onClick={() => go(i - 1)} aria-label="Previous chapter" className="w-11 h-11 rounded-full border border-wine/40 text-wine grid place-items-center text-xl leading-none hover:bg-wine hover:text-lace transition-colors">‹</button>
-            <div className="flex items-center gap-2.5">
+          <div className="mt-1.5 flex items-center justify-center lg:mt-2" role="group" aria-label="Choose a story chapter">
+            <div className="flex items-center gap-0.5">
               {sorted.map((c, k) => (
-                <button key={c.id} type="button" onClick={() => go(k)} aria-label={`Chapter ${k + 1}: ${c.title}`}
-                  className={`rounded-full border border-wine/50 transition-all ${k === i ? "w-6 h-2.5 bg-wine" : "w-2.5 h-2.5 hover:bg-wine/40"}`} />
+                <motion.button
+                  key={c.id}
+                  type="button"
+                  onClick={() => go(k)}
+                  aria-label={`Chapter ${k + 1}: ${c.title}`}
+                  aria-current={k === i ? "step" : undefined}
+                  initial={false}
+                  whileHover={reduceMotion ? undefined : { scale: 1.15 }}
+                  whileTap={reduceMotion ? undefined : { scale: 0.88 }}
+                  className="group grid h-8 w-8 place-items-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-wine"
+                >
+                  <span className={`rounded-full border border-wine/50 transition-all duration-300 ${k === i ? "h-2.5 w-6 bg-wine shadow-[0_0_0_3px_rgba(110,31,46,.1)]" : "h-2.5 w-2.5 bg-wine/15 group-hover:bg-wine/55"}`} />
+                </motion.button>
               ))}
             </div>
-            <button type="button" onClick={() => go(i + 1)} aria-label="Next chapter" className="w-11 h-11 rounded-full border border-wine/40 text-wine grid place-items-center text-xl leading-none hover:bg-wine hover:text-lace transition-colors">›</button>
           </div>
-          <p className="micro text-wine mt-6 text-balance">swipe or tap the dots — {info.hashtags.join("   ")}</p>
+          {info.hashtags.length > 0 && <p className="micro mt-1.5 text-center text-taupe/75">{info.hashtags.join("   ")}</p>}
         </div>
       </div>
     </section>
   );
 }
 
-/* ─────────── 11.11 INTERLUDE ─────────── */
+/* ─────────── 11.11 OPENING ─────────── */
+/** A short dedication at the beginning of the letter scroll, before the story and voice guestbook. */
 export function ElevenEleven({ info }: { info: WeddingInfo }) {
-  const d = fullDate(info.date);
   return (
-    <section className="sec-sm overflow-hidden text-center">
-      <div className="col-wide relative py-10 md:py-16 border-y border-taupe/25">
+    <section className="sec-sm text-center" aria-labelledby="wedding-dedication-title">
+      <div className="col-wide relative pt-8 pb-2 md:pt-12 md:pb-3">
         <Reveal>
-          <div className="flex items-center justify-center gap-3 md:gap-10">
-            <Paisley className="w-7 h-11 md:w-12 md:h-20 text-taupe/70 -scale-x-100" />
-            <p className="font-serif font-light text-wine text-numeral tracking-tight [text-shadow:0_2px_0_rgba(255,255,255,.9),0_-1px_1px_rgba(60,20,30,.3),0_18px_30px_rgba(110,31,46,.18)]">{d.slice(0, 5)}</p>
-            <Paisley className="w-7 h-11 md:w-12 md:h-20 text-taupe/70" />
+          <p className="micro text-taupe">The Wedding of</p>
+          <h2 id="wedding-dedication-title" className="script mt-1 text-[clamp(2.1rem,8vw,4.6rem)] leading-tight text-wine text-balance">{info.groom} &amp; {info.bride}</h2>
+          <p className="script mt-1 whitespace-nowrap text-[clamp(2.5rem,10vw,5.8rem)] leading-none tracking-[.015em] text-wine">{fullDate(info.date)}</p>
+          <p className="mt-3 font-serif text-fine italic text-mocha text-balance">A wish made by two — a prayer answered by the One above.</p>
+          <Flourish className="mx-auto mt-4 w-36 text-taupe/60" />
+          <div className="mx-auto mt-4 max-w-2xl border-y border-taupe/20 py-3">
+            <p className="micro text-taupe">1 Corinthians 11:11</p>
+            <p className="mx-auto mt-2 max-w-xl px-3 font-serif text-fine italic leading-relaxed text-mocha text-balance">“Nevertheless neither is the man without the woman, neither the woman without the man, in the Lord.”</p>
           </div>
-          <p className="font-serif font-light text-wine text-year tracking-[0.18em] mt-1 md:-mt-1 pl-[0.18em] [text-shadow:0_2px_0_rgba(255,255,255,.9),0_-1px_1px_rgba(60,20,30,.3)]">{d.slice(6)}</p>
-          <p className="font-serif italic text-mocha text-lead mt-5 text-balance">A wish made at 11:11 — a prayer answered by God.</p>
-          <p className="micro text-taupe mt-6 tracking-[0.18em]">1 Corinthians 11:11</p>
-          <p className="font-serif italic text-fine text-taupe mt-2 max-w-xl mx-auto text-balance px-5">
-            “Nevertheless neither is the man without the woman, neither the woman without the man, in the Lord.”
-          </p>
         </Reveal>
       </div>
-    </section>
-  );
-}
-
-/**
- * The couple's Save the Date graphic — appears only once one is uploaded in the binder
- * (Content → Save the Date). Guests can open it full size or save it to their phone.
- */
-export function SaveTheDate({ info }: { info: WeddingInfo }) {
-  const src = info.save_the_date_url;
-  if (!src) return null;
-  return (
-    <section className="sec-sm">
-      <Reveal className="col text-center">
-        <p className="micro text-wine">Save the Date</p>
-        <a href={src} target="_blank" rel="noreferrer" className="block mt-6">
-          <img src={src} alt={`Save the Date — ${info.groom} & ${info.bride}`} className="mx-auto w-auto max-h-[70vh] rounded-2xl ring-1 ring-taupe/20 shadow-[0_2px_3px_rgba(61,47,38,.15),0_40px_80px_-40px_rgba(61,47,38,.55)]" />
-        </a>
-        <a href={src} download className="micro text-taupe hover:text-wine underline underline-offset-4 mt-5 inline-block">Save it to your phone ↗</a>
-      </Reveal>
     </section>
   );
 }
 
 /* ─────────── THE DAY ─────────── */
-/** Line-art medallion icon chosen from the program title (sized to sit inside a 44px medallion on phones). */
+/** Small line-art icons for the fixed six-stop program timeline. */
 function ProgramIcon({ title }: { title: string }) {
   const t = title.toLowerCase();
-  const common = { fill: "none", stroke: "currentColor", strokeWidth: 1.4, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
-  if (t.includes("ceremony")) return <Paisley className="w-5 h-8 md:w-8 md:h-12" />;
-  if (t.includes("cocktail") || t.includes("mingl")) return (
-    <svg viewBox="0 0 48 48" className="w-7 h-7 md:w-9 md:h-9" {...common}><path d="M10 8h12l-1.5 12a4.5 4.5 0 01-9 0zM16 25v13M11 38h10M38 8H26l1.5 12a4.5 4.5 0 009 0zM32 25v13M27 38h10M22 4l2-3M26 5l3-2M24 12h0" /><circle cx="15" cy="15" r="1" fill="currentColor" /><circle cx="33" cy="14" r="1" fill="currentColor" /></svg>
+  const common = { fill: "none", stroke: "currentColor", strokeWidth: 1.5, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  if (t.includes("arrival")) return (
+    <svg viewBox="0 0 32 32" className="w-6 h-6" {...common}><circle cx="12" cy="10" r="3.5" /><circle cx="22" cy="12" r="3" /><path d="M4.5 26v-2a7.5 7.5 0 0115 0v2zM18 20a6 6 0 019.5 4v2H22" /></svg>
+  );
+  if (t.includes("ceremony")) return <Paisley className="w-5 h-7" />;
+  if (t.includes("photo")) return (
+    <svg viewBox="0 0 32 32" className="w-6 h-6" {...common}><path d="M5 10h5l2-3h8l2 3h5v16H5z" /><circle cx="16" cy="18" r="5" /><path d="M8 13h2" /></svg>
+  );
+  if (t.includes("toast") || t.includes("snack")) return (
+    <svg viewBox="0 0 32 32" className="w-6 h-6" {...common}><path d="M5 8h10l-1.2 9a3.8 3.8 0 01-7.6 0zM10 21v6M6 27h8M27 8h-9l1.2 9a3.4 3.4 0 006.8 0zM22 21v6M18 27h8" /><path d="M16 5l1.5-2M20 5l2-1" /></svg>
   );
   if (t.includes("reception") || t.includes("dinner") || t.includes("party")) return (
-    <svg viewBox="0 0 48 48" className="w-7 h-7 md:w-9 md:h-9" {...common}><circle cx="24" cy="22" r="11" /><path d="M13 22h22M24 11v22M16 14c4 3 12 3 16 0M16 30c4-3 12-3 16 0M24 5v6" /><path d="M8 40l3-3M40 40l-3-3M6 30h3M39 30h3M24 38v4" strokeWidth="1" /></svg>
+    <svg viewBox="0 0 32 32" className="w-6 h-6" {...common}><circle cx="16" cy="16" r="8" /><circle cx="16" cy="16" r="3.5" /><path d="M4 8v8M2 8v4h4V8M4 12v16M28 8v20M28 8c-3 2-4 5-4 9h4" /></svg>
   );
-  return <svg viewBox="0 0 24 24" className="w-6 h-6 md:w-8 md:h-8" fill="currentColor"><path d="M12 2l2.6 6.6L21 9.3l-5 4.4 1.6 6.8L12 16.8 6.4 20.5 8 13.7 3 9.3l6.4-.7z" /></svg>;
+  if (t.includes("send off")) return (
+    <svg viewBox="0 0 32 32" className="w-6 h-6" {...common}><path d="M16 3v5M16 24v5M3 16h5M24 16h5M6.8 6.8l3.5 3.5M21.7 21.7l3.5 3.5M25.2 6.8l-3.5 3.5M10.3 21.7l-3.5 3.5" /><path d="M16 11l1.6 3.4 3.7.5-2.7 2.6.7 3.7-3.3-1.8-3.3 1.8.7-3.7-2.7-2.6 3.7-.5z" /></svg>
+  );
+  return <svg viewBox="0 0 24 24" className="w-6 h-6" fill="currentColor"><path d="M12 2l2.6 6.6L21 9.3l-5 4.4 1.6 6.8L12 16.8 6.4 20.5 8 13.7 3 9.3l6.4-.7z" /></svg>;
 }
 
-/**
- * Renders *highlighted phrases* with a highlighter-pen sweep when `on` (played once).
- * The phrase is plain inline text with a background gradient, so a long phrase wraps with the paragraph
- * instead of overflowing a narrow card — and the sweep never changes the layout.
- */
-function Highlighted({ text, on }: { text: string; on: boolean }) {
-  const parts = text.split(/(\*[^*]+\*)/g);
-  let k = 0;
-  return (
-    <>
-      {parts.map((p, idx) => {
-        if (!p.startsWith("*")) return <span key={idx}>{p}</span>;
-        const d = 0.3 + k++ * 0.25;
-        return (
-          <motion.span key={idx} initial={false} animate={{ backgroundSize: on ? "100% 55%" : "0% 55%" }} transition={{ delay: on ? d : 0, duration: 0.7, ease: EASE_OUT }}
-            className="not-italic font-medium text-ink px-0.5 bg-no-repeat bg-[position:0_88%] bg-gradient-to-r from-[#E8C3BC]/80 to-[#E8C3BC]/80 [box-decoration-break:clone] [-webkit-box-decoration-break:clone]">
-            {p.slice(1, -1)}
-          </motion.span>
-        );
-      })}
-    </>
-  );
-}
+const PROGRAM_STOPS = [
+  { time: "3:30 PM", title: "Entourage Arrival" },
+  { time: "4:00 PM", title: "Wedding Ceremony" },
+  { time: "5:00 PM", title: "Wedding Photos" },
+  { time: "5:30 PM", title: "Welcome Toasts & Snacks" },
+  { time: "6:30 PM", title: "Wedding Reception" },
+  { time: "10:00 PM", title: "Send off" },
+];
 
-/**
- * One stop on the journey map: a medallion on the dotted path + an angled paper card.
- * Everything is visible from the start (time, title, full details) — nothing grows, shrinks or rotates while you
- * scroll, so the page height never changes. The card rises in once; the highlighter sweeps once.
- */
-function ProgramStop({ s, i }: { s: ScheduleItem; i: number }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const seen = useInView(ref, { once: true, margin: "0px 0px -15% 0px" });
-  const right = i % 2 === 1;
-  const tilt = right ? 1.5 : -1.5;
-  return (
-    <div ref={ref} className={`relative flex items-start mb-stack ${right ? "md:flex-row-reverse" : ""}`}>
-      {/* medallion on the path (centred with a negative margin — a transform here would be overridden by the entrance animation) */}
-      <div className="relative z-[2] shrink-0 mt-6 md:mt-0 w-11 h-11 md:w-20 md:h-20 md:absolute md:left-1/2 md:-ml-10 md:top-2">
-        <motion.div initial={{ opacity: 0, scale: 0.85 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true, margin: "-8%" }} transition={{ duration: 0.8, ease: EASE_OUT, delay: 0.1 }}
-          className="relative w-full h-full rounded-full bg-[#FBF7EF] border-2 border-wine/60 grid place-items-center text-wine shadow-[0_8px_18px_-8px_rgba(61,47,38,.55)]">
-          <div className="absolute inset-1 md:inset-1.5 rounded-full border border-wine/25" />
-          <ProgramIcon title={s.title} />
-          <span className="absolute -bottom-1.5 md:-bottom-2 left-1/2 -ml-2.5 md:-ml-3 bg-wine text-lace rounded-full w-5 h-5 md:w-6 md:h-6 grid place-items-center font-serif text-[11px] md:text-[13px] font-semibold leading-none">{i + 1}</span>
-        </motion.div>
-      </div>
+const PROGRAM_HIGHLIGHTS = [
+  {
+    time: "4:00 PM",
+    title: "The Ceremony",
+    detail: "An intimate ceremony with our families, entourage and a few honoured guests. You’re warmly welcome to witness our vows, with open seating around the reserved rows.",
+  },
+  {
+    time: "5:30 PM",
+    title: "Welcome Toasts & Snacks",
+    detail: "Join us from 5:30 PM for toasts, snacks, refreshments, photo moments and little activities at the majlis outside the hall. We’ll come find you for hugs, laughs and pictures.",
+  },
+  {
+    time: "6:30 PM",
+    title: "The Reception",
+    detail: "Dinner, our film on the big screen, games, giveaways and dancing until the end. We can’t wait to celebrate with you.",
+  },
+];
 
-      {/* the card — overlaps the medallion's edge on phones so the text column stays wide */}
-      <motion.div {...rise(0, 26)} className="relative flex-1 min-w-0 -ml-3 md:ml-0 md:flex-none md:w-[calc(50%-4rem)]">
-        <div style={{ transform: `rotate(${tilt}deg)` }} className="relative [filter:drop-shadow(0_14px_14px_rgba(61,47,38,.2))]">
-          {/* time tag like a luggage label — a sibling of the torn-edge card (not inside it), so the card's clip-path can never slice it */}
-          <div className="absolute z-[2] -top-4 left-4 md:left-6 w-max max-w-[calc(100%-2rem)] bg-wine text-lace pl-3.5 pr-6 py-1 [clip-path:polygon(0_0,calc(100%-11px)_0,100%_50%,calc(100%-11px)_100%,0_100%)]">
-            <span className="block font-serif font-semibold uppercase text-tag tracking-[0.08em] leading-tight lining-nums">{s.time}</span>
+/** One fixed, six-stop timeline; the mobile view fits without a horizontal swipe. */
+export function Schedule() {
+  const reduceMotion = useReducedMotion();
+  return (
+    <section id="program" className="sec">
+      <Title title="Program" />
+      <div className="col-wide mt-head">
+        <div role="list" aria-label="Wedding program timeline" className="relative grid grid-cols-6 pt-1">
+          <div aria-hidden className="pointer-events-none absolute left-[8.333%] right-[8.333%] top-[5.0625rem] border-t border-dashed border-wine/45 sm:top-[5.25rem]" />
+          {!reduceMotion && (
+            <motion.span
+              aria-hidden="true"
+              initial={{ left: "8.333%" }}
+              whileInView={{ left: "91.667%" }}
+              viewport={{ once: true, amount: 0.7 }}
+              transition={{ duration: 2.5, ease: EASE_OUT, delay: 0.2 }}
+              className="pointer-events-none absolute top-[calc(5.0625rem-3px)] z-0 -ml-[3px] h-1.5 w-1.5 rounded-full bg-[#B99D7D] shadow-[0_0_10px_3px_rgba(110,31,46,.35)] sm:top-[calc(5.25rem-3px)]"
+            />
+          )}
+          {PROGRAM_STOPS.map((stop, i) => {
+            const titleAbove = i % 2 === 0;
+            return (
+              <motion.div
+                role="listitem"
+                key={stop.time}
+                aria-label={`${stop.time} — ${stop.title}`}
+                initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.35 }}
+                transition={{ duration: 0.4, ease: EASE_OUT, delay: reduceMotion ? 0 : i * 0.035 }}
+                className="relative z-[1] grid min-w-0 grid-rows-[60px_34px_20px_60px] text-center sm:grid-rows-[60px_40px_20px_60px]"
+              >
+                <div className="flex min-w-0 items-end justify-center px-0.5 pb-1">
+                  {titleAbove && <h3 className="break-words font-serif text-[10px] leading-[1.05] text-mocha text-balance sm:text-xs md:text-sm">{stop.title}</h3>}
+                </div>
+                <div className="flex items-center justify-center">
+                  <span aria-hidden="true" className="grid h-8 w-8 place-items-center rounded-full border border-wine/20 bg-[#F8F2E7] text-wine shadow-[0_2px_6px_rgba(61,47,38,.12)] [&>svg]:!h-5 [&>svg]:!w-5 sm:h-10 sm:w-10 sm:[&>svg]:!h-6 sm:[&>svg]:!w-6">
+                    <ProgramIcon title={stop.title} />
+                  </span>
+                </div>
+                <time className="whitespace-nowrap font-serif text-[9px] font-semibold tabular-nums text-wine sm:text-xs">{stop.time}</time>
+                <div className="min-w-0 px-0.5 pt-1">
+                  {!titleAbove && <h3 className="break-words font-serif text-[10px] leading-[1.05] text-mocha text-balance sm:text-xs md:text-sm">{stop.title}</h3>}
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+
+        <div className="mt-5 sm:mt-7">
+          <div className="mb-3 flex items-center justify-center gap-2.5 sm:mb-4">
+            <span aria-hidden="true" className="h-px w-7 bg-gradient-to-r from-transparent to-wine/45 sm:w-10" />
+            <motion.span aria-hidden="true" className="text-sm text-wine/65" animate={reduceMotion ? undefined : { rotate: [0, 90, 180, 270, 360] }} transition={{ duration: 18, repeat: Infinity, ease: "linear" }}>✦</motion.span>
+            <p className="text-center font-serif text-sm italic text-wine/80 sm:text-base">A little more about the day</p>
+            <motion.span aria-hidden="true" className="text-sm text-wine/65" animate={reduceMotion ? undefined : { rotate: [360, 270, 180, 90, 0] }} transition={{ duration: 18, repeat: Infinity, ease: "linear" }}>✦</motion.span>
+            <span aria-hidden="true" className="h-px w-7 bg-gradient-to-l from-transparent to-wine/45 sm:w-10" />
           </div>
-          <div className="paper-card deckle relative px-4 md:px-7 pt-8 pb-5 md:pt-9 md:pb-7">
-            <div className="absolute inset-2 border border-taupe/25 pointer-events-none" />
-            <h3 className="font-serif text-h3 text-ink text-balance">{s.title}</h3>
-            <p className="font-serif italic text-body text-mocha mt-2"><Highlighted text={s.detail} on={seen} /></p>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
+            {PROGRAM_HIGHLIGHTS.map((moment, i) => (
+              <motion.article
+                key={moment.title}
+                initial={reduceMotion ? false : { opacity: 0, y: 18 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.18 }}
+                transition={{ duration: 0.55, ease: EASE_OUT, delay: reduceMotion ? 0 : i * 0.12 }}
+                whileHover={reduceMotion ? undefined : { y: -4 }}
+                className={`paper-card relative overflow-hidden rounded-xl border border-taupe/20 p-3 shadow-[0_2px_3px_rgba(61,47,38,.1),0_14px_24px_-18px_rgba(61,47,38,.4)] sm:p-4 ${i === 2 ? "col-span-2 md:col-span-1" : ""}`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span style={{ clipPath: "polygon(0 0, calc(100% - 8px) 0, 100% 50%, calc(100% - 8px) 100%, 0 100%)" }} className="inline-flex bg-wine py-1 pl-2.5 pr-4 font-serif text-[10px] font-semibold tabular-nums text-lace sm:text-xs">{moment.time}</span>
+                  <motion.span
+                    aria-hidden="true"
+                    animate={reduceMotion ? undefined : { rotate: [0, 3, 0, -3, 0] }}
+                    transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: i * 0.35 }}
+                    className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full border-2 border-[#F8F2E7] bg-[#EFE3D4] text-wine shadow-[0_2px_6px_rgba(61,47,38,.14)] [&>svg]:!h-5 [&>svg]:!w-5"
+                  >
+                    <ProgramIcon title={moment.title} />
+                    <span className="absolute -bottom-1 -right-1 grid h-4 w-4 place-items-center rounded-full border border-[#F8F2E7] bg-wine font-serif text-[8px] leading-none text-lace">{i + 1}</span>
+                  </motion.span>
+                </div>
+                <h3 className="relative mt-2 pr-1 font-serif text-sm leading-tight text-mocha sm:text-base">{moment.title}</h3>
+                <p className="mt-2 font-serif text-xs leading-[1.35] text-mocha/85 sm:text-sm">{moment.detail}</p>
+              </motion.article>
+            ))}
           </div>
         </div>
-      </motion.div>
-    </div>
-  );
-}
-
-export function Schedule({ items }: { items: ScheduleItem[] }) {
-  const sorted = [...items].sort((a, b) => a.order - b.order);
-  const ref = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start 75%", "end 60%"] });
-  const draw = useSpring(scrollYProgress, { stiffness: 80, damping: 20 });
-  return (
-    <section id="day" className="sec">
-      <Title kicker="Order of the Day" title="The Day" />
-      <Reveal className="text-center mt-6 md:mt-8">
-        <p className="inline-block font-serif text-fine md:text-body text-ink bg-[#FBF6EE] border border-wine/30 rounded-[1.75rem] md:rounded-full px-5 md:px-6 py-2 shadow-sm text-balance">
-          Everyone is welcome from <b className="text-wine lining-nums">5:00 PM</b> until the last dance
-        </p>
-      </Reveal>
-      <div ref={ref} className="relative col-wide mt-head">
-        {/* the journey path — draws itself as you scroll (a drawing effect only: it doesn't touch the layout) */}
-        <svg aria-hidden className="absolute left-[10px] md:left-1/2 md:-translate-x-1/2 top-0 h-full w-8 md:w-40 overflow-visible" viewBox="0 0 100 1000" preserveAspectRatio="none">
-          <defs>
-            <mask id="journey-mask" maskUnits="userSpaceOnUse" x="-50" y="0" width="200" height="1000">
-              <motion.path d="M50 0 C95 120 5 220 50 333 C95 450 5 550 50 666 C95 780 5 880 50 1000" stroke="#fff" strokeWidth="30" fill="none" style={{ pathLength: draw }} />
-            </mask>
-          </defs>
-          <path d="M50 0 C95 120 5 220 50 333 C95 450 5 550 50 666 C95 780 5 880 50 1000" stroke="#6E1F2E" strokeOpacity=".12" strokeWidth="2" fill="none" vectorEffect="non-scaling-stroke" strokeDasharray="2 7" />
-          <path d="M50 0 C95 120 5 220 50 333 C95 450 5 550 50 666 C95 780 5 880 50 1000" stroke="#6E1F2E" strokeOpacity=".7" strokeWidth="2.2" fill="none" vectorEffect="non-scaling-stroke" strokeDasharray="3 8" strokeLinecap="round" mask="url(#journey-mask)" />
-        </svg>
-        {sorted.map((s, i) => <ProgramStop key={s.id} s={s} i={i} />)}
-        <Reveal className="relative text-center">
-          <span className="script text-wine text-script-sm text-balance">…and happily ever after</span>
-        </Reveal>
       </div>
     </section>
   );
@@ -325,23 +435,26 @@ export function Venue({ info }: { info: WeddingInfo }) {
   return (
     <section id="venue" className="sec">
       <Title kicker="Where" title="The Venue" />
-      <div className="col-wide grid md:grid-cols-[1fr_1.3fr] gap-8 md:gap-14 mt-head items-center">
+      <div className="col-wide mt-head grid items-center gap-6 md:grid-cols-[.95fr_1.05fr] md:gap-10">
         <Reveal className="text-center md:text-left">
           <h3 className="caps text-mocha text-display">{info.venue_name}</h3>
           <p className="font-serif italic text-taupe text-body mt-3">{info.venue_address}</p>
           <p className="font-serif text-mocha text-body mt-4">{longDate(info.date)}</p>
-          <a href={info.venue_map_link} target="_blank" rel="noreferrer" className="micro inline-block mt-8 text-lace bg-wine rounded-full px-8 py-4 hover:bg-mocha transition-colors">Get Directions</a>
+          <a href={info.venue_map_link} target="_blank" rel="noreferrer" className="micro inline-flex items-center gap-2 mt-6 text-lace bg-wine rounded-full px-7 py-3.5 shadow-[0_8px_20px_-8px_rgba(110,31,46,.55)] hover:bg-mocha transition-colors">
+            Get Directions <span aria-hidden="true">↗</span>
+          </a>
         </Reveal>
-        <Reveal delay={0.1}>
-          <Tilt max={5}><div className="relative paper-card p-4 md:p-8 shadow-[0_2px_3px_rgba(61,47,38,.15),0_30px_60px_-30px_rgba(61,47,38,.55)]">
-            {/* lace border across the top and bottom edges, like the letter */}
-            <div aria-hidden className="lace-trim absolute z-[6] -top-3 md:-top-4 -inset-x-1" style={{ transform: "scaleY(-1)" }} />
-            <div aria-hidden className="lace-trim lace-trim-bottom absolute z-[6] -bottom-3 md:-bottom-4 -inset-x-1" />
-            <Corners className="w-14 h-14 md:w-20 md:h-20" inset="0" />
-            <div className="relative aspect-[4/3] overflow-hidden border border-taupe/30">
-              <iframe title="Venue map" src={info.venue_map_embed} className="absolute inset-0 w-full h-full sepia-[.35] saturate-[.7]" loading="lazy" />
+        <Reveal delay={0.1} className="mx-auto w-full max-w-[390px] sm:max-w-[420px] md:max-w-[520px]">
+          <Tilt max={3}>
+            <div className="relative paper-card p-2 sm:p-3 shadow-[0_2px_3px_rgba(61,47,38,.15),0_18px_36px_-24px_rgba(61,47,38,.5)]">
+              {/* Smaller lace edges keep the map framed without covering much of it. */}
+              <div aria-hidden className="lace-trim absolute z-[6] -top-2 md:-top-3 -inset-x-1" style={{ transform: "scaleY(-1)", height: "clamp(30px, 5vw, 48px)" }} />
+              <div aria-hidden className="lace-trim lace-trim-bottom absolute z-[6] -bottom-2 md:-bottom-3 -inset-x-1" style={{ height: "clamp(30px, 5vw, 48px)" }} />
+              <Corners className="w-10 h-10 md:w-14 md:h-14" inset="0" />
+              <VenueMapPreview />
+              <p className="micro mt-2 text-center text-taupe/80">Damistan map preview · live directions above</p>
             </div>
-          </div></Tilt>
+          </Tilt>
         </Reveal>
       </div>
     </section>
@@ -349,14 +462,14 @@ export function Venue({ info }: { info: WeddingInfo }) {
 }
 
 /* ─────────── ATTIRE ─────────── */
-export function DressCode({ attire }: { attire: Attire[] }) {
+export function DressCode({ attire, info }: { attire: Attire[]; info: WeddingInfo }) {
   const sorted = [...attire].sort((a, b) => a.order - b.order);
   const guests = sorted.find((a) => a.group === "guests");
   const reserved = sorted.filter((a) => a.reserved);
   return (
     <section id="dress" className="sec">
       <Title kicker="What to Wear" title="Attire" />
-      <AttireGuide guests={guests} />
+      <AttireGuide guests={guests} couple={`${info.bride} & ${info.groom}`} date={longDate(info.date)} reserved={reserved} />
       <div className="col-wide mt-10 md:mt-12">
         <p className="micro text-taupe text-center mb-6 text-balance">Reserved for the couple, family &amp; entourage — kindly avoid</p>
         {/* two columns on phones (the odd last card spans both, so there's no orphan), three rows of two on wide screens */}
@@ -378,9 +491,10 @@ export function DressCode({ attire }: { attire: Attire[] }) {
 
 /* ─────────── ENTOURAGE ─────────── */
 export function Entourage({ people }: { people: EntourageMember[] }) {
+  const reduceMotion = useReducedMotion();
   const sorted = [...people].sort((a, b) => a.order - b.order);
   const by = (r: EntourageMember["role"]) => sorted.filter((p) => p.role === r);
-  // two columns everywhere — his side left, her side right — so neither family reads as "first"
+  // Two columns everywhere — his side left, her side right — so neither family reads as "first".
   const bride = by("bride_family"), groom = by("groom_family");
   const sponsors = by("sponsor");
   const bestMan = by("best_man"), maidOfHonor = by("maid_of_honor");
@@ -390,81 +504,138 @@ export function Entourage({ people }: { people: EntourageMember[] }) {
   const others = by("other");
   const half = Math.ceil(sponsors.length / 2);
   const honouredHalf = Math.ceil(honoured.length / 2);
-  const Person = ({ p }: { p: EntourageMember }) => (
-    <li><p className="font-serif text-lead md:text-h3 text-ink text-balance">{p.name}</p>{p.title && <p className="font-serif italic text-taupe text-tag md:text-fine">{p.title}</p>}</li>
+  const Person = ({ p, index }: { p: EntourageMember; index: number }) => (
+    <motion.li
+      initial={reduceMotion ? false : { opacity: 0, y: 7 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.75 }}
+      transition={{ duration: 0.45, ease: EASE_OUT, delay: reduceMotion ? 0 : Math.min(index, 5) * 0.055 }}
+      whileHover={reduceMotion ? undefined : { y: -1 }}
+      className="group"
+    >
+      <p className="font-serif text-[16px] leading-tight text-ink text-balance transition-colors duration-300 group-hover:text-wine sm:text-[18px] md:text-[19px]">{p.name}</p>
+      {p.title && <p className="mt-0.5 font-serif text-[12px] leading-snug italic text-taupe sm:text-[13px] md:text-[14px]">{p.title}</p>}
+    </motion.li>
   );
   const List = ({ list, className = "" }: { list: EntourageMember[]; className?: string }) => (
-    <ul className={`space-y-3 ${className}`}>{list.map((p) => <Person key={p.id} p={p} />)}</ul>
+    <ul className={`space-y-2 ${className}`}>{list.map((p, index) => <Person key={p.id} p={p} index={index} />)}</ul>
+  );
+  const GroupLabel = ({ children }: { children: string }) => (
+    <p className="micro mb-2 text-center text-[10px] tracking-[.16em] text-wine sm:mb-2.5 sm:text-[11px]">{children}</p>
   );
   const Divider = () => (
-    <div aria-hidden className="absolute left-1/2 top-0 bottom-0 -translate-x-1/2 flex flex-col items-center">
-      <div className="flex-1 w-px bg-taupe/35" /><Paisley className="w-8 h-12 md:w-10 md:h-14 text-wine/70 my-3" /><div className="flex-1 w-px bg-taupe/35" />
+    <div aria-hidden className="pointer-events-none absolute left-1/2 top-0 bottom-0 z-0 flex -translate-x-1/2 flex-col items-center">
+      <motion.div
+        initial={reduceMotion ? false : { opacity: 0, scaleY: 0.2 }}
+        whileInView={{ opacity: 1, scaleY: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.65, ease: EASE_OUT }}
+        className="w-px flex-1 origin-top bg-taupe/30"
+      />
+      <motion.div
+        initial={reduceMotion ? false : { opacity: 0, scale: 0.8 }}
+        whileInView={{ opacity: 1, scale: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.55, ease: EASE_OUT, delay: reduceMotion ? 0 : 0.12 }}
+        className="my-1.5"
+      >
+        <Paisley className="h-9 w-7 text-wine/65 md:h-11 md:w-8" />
+      </motion.div>
+      <motion.div
+        initial={reduceMotion ? false : { opacity: 0, scaleY: 0.2 }}
+        whileInView={{ opacity: 1, scaleY: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.65, ease: EASE_OUT, delay: reduceMotion ? 0 : 0.08 }}
+        className="w-px flex-1 origin-bottom bg-taupe/30"
+      />
     </div>
   );
   return (
-    <section id="family" className="sec">
-      <Title kicker="The Hearts Behind Us" title="Our Families" />
+    <section id="family" className="sec !py-6 md:!py-12">
+      <Reveal className="text-center">
+        <p className="micro text-[10px] tracking-[.2em] text-taupe sm:text-[11px]">The Hearts Behind Us</p>
+        <h2 className="script mt-1 text-[clamp(1.9rem,5.2vw,2.75rem)] leading-none text-wine text-balance">Our Families</h2>
+        <Flourish className="mx-auto mt-1 w-36 text-taupe/70 sm:w-44" />
+      </Reveal>
       {(bride.length > 0 || groom.length > 0) && (
-        <Reveal className="col-wide mt-head">
-          <p className="font-serif italic text-mocha text-lead text-center text-balance">With grateful hearts and the blessing of our parents</p>
-          <div className="relative grid grid-cols-2 gap-8 md:gap-0 mt-8 text-center">
+        <Reveal className="col-wide mt-5 sm:mt-6">
+          <p className="font-serif text-center text-[15px] leading-snug italic text-mocha text-balance sm:text-[17px] md:text-lg">With grateful hearts and the blessing of our parents</p>
+          <div className="relative mt-5 grid grid-cols-2 gap-x-4 gap-y-4 text-center sm:mt-6 md:mt-5 md:gap-0">
             <Divider />
-            <div className="px-2 md:px-12">
-              <p className="micro text-wine mb-4">{entourageHeading("groom_family")}</p>
+            <div className="min-w-0 px-1 sm:px-3 md:px-10">
+              <GroupLabel>{entourageHeading("groom_family")}</GroupLabel>
               <List list={groom} />
             </div>
-            <div className="px-2 md:px-12">
-              <p className="micro text-wine mb-4">{entourageHeading("bride_family")}</p>
+            <div className="min-w-0 px-1 sm:px-3 md:px-10">
+              <GroupLabel>{entourageHeading("bride_family")}</GroupLabel>
               <List list={bride} />
             </div>
           </div>
         </Reveal>
       )}
-      <Flourish className="w-48 md:w-56 mx-auto mt-10 md:mt-12 text-taupe/70" />
-      <p className="micro text-taupe text-center mt-5">Standing with us</p>
-      <div className="col-wide mt-8 text-center space-y-10 md:space-y-12">
+      <Flourish className="mx-auto mt-6 w-40 text-taupe/65 sm:mt-7 md:mt-8 md:w-48" />
+      <motion.div
+        initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.7 }}
+        transition={{ duration: 0.65, ease: EASE_OUT }}
+        className="mt-3 text-center sm:mt-4"
+      >
+        <p className="micro text-[10px] tracking-[.2em] text-taupe sm:text-[11px]">Standing with us</p>
+        <h3 className="script mt-0.5 text-[clamp(1.9rem,4.8vw,2.65rem)] leading-none text-wine">Entourage</h3>
+        <div aria-hidden className="mt-2 flex items-center justify-center gap-2.5 text-wine/60">
+          <span className="h-px w-7 bg-taupe/35 sm:w-9" />
+          <motion.span
+            animate={reduceMotion ? undefined : { opacity: [0.45, 1, 0.45], rotate: [0, 24, 0], scale: [0.9, 1.08, 0.9] }}
+            transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
+            className="text-[11px]"
+          >✦</motion.span>
+          <span className="h-px w-7 bg-taupe/35 sm:w-9" />
+        </div>
+      </motion.div>
+      <div className="col-wide mt-5 space-y-6 text-center sm:mt-6 sm:space-y-7">
         {sponsors.length > 0 && (
           <Reveal>
-            <p className="micro text-wine mb-4 text-center">{entourageHeading("sponsor")}</p>
+            <GroupLabel>{entourageHeading("sponsor")}</GroupLabel>
             {sponsors.length === 1 ? (
-              <List list={sponsors} className="max-w-sm mx-auto" />
+              <List list={sponsors} className="mx-auto max-w-sm" />
             ) : (
-              <div className="relative grid grid-cols-2 gap-8 md:gap-0">
+              <div className="relative grid grid-cols-2 gap-x-4 gap-y-3 md:gap-0">
                 <Divider />
-                <div className="px-2 md:px-10"><List list={sponsors.slice(0, half)} /></div>
-                <div className="px-2 md:px-10"><List list={sponsors.slice(half)} /></div>
+                <div className="min-w-0 px-1 sm:px-3 md:px-10"><List list={sponsors.slice(0, half)} /></div>
+                <div className="min-w-0 px-1 sm:px-3 md:px-10"><List list={sponsors.slice(half)} /></div>
               </div>
             )}
           </Reveal>
         )}
         {(bestMan.length > 0 || maidOfHonor.length > 0 || groomsmen.length > 0 || bridesmaids.length > 0) && (
           <Reveal>
-            <div className="relative grid grid-cols-2 gap-8 md:gap-0">
+            <div className="relative grid grid-cols-2 gap-x-4 gap-y-4 md:gap-0">
               <Divider />
-              <div className="px-2 md:px-10 space-y-10">
+              <div className="min-w-0 space-y-6 px-1 sm:px-3 md:space-y-7 md:px-10">
                 {bestMan.length > 0 && (
                   <div>
-                    <p className="micro text-wine mb-4">{entourageHeading("best_man")}</p>
+                    <GroupLabel>{entourageHeading("best_man")}</GroupLabel>
                     <List list={bestMan} />
                   </div>
                 )}
                 {groomsmen.length > 0 && (
                   <div>
-                    <p className="micro text-wine mb-4">{entourageHeading("groomsman")}</p>
+                    <GroupLabel>{entourageHeading("groomsman")}</GroupLabel>
                     <List list={groomsmen} />
                   </div>
                 )}
               </div>
-              <div className="px-2 md:px-10 space-y-10">
+              <div className="min-w-0 space-y-6 px-1 sm:px-3 md:space-y-7 md:px-10">
                 {maidOfHonor.length > 0 && (
                   <div>
-                    <p className="micro text-wine mb-4">{entourageHeading("maid_of_honor")}</p>
+                    <GroupLabel>{entourageHeading("maid_of_honor")}</GroupLabel>
                     <List list={maidOfHonor} />
                   </div>
                 )}
                 {bridesmaids.length > 0 && (
                   <div>
-                    <p className="micro text-wine mb-4">{entourageHeading("bridesmaid")}</p>
+                    <GroupLabel>{entourageHeading("bridesmaid")}</GroupLabel>
                     <List list={bridesmaids} />
                   </div>
                 )}
@@ -474,14 +645,14 @@ export function Entourage({ people }: { people: EntourageMember[] }) {
         )}
         {(ringBearer.length > 0 || flowerGirl.length > 0) && (
           <Reveal>
-            <div className="relative grid grid-cols-2 gap-8 md:gap-0">
+            <div className="relative grid grid-cols-2 gap-x-4 gap-y-3 md:gap-0">
               <Divider />
-              <div className="px-2 md:px-10">
-                <p className="micro text-wine mb-4">{entourageHeading("ring_bearer")}</p>
+              <div className="min-w-0 px-1 sm:px-3 md:px-10">
+                <GroupLabel>{entourageHeading("ring_bearer")}</GroupLabel>
                 <List list={ringBearer} />
               </div>
-              <div className="px-2 md:px-10">
-                <p className="micro text-wine mb-4">{entourageHeading("flower_girl")}</p>
+              <div className="min-w-0 px-1 sm:px-3 md:px-10">
+                <GroupLabel>{entourageHeading("flower_girl")}</GroupLabel>
                 <List list={flowerGirl} />
               </div>
             </div>
@@ -489,22 +660,22 @@ export function Entourage({ people }: { people: EntourageMember[] }) {
         )}
         {honoured.length > 0 && (
           <Reveal>
-            <p className="micro text-wine mb-4 text-center">{entourageHeading("honored_guest")}</p>
+            <GroupLabel>{entourageHeading("honored_guest")}</GroupLabel>
             {honoured.length === 1 ? (
-              <List list={honoured} className="max-w-sm mx-auto" />
+              <List list={honoured} className="mx-auto max-w-sm" />
             ) : (
-              <div className="relative grid grid-cols-2 gap-8 md:gap-0 max-w-3xl mx-auto">
+              <div className="relative mx-auto grid max-w-3xl grid-cols-2 gap-x-4 gap-y-3 md:gap-0">
                 <Divider />
-                <div className="px-2 md:px-10"><List list={honoured.slice(0, honouredHalf)} /></div>
-                <div className="px-2 md:px-10"><List list={honoured.slice(honouredHalf)} /></div>
+                <div className="min-w-0 px-1 sm:px-3 md:px-10"><List list={honoured.slice(0, honouredHalf)} /></div>
+                <div className="min-w-0 px-1 sm:px-3 md:px-10"><List list={honoured.slice(honouredHalf)} /></div>
               </div>
             )}
           </Reveal>
         )}
         {others.length > 0 && (
           <Reveal>
-            <p className="micro text-wine mb-4 text-center">{entourageHeading("other")}</p>
-            <List list={others} className="max-w-sm mx-auto" />
+            <GroupLabel>{entourageHeading("other")}</GroupLabel>
+            <List list={others} className="mx-auto max-w-sm" />
           </Reveal>
         )}
       </div>
@@ -519,32 +690,101 @@ export function Entourage({ people }: { people: EntourageMember[] }) {
  * yet — fill the handle in and the whole section appears, no deploy needed.
  */
 export function FollowAndTag({ info }: { info: WeddingInfo }) {
+  const reduceMotion = useReducedMotion();
   const handle = (info.instagram || "").replace(/^@/, "").trim();
   if (!handle) return null;
   const tags = (info.hashtags || []).filter(Boolean);
+  const photos = (info.gallery || []).filter(Boolean);
+  const firstPhoto = info.cover_photo || photos[0] || BAKED_COVER;
+  const secondPhoto = photos.find((photo) => photo !== firstPhoto) || "/img/banners-js.png";
+  const thirdPhoto = photos.find((photo) => photo !== firstPhoto && photo !== secondPhoto);
+  const tiles: { src?: string; label: string; note?: string }[] = [
+    { src: firstPhoto, label: "our story so far" },
+    { src: secondPhoto, label: "counting down" },
+    thirdPhoto ? { src: thirdPhoto, label: "little moments" } : { label: "your turn", note: tags[0] || "11.11.2026" },
+  ];
+  const note = info.instagram_note?.trim() || "Follow for the countdown, behind-the-scenes peeks and all the wedding-day joy.";
   return (
     <section className="sec-sm">
       <Reveal className="col text-center">
-        <p className="micro text-taupe">Keep in touch</p>
+        <p className="micro text-taupe">The happy bits before “I do”</p>
         <h2 className="script text-wine text-script mt-2 text-balance">Follow our story</h2>
-        <Flourish className="w-44 md:w-56 mx-auto mt-2 text-taupe/70" />
-        <p className="font-serif italic text-body text-mocha mt-6 text-balance max-w-2xl mx-auto">
-          {info.instagram_note?.trim() || "Follow along for the countdown, the behind-the-scenes and our favourite moments — then tag your photos on the day so we can keep them forever."}
+        <Flourish className="w-44 mx-auto mt-2 text-taupe/70" />
+        <p className="font-serif italic text-body text-mocha mt-4 max-w-xl mx-auto text-balance line-clamp-3">
+          {note}
         </p>
+
+        <div className="mx-auto mt-6 max-w-xl rounded-[22px] border border-taupe/25 bg-[#FCFAF6] p-3 md:p-4 shadow-[0_12px_30px_-18px_rgba(61,47,38,.45)]">
+          <div className="flex items-center gap-2.5 px-1">
+            <div className="w-9 h-9 rounded-full bg-[linear-gradient(135deg,#D9B56D,#9B4A67,#66508B)] p-[2px] shrink-0">
+              <div className="w-full h-full rounded-full bg-[#FBF8F2] grid place-items-center script text-wine text-[17px] leading-none">J&amp;S</div>
+            </div>
+            <div className="min-w-0 flex-1 text-left">
+              <p className="micro text-mocha leading-tight truncate">@{handle}</p>
+              <p className="font-serif italic text-taupe text-sm mt-0.5 truncate">countdown to 11.11.2026</p>
+            </div>
+            <svg viewBox="0 0 24 24" aria-hidden fill="none" className="w-5 h-5 shrink-0 text-wine" stroke="currentColor" strokeWidth="1.6">
+              <rect x="3.25" y="3.25" width="17.5" height="17.5" rx="5" />
+              <circle cx="12" cy="12" r="4" />
+              <circle cx="17.7" cy="6.4" r=".9" fill="currentColor" stroke="none" />
+            </svg>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 mt-3">
+            {tiles.map((tile, index) => (
+              <motion.figure key={tile.label} initial={reduceMotion ? false : { opacity: 0, y: 8 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.8 }}
+                transition={{ delay: index * 0.08, duration: 0.4 }} className="min-w-0">
+                {tile.src ? (
+                  <div className="aspect-square overflow-hidden rounded-lg bg-oat">
+                    <img src={tile.src} alt="" loading="lazy" draggable={false} className="w-full h-full object-cover [filter:sepia(.08)_saturate(.94)] transition-transform duration-500 hover:scale-105" />
+                  </div>
+                ) : (
+                  <div className="aspect-square rounded-lg border border-wine/15 bg-[linear-gradient(145deg,#EFE3D3,#FBF8F2)] flex flex-col items-center justify-center px-2 text-center">
+                    <span aria-hidden className="script text-wine text-[27px] leading-none">♡</span>
+                    <span className="script text-wine text-[19px] leading-none mt-1">your turn</span>
+                    <span className="micro text-taupe text-[9px] mt-2 truncate max-w-full">{tile.note}</span>
+                  </div>
+                )}
+                <figcaption className="font-serif italic text-taupe text-[12px] md:text-sm truncate mt-1.5">{tile.label}</figcaption>
+              </motion.figure>
+            ))}
+          </div>
+
+          <div className="flex items-center justify-between gap-3 mt-3 px-1">
+            <div className="flex items-center gap-1.5" aria-hidden>
+              <span className="w-2 h-2 rounded-full bg-wine" />
+              <span className="w-1.5 h-1.5 rounded-full bg-taupe/35" />
+              <span className="w-1.5 h-1.5 rounded-full bg-taupe/35" />
+            </div>
+            <p className="micro text-taupe/80 text-right">countdown · behind the scenes · celebration</p>
+          </div>
+        </div>
+
         <a href={`https://instagram.com/${handle}`} target="_blank" rel="noreferrer"
-          className="micro inline-block mt-8 bg-wine text-lace rounded-full px-8 py-4 hover:bg-mocha transition-colors">
-          Follow @{handle} ↗
+          aria-label={`Follow @${handle} on Instagram in a new tab`}
+          className="micro inline-flex items-center justify-center gap-3 mt-5 bg-wine text-lace rounded-full px-6 py-3.5 shadow-[0_8px_20px_-7px_rgba(110,31,46,.48)] hover:bg-mocha hover:-translate-y-0.5 transition-all">
+          <svg viewBox="0 0 24 24" aria-hidden fill="none" className="w-5 h-5 shrink-0" stroke="currentColor" strokeWidth="1.7">
+            <rect x="3.25" y="3.25" width="17.5" height="17.5" rx="5" />
+            <circle cx="12" cy="12" r="4" />
+            <circle cx="17.7" cy="6.4" r=".9" fill="currentColor" stroke="none" />
+          </svg>
+          <span className="flex flex-col items-start leading-tight">
+            <span>Follow @{handle}</span>
+            <span className="font-serif normal-case tracking-normal text-[12px] opacity-85 mt-0.5">for the fun</span>
+          </span>
+          <span aria-hidden className="text-lg leading-none">↗</span>
         </a>
+        <p className="micro text-taupe/75 mt-2">Tag your photos and help us keep the joy.</p>
+
         {tags.length > 0 && (
-          <div className="mt-10">
-            <p className="micro text-taupe">Tag your moments with</p>
-            <div className="flex flex-wrap justify-center gap-3 mt-4">
-              {tags.map((t) => (
-                <a key={t} href={`https://instagram.com/explore/tags/${t.replace("#", "")}`} target="_blank" rel="noreferrer"
-                  className="font-serif text-lead text-wine border border-wine/30 rounded-full px-5 py-2 hover:bg-wine hover:text-lace transition-colors">{t}</a>
+          <div className="mt-5">
+            <div className="flex flex-wrap justify-center gap-2">
+              {tags.map((tag) => (
+                <a key={tag} href={`https://instagram.com/explore/tags/${tag.replace("#", "")}`} target="_blank" rel="noreferrer"
+                  className="font-serif text-fine text-wine border border-wine/25 rounded-full px-3.5 py-1 hover:bg-wine hover:text-lace transition-colors">{tag}</a>
               ))}
             </div>
-            <p className="micro text-taupe/70 mt-4">Tap a tag to see everyone&rsquo;s photos — we&rsquo;ll be looking for yours.</p>
+            <p className="micro text-taupe/70 mt-2">Tap a tag to see everyone’s photos.</p>
           </div>
         )}
       </Reveal>
@@ -612,7 +852,7 @@ export function Rsvp({ info, invite, code, onReplied, schedule, dressNote }: { i
       photo: info.cover_photo || info.gallery[0] || BAKED_COVER,
     });
   // the wax seal pops half above the card — leave it its own room so it never sits on the text (mobile)
-  const cardGap = "col mt-20 md:mt-24";
+  const cardGap = "col mt-16 md:mt-20";
 
   /* ── a burned link: greet the guest, seal the reply ── */
   const reply = invite.reply;
@@ -704,7 +944,7 @@ export function Rsvp({ info, invite, code, onReplied, schedule, dressNote }: { i
           </motion.div>
           <div className="relative">
             <LaceEdge color="#FCFAF5" flip />
-          <div className="paper-card relative px-5 md:px-14 pt-10 pb-12 md:pt-14 md:pb-16 shadow-[0_2px_3px_rgba(61,47,38,.15),0_40px_80px_-40px_rgba(61,47,38,.55)] min-h-[560px]">
+          <div className="paper-card relative px-5 md:px-14 pt-10 pb-10 md:pt-14 md:pb-14 shadow-[0_2px_3px_rgba(61,47,38,.15),0_40px_80px_-40px_rgba(61,47,38,.55)] min-h-[520px]">
             <div className="absolute inset-3 border border-taupe/30 pointer-events-none" />
             <Corners className="w-16 h-16 md:w-28 md:h-28" inset="0.25rem" />
             <AnimatePresence mode="wait">
@@ -719,30 +959,30 @@ export function Rsvp({ info, invite, code, onReplied, schedule, dressNote }: { i
                   {f.attending === "yes" && <KeepsakeOffer onBuild={() => makeKeepsake(f.name, f.plus_one || undefined)} />}
                 </motion.div>
               ) : (
-                <motion.form key="form" onSubmit={submit} exit={{ opacity: 0 }} className="relative space-y-6 text-center">
+                <motion.form key="form" onSubmit={submit} exit={{ opacity: 0 }} className="relative space-y-4 text-center sm:space-y-5">
                   <p className="micro text-moss tracking-[0.18em]">Invitation{household ? ` — ${household}` : ""} · up to {seatCap} seat{seatCap > 1 ? "s" : ""}</p>
                   <p className="font-serif italic text-body text-mocha text-balance">Fill this in now — it takes less than a minute.</p>
-                  <input className="field text-center" placeholder="Your full name" required value={f.name} onChange={set("name")} maxLength={120} />
-                  <input className="field text-center" placeholder="WhatsApp number" type="tel" value={f.phone} onChange={set("phone")} maxLength={40} />
-                  <div className="flex flex-wrap justify-center gap-3 pt-2">
+                  <input className="field !py-2 text-center" placeholder="Your full name" required value={f.name} onChange={set("name")} maxLength={120} />
+                  <input className="field !py-2 text-center" placeholder="WhatsApp number" type="tel" value={f.phone} onChange={set("phone")} maxLength={40} />
+                  <div className="flex flex-wrap justify-center gap-2 pt-1 sm:gap-3 sm:pt-2">
                     <button type="button" className={choice(f.attending === "yes")} onClick={() => setF({ ...f, attending: "yes" })}>Joyfully accepts</button>
                     <button type="button" className={choice(f.attending === "no")} onClick={() => setF({ ...f, attending: "no" })}>Regretfully declines</button>
                   </div>
                   {f.attending === "yes" && (
-                    <div className="flex justify-center items-center gap-3">
-                      <span className="font-serif italic text-taupe text-body mr-2">Number of guests</span>
+                    <div className="flex justify-center items-center gap-2 sm:gap-3">
+                      <span className="font-serif italic text-taupe text-body mr-1">Number of guests</span>
                       {[1, 2].map((n) => <button key={n} type="button" disabled={seatCap < n} className={choice(f.pax === n) + (seatCap < n ? " opacity-35 pointer-events-none" : "")} onClick={() => setF({ ...f, pax: n })}>{n}</button>)}
                     </div>
                   )}
                   {f.attending === "yes" && f.pax === 2 && (
-                    <div className="space-y-2">
-                      <input className="field text-center" placeholder="Name of your plus-one" required value={f.plus_one} onChange={set("plus_one")} maxLength={120} />
+                    <div className="space-y-1.5">
+                      <input className="field !py-2 text-center" placeholder="Name of your plus-one" required value={f.plus_one} onChange={set("plus_one")} maxLength={120} />
                       <p className="micro text-taupe tracking-[0.14em]">Two seats always wait for the couple&apos;s personal confirmation</p>
                     </div>
                   )}
-                  <input className="field text-center" placeholder="Dietary requirements" value={f.dietary} onChange={set("dietary")} maxLength={200} />
-                  <input className="field text-center" placeholder="A song to get you dancing" value={f.song_request} onChange={set("song_request")} maxLength={200} />
-                  <textarea className="field text-center resize-none" rows={2} placeholder="A little note for the couple" value={f.message} onChange={set("message")} maxLength={1000} />
+                  <input className="field !py-2 text-center" placeholder="Dietary requirements" value={f.dietary} onChange={set("dietary")} maxLength={200} />
+                  <input className="field !py-2 text-center" placeholder="A song to get you dancing" value={f.song_request} onChange={set("song_request")} maxLength={200} />
+                  <textarea className="field !py-2 text-center resize-none" rows={2} placeholder="A little note for the couple" value={f.message} onChange={set("message")} maxLength={1000} />
                   {err && <p className="text-wine text-fine text-balance">{err}</p>}
                   <motion.button disabled={state === "sending"} whileTap={{ scale: 0.97 }}
                     className="micro bg-wine text-lace rounded-full px-12 py-4 shadow-[0_8px_20px_-6px_rgba(110,31,46,.6)] hover:bg-mocha transition-colors disabled:opacity-50">

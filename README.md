@@ -8,7 +8,7 @@ A digital art piece plus a wedding binder, in one Next.js app.
 | **The invitation preview** | `/preview` | The one-page editorial site in the Midnight Botanical style as the world may see it: loader, hero + countdown, story chapters, 11.11, dress code, entourage, gallery, moments, hashtags. **No venue, no programme, no reply card, no FAQ.** Safe to post anywhere. |
 | **An invitation** | `/JS-7KQF` | The same site, unsealed for one household: the invitation wording, the pinned programme, the venue + map, the postcard, the RSVP card and the FAQ. This is the link you send. |
 | **RSVP** | `/rsvp` | The code door for guests who lost the link: type the **last 4 characters** of your code (or the whole thing) and you're taken to your own reply card. |
-| **The Binder** | `/admin` | Private admin (password: `ADMIN_PASSWORD`, default `JS2026`). Tabs: Overview · Details · Schedule (drag to reorder) · Checklist · Budget · **Invite Codes** · **Guests & RSVP** · Vendors · Attire & Colors · Content · Settings |
+| **The Binder** | `/admin` | Private admin (password: `ADMIN_PASSWORD`, default `JS2026`). Tabs: Overview · Details · Schedule (drag to reorder) · Checklist · Budget · **Invite Codes** · **Guests & RSVP** · **Audio Guestbook** · Vendors · Attire & Colors · Content · Settings |
 
 Anything you edit in the Binder shows up on the public site.
 
@@ -69,46 +69,44 @@ idempotent). The Binder now shows a clear migration error instead of claiming th
 The activity timestamps `sent_at` and `viewed_at` remain optional and can be omitted on older projects.
 
 ### The WhatsApp message
-**copy message** and **send ↗** send the same short letter — the couple's own wording, with four
-things filled in per household:
+**copy message** and **send ↗** send the same letter — the couple's own wording, with the name,
+seat count, wedding date, reply-by date and personal invitation link filled in for each household:
 
 ```
-Shaira & Jeger · 11.11.2026
+*Shaira & Jeger · 11.11.2026*
 
-Dear Ana & Ivan,
+Hi Ana & Ivan! 🥰
 
-We're getting married —
-on Wednesday, 11 November 2026.
+We’re getting married! 💍
+Wednesday, 11 November 2026.
 
-You've been part of our story from the very beginning,
-and the day wouldn't be the same without you there.
+You’ve been part of our lives in your own special way, and we’d be so happy to celebrate this day with you.
 
-Your invitation, made just for you:
+*Here’s an invitation made especially for you:*
 https://your-site/JS-7KQF
 
-Two seats at our table are yours.
+We’ve saved 2 seats just for you.
 
-Inside, you'll find everything —
-our story, the programme, the dress code and the venue.
-You can RSVP right there on the website.
+Everything you need is on the website—our story, the programme, dress code and venue. You can RSVP there too.
 
-Kindly let us know by 25 October.
+Please let us know by 25 October.
 
-We can't wait to celebrate with you. 🤍
+We can’t wait to celebrate with you! ❤️
 
 With love,
 Shaira & Jeger
 ```
 
-* **`Dear …`** is the **Who it's for** column (falling back to the row's name, for invitations made
-  before the column existed). A row with neither is greeted as `Dear friend,`, so a label like
-  `Household 7` never reaches a guest.
-* **`Two seats at our table are yours.`** is the row's **Seats** — one seat reads *A seat at our
-  table is yours.*, and a row with no seats leaves the line out.
+* **The greeting** comes from **Who it's for** (falling back to the row's name). A blank or placeholder
+  label becomes `Hi there!`, so `Household 7` never reaches a guest.
+* **The saved seat count** uses the row's **Seats** and handles singular/plural automatically: `1 seat`
+  or `2 seats`. A row with no seats leaves the sentence out.
 * **The date and the reply-by date** come from **Details** and **Settings → Website & sharing**;
-  empty the reply-by date and that line leaves the message. Nothing about the programme, the venue
-  or the dress code is repeated here — the letter points at the website, which holds all of it
-  behind their code.
+  empty the reply-by date and that line leaves the message. The invitation URL is the guest's own
+  code link, and stays as a plain URL so WhatsApp makes it tappable.
+* **Emoji on Mac** — the message is UTF-8 encoded when the **send ↗** link hands it to WhatsApp.
+  If the WhatsApp app still replaces an emoji with `?`, use **copy message** and paste it directly
+  into WhatsApp; that bypasses the link handoff. Updating WhatsApp/macOS can also help with newer emoji.
 * **Proof before you send** — the **✦ Generate codes** panel prints one real household's letter
   under *The message they receive*, and **Settings → The WhatsApp invitation** keeps the wording in
   view with a note on where to change it.
@@ -124,6 +122,15 @@ Shaira & Jeger
   rather than guessed, and one code answers for exactly one household.
 * Nothing about the venue, the programme or the FAQ is reachable without a code, and a wrong code
   unlocks nothing.
+
+## Anonymous audio guestbook
+The 11.11.2026 dedication opens the letter scroll with the couple’s names, the 1 Corinthians 11:11 verse and the line “A wish made at 11:11 — a prayer answered by God.” Further down, invited guests can leave a short wish, greeting or prayer in the vintage-phone guestbook. Playback and delete/re-record are available before sending; the live timer stops at the **20-second maximum**. The browser asks for microphone permission only when a guest taps the phone. The `/test` demo lets you try the microphone and player, but intentionally never saves demo audio.
+
+Each upload must include an issued invitation code; the server checks it with the same invite gate used by the private site, then discards it. Guests aren't asked for names, and the guestbook stores no name, invite code, transcript or IP address. Clips are uploaded as audio objects to the **private `guestbook-audio` Supabase Storage bucket**; Supabase holds only a random object path, MIME type, file size, duration and timestamp. The couple can listen and delete notes under **The Binder → Audio Guestbook**, which also totals the guestbook's stored audio. Playback uses short-lived signed links returned only to the authenticated binder.
+
+Run the latest `supabase/schema.sql` in the Supabase SQL Editor to create the metadata table and private bucket. Keep `SUPABASE_SERVICE_ROLE_KEY` server-side and configured: there are no public Storage or table policies, and guests only upload through the invitation-validated `/api/guestbook` endpoint. Microphone recording requires HTTPS and browser permission; the browser usually asks on the first tap. If permission was previously denied, the guest must allow it in site settings and reload—websites cannot switch the microphone on themselves. The 512 KB per-clip cap is generous for a 20-second compressed voice note and helps keep storage and egress low.
+
+**Storage recommendation:** Supabase Storage is the best fit here because the site already integrates with Supabase, and private files plus signed playback links avoid public audio URLs. A direct Google Drive integration would still need server-side OAuth/API credentials and carefully managed file permissions. For future guest photos, resize/compress in the browser (WebP or JPEG, with a reasonable maximum dimension) and store the image object in Storage, keeping only its object path and photo metadata in Supabase—not a base64 image blob in a database row.
 
 ## Website settings (tab title, share preview, favicon)
 **Settings → Website & sharing** controls how the site introduces itself, with a live mock of the shared-link card:

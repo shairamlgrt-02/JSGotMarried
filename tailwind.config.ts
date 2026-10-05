@@ -72,13 +72,14 @@ const config: Config = {
        * SECTION RHYTHM — vertical padding between blocks of the letter (phone → desktop).
        *   sec-lg  the invitation     sec  a normal section     sec-sm  connectors (postcard, photos)
        *   head    title → content    stack  gap between stacked cards
+       * Mobile minima are compact so a section can feel like one phone-screen beat where its content allows.
        */
       spacing: {
-        "sec-lg": fluid(64, 92),
-        sec: fluid(44, 66),
-        "sec-sm": fluid(26, 40),
-        head: fluid(32, 46),
-        stack: fluid(28, 44),
+        "sec-lg": fluid(24, 92),
+        sec: fluid(24, 66),
+        "sec-sm": fluid(16, 40),
+        head: fluid(20, 46),
+        stack: fluid(16, 44),
       },
       transitionTimingFunction: { lux: "cubic-bezier(0.76, 0, 0.24, 1)" },
     },

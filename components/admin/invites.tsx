@@ -57,7 +57,7 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
   const [seatDefault, setSeatDefault] = useState(1);
   const [copyAfter, setCopyAfter] = useState(true);
 
-  const couple = info ? `${info.bride} & ${info.groom}` : "Jeger & Shaira";
+  const couple = info ? `${info.bride} & ${info.groom}` : "Shaira & Jeger";
   const dayText = info ? new Date(info.date).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }) : "11.11.2026";
   const tally = useMemo(() => tallyInvites(rows), [rows]);
 
@@ -228,7 +228,8 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
                 <pre className="mt-2 max-h-[20rem] overflow-y-auto whitespace-pre-wrap font-sans text-[12px] leading-[1.65] text-ink/75">{sampleText}</pre>
                 <p className="mt-2 text-[10px] leading-snug text-ink/45">
                   Who it&apos;s for and how many seats come from their row — write a name in the <b>Who it&apos;s for</b> column and every
-                  letter is addressed. The date and the reply-by date are read from the binder.
+                  letter is addressed. The date and the reply-by date are read from the binder. If WhatsApp on your Mac turns an emoji into
+                  a question mark, use <b>copy this text</b> and paste it directly into the chat.
                 </p>
               </div>
             </div>
