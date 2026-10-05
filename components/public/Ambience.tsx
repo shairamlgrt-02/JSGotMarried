@@ -2,7 +2,8 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useEffect, useRef } from "react";
 
-type Petal = { x: number; y: number; z: number; size: number; vx: number; vy: number; rot: number; vr: number; flip: number; vf: number; hue: number };
+type PetalSprite = { canvas: HTMLCanvasElement; extent: number };
+type Petal = { x: number; y: number; z: number; size: number; vx: number; vy: number; rot: number; vr: number; flip: number; vf: number; hue: number; sprite: PetalSprite };
 type Mote = { x: number; y: number; r: number; vx: number; vy: number; tw: number };
 
 /**
@@ -22,14 +23,62 @@ export default function Ambience() {
     const mobile = window.matchMedia("(pointer: coarse)").matches;
     let petals: Petal[] = [], motes: Mote[] = [];
     let wind = 0, lastScroll = window.scrollY;
+    const sprites = new Map<string, PetalSprite>();
+
+    // Petal shape, shading and shadow never change while it drifts. Bake them once into a tiny
+    // canvas sprite, then each animation frame only moves, rotates and draws that cached image.
+    const getSprite = (size: number, warm: boolean): PetalSprite => {
+      const key = `${size}-${warm ? "warm" : "ivory"}`;
+      const existing = sprites.get(key);
+      if (existing) return existing;
+
+      const padding = mobile ? 2 : Math.ceil(size * 0.75);
+      const extent = size + padding;
+      const image = document.createElement("canvas");
+      image.width = Math.ceil(extent * 2 * dpr);
+      image.height = Math.ceil(extent * 2 * dpr);
+      const g = image.getContext("2d")!;
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      g.translate(extent, extent);
+
+      const gradient = g.createRadialGradient(-size * 0.2, -size * 0.3, size * 0.1, 0, 0, size * 1.1);
+      gradient.addColorStop(0, "rgba(255,253,248,0.97)");
+      gradient.addColorStop(0.6, warm ? "rgba(246,236,222,0.95)" : "rgba(250,244,236,0.95)");
+      gradient.addColorStop(1, warm ? "rgba(226,208,190,0.9)" : "rgba(232,220,206,0.9)");
+      g.fillStyle = gradient;
+      if (!mobile) {
+        const depth = size / 15;
+        g.shadowColor = "rgba(90,70,58,0.18)";
+        g.shadowBlur = 6 * depth;
+        g.shadowOffsetY = 3 * depth;
+      }
+      g.beginPath();
+      g.moveTo(0, -size);
+      g.bezierCurveTo(size * 0.95, -size * 0.9, size * 0.9, size * 0.45, 0, size);
+      g.bezierCurveTo(-size * 0.9, size * 0.45, -size * 0.95, -size * 0.9, 0, -size);
+      g.fill();
+      g.shadowColor = "transparent";
+      g.strokeStyle = "rgba(200,180,160,0.35)";
+      g.lineWidth = 0.6;
+      g.beginPath();
+      g.moveTo(0, -size * 0.7);
+      g.quadraticCurveTo(size * 0.1, 0, 0, size * 0.8);
+      g.stroke();
+
+      const sprite = { canvas: image, extent };
+      sprites.set(key, sprite);
+      return sprite;
+    };
 
     const newPetal = (initial: boolean): Petal => {
       const z = 0.4 + Math.random() * 0.9; // depth: small+slow = far
+      const size = Math.round((10 + Math.random() * 12) * z);
+      const hue = Math.random();
       return {
         x: Math.random() * W, y: initial ? Math.random() * H : -40, z,
-        size: (10 + Math.random() * 12) * z, vx: (Math.random() - 0.3) * 0.4 * z, vy: (0.35 + Math.random() * 0.5) * z,
+        size, vx: (Math.random() - 0.3) * 0.4 * z, vy: (0.35 + Math.random() * 0.5) * z,
         rot: Math.random() * Math.PI * 2, vr: (Math.random() - 0.5) * 0.02, flip: Math.random() * Math.PI * 2, vf: 0.01 + Math.random() * 0.03,
-        hue: Math.random(),
+        hue, sprite: getSprite(size, hue > 0.6),
       };
     };
     const resize = () => {
@@ -37,6 +86,7 @@ export default function Ambience() {
       W = window.innerWidth; H = window.innerHeight;
       c.width = W * dpr; c.height = H * dpr; c.style.width = W + "px"; c.style.height = H + "px";
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      sprites.clear();
       const n = W < 700 ? 10 : 24;
       petals = Array.from({ length: n }, () => newPetal(true));
       motes = Array.from({ length: W < 700 ? 18 : 50 }, () => ({ x: Math.random() * W, y: Math.random() * H, r: 0.6 + Math.random() * 1.6, vx: (Math.random() - 0.5) * 0.15, vy: -0.05 - Math.random() * 0.15, tw: Math.random() * 6 }));
@@ -47,22 +97,7 @@ export default function Ambience() {
       ctx.translate(p.x, p.y);
       ctx.rotate(p.rot);
       ctx.scale(Math.cos(p.flip) * 0.85 + 0.15 * Math.sign(Math.cos(p.flip) || 1), 1); // 3D flip illusion
-      const s = p.size;
-      const g = ctx.createRadialGradient(-s * 0.2, -s * 0.3, s * 0.1, 0, 0, s * 1.1);
-      const warm = p.hue > 0.6;
-      g.addColorStop(0, "rgba(255,253,248,0.97)");
-      g.addColorStop(0.6, warm ? "rgba(246,236,222,0.95)" : "rgba(250,244,236,0.95)");
-      g.addColorStop(1, warm ? "rgba(226,208,190,0.9)" : "rgba(232,220,206,0.9)");
-      ctx.fillStyle = g;
-      if (!mobile) { ctx.shadowColor = "rgba(90,70,58,0.18)"; ctx.shadowBlur = 6 * p.z; ctx.shadowOffsetY = 3 * p.z; }
-      ctx.beginPath();
-      ctx.moveTo(0, -s);
-      ctx.bezierCurveTo(s * 0.95, -s * 0.9, s * 0.9, s * 0.45, 0, s);
-      ctx.bezierCurveTo(-s * 0.9, s * 0.45, -s * 0.95, -s * 0.9, 0, -s);
-      ctx.fill();
-      ctx.shadowColor = "transparent";
-      ctx.strokeStyle = "rgba(200,180,160,0.35)"; ctx.lineWidth = 0.6;
-      ctx.beginPath(); ctx.moveTo(0, -s * 0.7); ctx.quadraticCurveTo(s * 0.1, 0, 0, s * 0.8); ctx.stroke();
+      ctx.drawImage(p.sprite.canvas, -p.sprite.extent, -p.sprite.extent, p.sprite.extent * 2, p.sprite.extent * 2);
       ctx.restore();
     };
 
@@ -89,10 +124,28 @@ export default function Ambience() {
       }
       raf = requestAnimationFrame(loop);
     };
+    const onResize = () => {
+      resize();
+      if (reduce) petals.forEach(drawPetal);
+    };
+    const onVisibilityChange = () => {
+      if (reduce) return;
+      if (document.hidden) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      } else if (!raf) raf = requestAnimationFrame(loop);
+    };
+
     resize();
-    window.addEventListener("resize", resize);
-    if (reduce) { petals.forEach(drawPetal); } else raf = requestAnimationFrame(loop);
-    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", resize); };
+    window.addEventListener("resize", onResize);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    if (reduce) petals.forEach(drawPetal);
+    else if (!document.hidden) raf = requestAnimationFrame(loop);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", onResize);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, []);
 
   return (

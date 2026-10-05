@@ -27,10 +27,9 @@ export type KeepsakeData = {
 const VERSE =
   "“Nevertheless neither is the man without the woman, neither the woman without the man, in the Lord.”";
 const VERSE_REF = "1 CORINTHIANS 11:11";
-const ARRIVAL_NOTE = "Entourage & family, kindly arrive by 3:30 PM · Guests from 5:00 PM";
-
 const W = 1200;
-const H = 2280;
+const MIN_HEIGHT = 2280;
+const PROGRAM_ROW_HEIGHT = 52;
 const CX = W / 2;
 
 const INK = "#33271F";
@@ -118,13 +117,13 @@ const loadImage = (src: string) =>
     im.src = src;
   });
 
-function draw(g: CanvasRenderingContext2D, d: KeepsakeData, photo: HTMLImageElement | null) {
+function draw(g: CanvasRenderingContext2D, d: KeepsakeData, photo: HTMLImageElement | null, height: number) {
   g.fillStyle = PAPER;
-  g.fillRect(0, 0, W, H);
+  g.fillRect(0, 0, W, height);
 
   // double rule border, like the invitation's inner frame
-  g.strokeStyle = WINE; g.lineWidth = 3; g.strokeRect(34, 34, W - 68, H - 68);
-  g.strokeStyle = EDGE; g.lineWidth = 1.2; g.strokeRect(50, 50, W - 100, H - 100);
+  g.strokeStyle = WINE; g.lineWidth = 3; g.strokeRect(34, 34, W - 68, height - 68);
+  g.strokeStyle = EDGE; g.lineWidth = 1.2; g.strokeRect(50, 50, W - 100, height - 100);
 
   let y = 150;
   caps(g, "J & S · the invitation", y, 26, TAUPE, 0.34);
@@ -179,14 +178,12 @@ function draw(g: CanvasRenderingContext2D, d: KeepsakeData, photo: HTMLImageElem
   // the programme, in short
   caps(g, "The celebration", y, 25, TAUPE, 0.3);
   y += 58;
-  d.program.slice(0, 4).forEach((p) => {
+  d.program.forEach((p) => {
     line(g, `${p.time} — ${p.title}`, y, serif(31, "i400"), MOCHA);
     y += 52;
   });
   y += 30;
 
-  y = wrap(g, ARRIVAL_NOTE, y, serif(28, "i400"), TAUPE, 38);
-  y += 56;
   y = wrap(g, `Dress code — ${d.dressNote}`, y, serif(28, "i400"), TAUPE, 38);
   y += 78;
 
@@ -200,12 +197,13 @@ function draw(g: CanvasRenderingContext2D, d: KeepsakeData, photo: HTMLImageElem
 
 async function render(d: KeepsakeData, withPhoto: boolean): Promise<Blob | null> {
   const c = document.createElement("canvas");
-  c.width = W; c.height = H;
+  const height = MIN_HEIGHT + Math.max(0, d.program.length - 4) * PROGRAM_ROW_HEIGHT;
+  c.width = W; c.height = height;
   const g = c.getContext("2d");
   if (!g) return null;
   const photo = withPhoto && d.photo ? await loadImage(d.photo) : null;
   if (withPhoto && d.photo && !photo) return null; // photo wouldn't load — caller retries without it
-  draw(g, d, photo);
+  draw(g, d, photo, height);
   return await new Promise<Blob | null>((res) => c.toBlob(res, "image/png"));
 }
 

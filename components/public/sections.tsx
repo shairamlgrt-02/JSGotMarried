@@ -5,7 +5,8 @@ import { submitRsvp, type InviteState } from "@/lib/db";
 import { entourageHeading } from "@/lib/entourage";
 import { useCountdown } from "@/lib/hooks";
 import { downloadKeepsake } from "@/lib/keepsake";
-import type { Attire, EntourageMember, Faq, ScheduleItem, StoryChapter, WeddingInfo } from "@/lib/types";
+import { WEDDING_PROGRAM_HIGHLIGHTS, WEDDING_PROGRAM_STOPS } from "@/lib/program";
+import type { Attire, EntourageMember, Faq, StoryChapter, WeddingInfo } from "@/lib/types";
 import AddToCalendar from "./AddToCalendar";
 import { BAKED_COVER, fullDate } from "./Envelope";
 import { EASE, EASE_OUT, Reveal, Tilt, rise } from "./fx";
@@ -314,33 +315,6 @@ function ProgramIcon({ title }: { title: string }) {
   return <svg viewBox="0 0 24 24" className="w-6 h-6" fill="currentColor"><path d="M12 2l2.6 6.6L21 9.3l-5 4.4 1.6 6.8L12 16.8 6.4 20.5 8 13.7 3 9.3l6.4-.7z" /></svg>;
 }
 
-const PROGRAM_STOPS = [
-  { time: "3:30 PM", title: "Entourage Arrival" },
-  { time: "4:00 PM", title: "Wedding Ceremony" },
-  { time: "5:00 PM", title: "Wedding Photos" },
-  { time: "5:30 PM", title: "Welcome Toasts & Snacks" },
-  { time: "6:30 PM", title: "Wedding Reception" },
-  { time: "10:00 PM", title: "Send off" },
-];
-
-const PROGRAM_HIGHLIGHTS = [
-  {
-    time: "4:00 PM",
-    title: "The Ceremony",
-    detail: "An intimate ceremony with our families, entourage and a few honoured guests. You’re warmly welcome to witness our vows, with open seating around the reserved rows.",
-  },
-  {
-    time: "5:30 PM",
-    title: "Welcome Toasts & Snacks",
-    detail: "Join us from 5:30 PM for toasts, snacks, refreshments, photo moments and little activities at the majlis outside the hall. We’ll come find you for hugs, laughs and pictures.",
-  },
-  {
-    time: "6:30 PM",
-    title: "The Reception",
-    detail: "Dinner, our film on the big screen, games, giveaways and dancing until the end. We can’t wait to celebrate with you.",
-  },
-];
-
 /** One fixed, six-stop timeline; the mobile view fits without a horizontal swipe. */
 export function Schedule() {
   const reduceMotion = useReducedMotion();
@@ -360,7 +334,7 @@ export function Schedule() {
               className="pointer-events-none absolute top-[calc(5.0625rem-3px)] z-0 -ml-[3px] h-1.5 w-1.5 rounded-full bg-[#B99D7D] shadow-[0_0_10px_3px_rgba(110,31,46,.35)] sm:top-[calc(5.25rem-3px)]"
             />
           )}
-          {PROGRAM_STOPS.map((stop, i) => {
+          {WEDDING_PROGRAM_STOPS.map((stop, i) => {
             const titleAbove = i % 2 === 0;
             return (
               <motion.div
@@ -399,7 +373,7 @@ export function Schedule() {
             <span aria-hidden="true" className="h-px w-7 bg-gradient-to-l from-transparent to-wine/45 sm:w-10" />
           </div>
           <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
-            {PROGRAM_HIGHLIGHTS.map((moment, i) => (
+            {WEDDING_PROGRAM_HIGHLIGHTS.map((moment, i) => (
               <motion.article
                 key={moment.title}
                 initial={reduceMotion ? false : { opacity: 0, y: 18 }}
@@ -813,7 +787,7 @@ function KeepsakeOffer({ onBuild }: { onBuild: () => Promise<unknown> }) {
   );
 }
 
-export function Rsvp({ info, invite, code, onReplied, schedule, dressNote }: { info: WeddingInfo; invite: InviteState; code: string; onReplied: () => void; schedule: ScheduleItem[]; dressNote: string }) {
+export function Rsvp({ info, invite, code, onReplied, dressNote }: { info: WeddingInfo; invite: InviteState; code: string; onReplied: () => void; dressNote: string }) {
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
   const [err, setErr] = useState("");
   const [approved, setApproved] = useState<boolean | null>(null);
@@ -848,7 +822,7 @@ export function Rsvp({ info, invite, code, onReplied, schedule, dressNote }: { i
       groom: info.groom, bride: info.bride,
       guestName, plusOne: plusOne || undefined,
       dateISO: info.date, venue: info.venue_name, address: info.venue_address,
-      program: [...schedule].sort((a, b) => a.order - b.order).map((s) => ({ time: s.time, title: s.title })),
+      program: WEDDING_PROGRAM_STOPS,
       dressNote: dressNote || "Black tie — details live in the attire guide",
       hashtags: info.hashtags,
       photo: info.cover_photo || info.gallery[0] || BAKED_COVER,

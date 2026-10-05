@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useInView, useReducedMotion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { AUDIO_GUESTBOOK_MAX_BYTES as MAX_UPLOAD_BYTES, AUDIO_GUESTBOOK_MAX_MS as MAX_RECORDING_MS } from "@/lib/guestbook";
 import { DEMO_CODE } from "@/lib/db";
@@ -103,6 +103,8 @@ const PROMPTS = ["Tap to record", "Wish · hello · prayer", "Tap to stop · 20 
 
 export default function VoiceGuestbook({ code }: { code: string }) {
   const reduceMotion = useReducedMotion();
+  const sectionRef = useRef<HTMLElement>(null);
+  const inView = useInView(sectionRef, { amount: 0.12 });
   const [phase, setPhase] = useState<Phase>("idle");
   const [elapsedMs, setElapsedMs] = useState(0);
   const [durationMs, setDurationMs] = useState(0);
@@ -309,17 +311,17 @@ export default function VoiceGuestbook({ code }: { code: string }) {
   const isRecording = phase === "recording";
   const showReview = phase === "review" || phase === "uploading" || phase === "sent" || phase === "demo";
   const recordedTooLarge = oversize || (clip?.size ?? 0) > MAX_UPLOAD_BYTES;
-  const ringing = canRecord && phase === "idle" && !reduceMotion;
+  const ringing = canRecord && phase === "idle" && inView && !reduceMotion;
 
   return (
-    <section id="voice-guestbook" className="sec-sm" aria-labelledby="voice-guestbook-title">
+    <section ref={sectionRef} id="voice-guestbook" className="sec-sm" aria-labelledby="voice-guestbook-title">
       <div className="col-wide">
         <div className="mb-5 text-center sm:mb-7">
           <p className="inline-flex items-center gap-2 rounded-full bg-wine px-4 py-2 font-sans text-[10px] font-semibold uppercase tracking-[.22em] text-lace shadow-[0_6px_18px_-8px_rgba(110,31,46,.8)] sm:text-xs">
             <span aria-hidden="true" className="text-sm">♡</span> Voice guestbook · anonymous
           </p>
           <h2 id="voice-guestbook-title" className="script mx-auto mt-3 text-[clamp(2.5rem,9vw,4.8rem)] leading-none text-wine text-balance">Leave a little love</h2>
-          <p className="mx-auto mt-3 max-w-xl font-serif text-base italic text-mocha text-balance sm:text-lg">Leave us your wishes, greetings, or your prayers for us anonymously.</p>
+          <p className="mx-auto mt-3 max-w-xl font-serif text-base italic text-mocha text-balance sm:text-lg">Send us your wishes, greetings, or your prayers for us anonymously with a voice note.</p>
         </div>
         <div className="relative mx-auto max-w-4xl overflow-hidden rounded-[2rem] border-2 border-wine/20 bg-[#F8F2E7]/95 shadow-[0_20px_54px_rgba(69,50,35,.18)]">
           <div aria-hidden="true" className="absolute inset-0 opacity-[.3]" style={{ backgroundImage: "radial-gradient(ellipse at 8% 12%,rgba(110,31,46,.19),transparent 38%),radial-gradient(ellipse at 92% 100%,rgba(166,137,107,.27),transparent 42%)" }} />
@@ -329,9 +331,9 @@ export default function VoiceGuestbook({ code }: { code: string }) {
 
           <div className="relative px-4 pb-8 pt-7 sm:px-8 sm:pb-10 sm:pt-8">
             <div className="relative mx-auto flex h-56 w-full max-w-md items-center justify-center sm:h-72">
-              <motion.span aria-hidden="true" className="absolute left-5 top-6 z-[2] font-serif text-3xl text-wine/80 sm:left-14 sm:top-8 sm:text-4xl" animate={reduceMotion ? undefined : { y: [0, -7, 0], rotate: [-9, 5, -9] }} transition={{ duration: 3.4, repeat: Infinity, ease: "easeInOut" }}>♡</motion.span>
-              <motion.span aria-hidden="true" className="absolute bottom-6 left-7 z-[2] font-serif text-2xl text-wine/70 sm:bottom-10 sm:left-16 sm:text-3xl" animate={reduceMotion ? undefined : { y: [0, 5, 0], rotate: [4, -7, 4] }} transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut", delay: .4 }}>♫</motion.span>
-              <motion.div aria-hidden="true" animate={reduceMotion ? undefined : { y: [0, -3, 0], rotate: [7, 4, 7] }} transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }} className="absolute left-1/2 top-3 z-[2] -translate-x-1/2 rounded-sm border border-[#B99D7D]/45 bg-[#EFE3D4] px-2 py-1 shadow-[0_3px_8px_rgba(61,47,38,.16)] sm:top-5 sm:px-3 sm:py-2">
+              <motion.span aria-hidden="true" className="absolute left-5 top-6 z-[2] font-serif text-3xl text-wine/80 sm:left-14 sm:top-8 sm:text-4xl" animate={reduceMotion || !inView ? undefined : { y: [0, -7, 0], rotate: [-9, 5, -9] }} transition={{ duration: 3.4, repeat: Infinity, ease: "easeInOut" }}>♡</motion.span>
+              <motion.span aria-hidden="true" className="absolute bottom-6 left-7 z-[2] font-serif text-2xl text-wine/70 sm:bottom-10 sm:left-16 sm:text-3xl" animate={reduceMotion || !inView ? undefined : { y: [0, 5, 0], rotate: [4, -7, 4] }} transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut", delay: .4 }}>♫</motion.span>
+              <motion.div aria-hidden="true" animate={reduceMotion || !inView ? undefined : { y: [0, -3, 0], rotate: [7, 4, 7] }} transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }} className="absolute left-1/2 top-3 z-[2] -translate-x-1/2 rounded-sm border border-[#B99D7D]/45 bg-[#EFE3D4] px-2 py-1 shadow-[0_3px_8px_rgba(61,47,38,.16)] sm:top-5 sm:px-3 sm:py-2">
                 <span className="script whitespace-nowrap text-[clamp(.68rem,3.4vw,.95rem)] text-wine">leave a message after the beep</span>
               </motion.div>
               {canRecord ? (
@@ -390,7 +392,7 @@ export default function VoiceGuestbook({ code }: { code: string }) {
                 {isRecording && (
                   <div className="mt-6 rounded-2xl border border-wine/15 bg-[#FCF8F1] px-4 py-3 sm:mt-8 sm:px-5" role="status" aria-live="polite">
                     <div className="flex items-center justify-between gap-3">
-                      <span className="flex items-center gap-2 font-serif text-sm text-wine"><motion.span aria-hidden="true" className="h-2 w-2 rounded-full bg-wine" animate={reduceMotion ? undefined : { opacity: [.35, 1, .35] }} transition={{ duration: .9, repeat: Infinity }} />On the line</span>
+                      <span className="flex items-center gap-2 font-serif text-sm text-wine"><motion.span aria-hidden="true" className="h-2 w-2 rounded-full bg-wine" animate={reduceMotion || !inView ? undefined : { opacity: [.35, 1, .35] }} transition={{ duration: .9, repeat: Infinity }} />On the line</span>
                       <span className="font-mono text-sm tabular-nums text-mocha">{clock(elapsedMs)} <span className="text-taupe/55">/ 00:20</span></span>
                     </div>
                     <div role="progressbar" aria-label="Recording time" aria-valuemin={0} aria-valuemax={20} aria-valuenow={Math.min(20, Math.floor(elapsedMs / 1000))} className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#DCCDB8]">

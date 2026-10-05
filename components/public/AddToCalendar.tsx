@@ -1,5 +1,5 @@
 "use client";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useInView } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -111,6 +111,7 @@ export default function AddToCalendar({ info, code = "", sealed = false }: { inf
   const [done, setDone] = useState<"apple" | "google" | null>(null);
   const [mounted, setMounted] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
+  const triggerInView = useInView(trigger, { amount: 0.6 });
   const panel = useRef<HTMLDivElement>(null);
   const timer = useRef<number | null>(null);
 
@@ -170,7 +171,7 @@ export default function AddToCalendar({ info, code = "", sealed = false }: { inf
           <motion.span
             aria-hidden
             className="pointer-events-none absolute inset-0 rounded-full border-2 border-wine/50 motion-reduce:hidden"
-            animate={{ scale: [1, 1.16, 1.16], opacity: [0.5, 0, 0] }}
+            animate={triggerInView ? { scale: [1, 1.16, 1.16], opacity: [0.5, 0, 0] } : undefined}
             transition={{ duration: 3.4, times: [0, 0.7, 1], repeat: Infinity, ease: "easeOut", repeatDelay: 0.6 }}
           />
           <motion.button
@@ -191,19 +192,19 @@ export default function AddToCalendar({ info, code = "", sealed = false }: { inf
             <motion.span
               aria-hidden
               className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/4 -skew-x-12 bg-[linear-gradient(90deg,transparent,rgba(252,250,245,.45),transparent)] motion-reduce:hidden"
-              animate={{ x: ["0%", "560%"] }}
+              animate={triggerInView ? { x: ["0%", "560%"] } : undefined}
               transition={{ duration: 2.2, ease: "easeInOut", repeat: Infinity, repeatDelay: 3.2 }}
             />
             <motion.span
               aria-hidden
               className="relative grid h-10 w-10 shrink-0 place-items-center sm:h-11 sm:w-11 md:h-[3.4rem] md:w-[3.4rem]"
-              animate={{ y: [0, -2.5, 0], rotate: [0, -2, 0] }}
+              animate={triggerInView ? { y: [0, -2.5, 0], rotate: [0, -2, 0] } : undefined}
               transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
             >
               <CalendarGlyph />
               <motion.span
                 className="absolute -bottom-1 -right-1 grid h-[17px] w-[17px] place-items-center rounded-full border-2 border-lace bg-[#E8CE8C] text-[#4A1218] shadow-[0_1px_3px_rgba(0,0,0,.45)] sm:h-[18px] sm:w-[18px] md:h-5 md:w-5"
-                animate={{ scale: [1, 1.18, 1] }}
+                animate={triggerInView ? { scale: [1, 1.18, 1] } : undefined}
                 transition={{ duration: 1.7, repeat: Infinity, ease: "easeInOut" }}
               >
                 <svg viewBox="0 0 12 12" aria-hidden className="h-2.5 w-2.5 md:h-3 md:w-3" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><path d="M6 2.1v7.8M2.1 6h7.8" /></svg>
