@@ -215,9 +215,6 @@ export default function AddToCalendar({ info, code = "", sealed = false }: { inf
             </span>
           </motion.button>
         </div>
-        <p className="micro mt-3 px-4 text-taupe/80 tracking-[0.14em] text-balance">
-          One tap · Apple Calendar · Google · Outlook
-        </p>
       </div>
 
       {mounted && createPortal(
