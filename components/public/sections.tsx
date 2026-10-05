@@ -6,6 +6,7 @@ import { entourageHeading } from "@/lib/entourage";
 import { useCountdown } from "@/lib/hooks";
 import { downloadKeepsake } from "@/lib/keepsake";
 import type { Attire, EntourageMember, Faq, ScheduleItem, StoryChapter, WeddingInfo } from "@/lib/types";
+import AddToCalendar from "./AddToCalendar";
 import { BAKED_COVER, fullDate } from "./Envelope";
 import { EASE, EASE_OUT, Reveal, Tilt, rise } from "./fx";
 import { Corners, Flourish, GemDot, LaceEdge, Paisley } from "./ornaments";
@@ -268,7 +269,7 @@ export function Story({ info, chapters = [] }: { info: WeddingInfo; chapters?: S
 
 /* ─────────── 11.11 OPENING ─────────── */
 /** A short dedication at the beginning of the letter scroll, before the story and voice guestbook. */
-export function ElevenEleven({ info }: { info: WeddingInfo }) {
+export function ElevenEleven({ info, code = "", sealed = false }: { info: WeddingInfo; code?: string; sealed?: boolean }) {
   return (
     <section className="sec-sm text-center" aria-labelledby="wedding-dedication-title">
       <div className="col-wide relative pt-8 pb-2 md:pt-12 md:pb-3">
@@ -277,11 +278,12 @@ export function ElevenEleven({ info }: { info: WeddingInfo }) {
           <h2 id="wedding-dedication-title" className="script mt-1 text-[clamp(2.1rem,8vw,4.6rem)] leading-tight text-wine text-balance">{info.groom} &amp; {info.bride}</h2>
           <p className="script mt-1 whitespace-nowrap text-[clamp(2.5rem,10vw,5.8rem)] leading-none tracking-[.015em] text-wine">{fullDate(info.date)}</p>
           <p className="mt-3 font-serif text-fine italic text-mocha text-balance">A wish made by two — a prayer answered by the One above.</p>
-          <Flourish className="mx-auto mt-4 w-36 text-taupe/60" />
           <div className="mx-auto mt-4 max-w-2xl border-y border-taupe/20 py-3">
             <p className="micro text-taupe">1 Corinthians 11:11</p>
             <p className="mx-auto mt-2 max-w-xl px-3 font-serif text-fine italic leading-relaxed text-mocha text-balance">“Nevertheless neither is the man without the woman, neither the woman without the man, in the Lord.”</p>
           </div>
+          {/* The first invitation to act: the whole day, in the guest's own calendar. */}
+          <AddToCalendar info={info} code={code} sealed={sealed} />
         </Reveal>
       </div>
     </section>

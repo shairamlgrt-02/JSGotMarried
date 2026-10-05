@@ -33,6 +33,31 @@ venue's name.
 Sign in to the binder and open `/preview` and you see the finished site instead, with an
 `Admin preview` note — that's the one view of everything.
 
+## Add to Calendar (the button under the verse)
+The 11.11 dedication — names, date, the 1 Corinthians verse — closes with the one thing a guest
+should do first: **Add to Calendar**. One big button, and a small sheet that asks which calendar
+they use, so nobody has to know what an `.ics` is:
+
+| Tap | What happens |
+|---|---|
+| **Apple Calendar** | opens `/api/calendar` — a real `text/calendar` file. iOS Safari hands it straight to Calendar's **Add event** card; Mac, Outlook, Samsung and Xiaomi open or download the same file. |
+| **Google Calendar** | opens Google Calendar's pre-filled *add event* screen in a new tab — the Android path. |
+
+Both carry the same times (ceremony → send-off, 4–10 PM Bahrain time), the venue with its map link,
+a note with the couple's hashtags and the guest's own invitation link, plus a **reminder the day
+before** they can change in their app. The row for the phone in hand is marked *Suggested*.
+
+* **Everything comes from the binder.** The date, time, names and venue are read from
+  `wedding_info`, so moving the wedding in **Details** moves every calendar with no redeploy — and
+  the day is always read off the Bahrain calendar, never the guest's device time zone.
+* **The venue stays sealed.** The file is served with the guest's `?code=`, through the same gate as
+  `/api/data`: an issued code (or the binder's cookie) unlocks the address, a preview visitor gets
+  the date and nothing more. The client never guesses — a guest on a personalised link passes their
+  code along automatically.
+* **A real URL, on purpose.** iOS Safari blocks top-level `data:` navigations and drops blob
+  downloads into Files, so the `.ics` is a server response instead (`app/api/calendar/route.ts`,
+  `Content-Disposition: inline`). Edit the wording, the title or the reminder in `lib/calendar.ts`.
+
 ## Invite codes: generate, send, track (`Invite Codes`)
 One row per household, one code per row, one reply per code — and a ledger that tells you where
 every single invitation stands.
@@ -196,11 +221,12 @@ app/preview/page.tsx         the sealed public preview
 app/rsvp/page.tsx            the code-locked reply door
 app/[code]/page.tsx          a household's own unsealed invitation
 app/admin/…                  binder + login
-app/api/…                    login, data CRUD, rsvp
+app/api/…                    login, data CRUD, rsvp, the calendar .ics
 lib/guests.ts                codes: matching, statuses, bulk paste, links
 lib/invite-gate.ts           what a sealed visitor may read (server side)
 components/public/…          sections + effects (Lenis, cursor, vines, magnetic, split text)
 components/admin/…           binder tabs + UI kit
+lib/calendar.ts              the wedding event: .ics + Google Calendar + how the dates read
 lib/seed.ts                  all starter data (budget, vendors, checklist, attire…)
 lib/db.ts                    Supabase-via-API or localStorage data layer
 supabase/schema.sql          database tables
