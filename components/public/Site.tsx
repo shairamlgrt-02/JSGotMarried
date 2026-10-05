@@ -36,10 +36,9 @@ export default function Home({ code = "", variant = "guest" }: { code?: string; 
     return (code || fromQuery).trim().toUpperCase();
   }, [code, variant]);
 
-  // The sensitive tables are asked for *with* the guest's code, so the server only answers with
-  // the venue, the programme and the FAQ for a code the couple actually issued.
+  // Private venue and FAQ data are requested with the guest's invitation code. The displayed
+  // program and its keepsake copy share one source so their timings and names stay in sync.
   const { rows: infoRows } = useTable("wedding_info", true, activeCode);
-  const { rows: schedule } = useTable("schedule", true, activeCode);
   const { rows: attire } = useTable("attire");
   const { rows: entourage } = useTable("entourage");
   const { rows: faq } = useTable("faq", true, activeCode);
@@ -142,7 +141,7 @@ export default function Home({ code = "", variant = "guest" }: { code?: string; 
               <ScrollContinue />
             </>}
             {unlocked && <>
-              <Rsvp info={info} invite={rsvpInvite} code={replyCode} onReplied={load} schedule={schedule} dressNote={dressNote} />
+              <Rsvp info={info} invite={rsvpInvite} code={replyCode} onReplied={load} dressNote={dressNote} />
               <ScrollContinue />
               <D deco={<Deco at="tr" rotate={6}><Sticker kind="dance" /></Deco>}><FaqSection faqs={faq} /></D>
             </>}

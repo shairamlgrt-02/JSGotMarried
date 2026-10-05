@@ -21,7 +21,9 @@ export const rise = (delay = 0, y = 24) => ({
 
 export function SmoothScroll() {
   useEffect(() => {
-    const lenis = new Lenis({ duration: 1.2 });
+    // A time-based lerp smooths successive wheel/trackpad events without restarting a long tween
+    // on every input. Anchor jumps below keep their own distance-based duration.
+    const lenis = new Lenis({ lerp: 0.09, smoothWheel: true, respectReducedMotion: true });
     let raf = 0;
     const loop = (t: number) => { lenis.raf(t); raf = requestAnimationFrame(loop); };
     raf = requestAnimationFrame(loop);
