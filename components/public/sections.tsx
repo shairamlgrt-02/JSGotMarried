@@ -442,6 +442,37 @@ export function DressCode({ attire, info }: { attire: Attire[]; info: WeddingInf
   const sorted = [...attire].sort((a, b) => a.order - b.order);
   const guests = sorted.find((a) => a.group === "guests");
   const reserved = sorted.filter((a) => a.reserved);
+  
+  // Add flower girl and ring bearer color palettes if not already in the database
+  const flowerGirlExists = reserved.some((a) => a.group === "flower_girl");
+  const ringBearerExists = reserved.some((a) => a.group === "ring_bearer");
+  
+  if (!flowerGirlExists) {
+    reserved.push({
+      id: "flower_girl_builtin",
+      group: "flower_girl",
+      label: "Flower Girl",
+      colors: [{ name: "Shiny Fuchsia Pink", hex: "#D6006E", fabric: "satin" }],
+      reserved: true,
+      notes: "",
+      swatch_url: "",
+      order: 100,
+    });
+  }
+  
+  if (!ringBearerExists) {
+    reserved.push({
+      id: "ring_bearer_builtin",
+      group: "ring_bearer",
+      label: "Ring Bearer",
+      colors: [{ name: "Shiny Navy Blue", hex: "#1A2744", fabric: "satin" }],
+      reserved: true,
+      notes: "",
+      swatch_url: "",
+      order: 101,
+    });
+  }
+  
   return (
     <section id="dress" className="sec">
       <Title kicker="What to Wear" title="Attire" />

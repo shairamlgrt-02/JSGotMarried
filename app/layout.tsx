@@ -14,6 +14,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
+        {/* Always start at the top on a fresh load — the browser's scroll restoration can
+            otherwise park a guest mid-page after a refresh, which is jarring on a long scroll site. */}
+        <script dangerouslySetInnerHTML={{ __html: `history.scrollRestoration="manual";window.scrollTo(0,0);` }} />
         {/* Keep this URL exactly as-is: Google Fonts answers the WHOLE request with a 400
             when an axis is wrong (Jost has no italic axis, so "Jost:wght@0,300…" would take
             every font on the page down and leave the system serif/sans in its place). */}

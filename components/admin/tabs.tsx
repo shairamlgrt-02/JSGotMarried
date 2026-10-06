@@ -483,6 +483,7 @@ export function Guests({ go }: { go: (tab: string) => void }) {
   return (
     <>
       <PageHead kicker="Master check-in · plus-ones · catering & songs" title="The guest list.">
+        <Btn variant="ghost" onClick={() => { localStorage.setItem("jsos:compose_category", "pending_rsvp"); go("messaging-compose"); }}>📨 Send RSVP Reminder ({rows.filter((g) => g.attending === "pending").length})</Btn>
         <Btn variant="ghost" onClick={() => go("invites")}>Invite codes →</Btn>
         <Btn onClick={add}>+ Add guest</Btn>
         <Btn variant="ghost" onClick={exportCsv}>Export CSV ({shown.length || entries.length})</Btn>

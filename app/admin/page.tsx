@@ -4,10 +4,13 @@ import { useEffect, useState } from "react";
 import { AttireEditor, Budget, Checklist, Content, Details, Guests, Overview, PrintBinder, ScheduleBuilder, Settings, Vendors, getMode } from "@/components/admin/tabs";
 import { InviteCodes } from "@/components/admin/invites";
 import { AudioGuestbook } from "@/components/admin/guestbook";
+import { TemplatesTab, ComposeTab, TrackerTab } from "@/components/admin/messaging";
 
 const TABS = [
   ["overview", "Overview", "◐"], ["details", "Details", "✎"], ["schedule", "Schedule", "◷"], ["checklist", "Checklist", "☑"],
-  ["budget", "Budget", "◎"], ["invites", "Invite Codes", "✦"], ["guests", "Guests & RSVP", "♡"], ["audio", "Audio Guestbook", "☎"], ["vendors", "Vendors", "◇"], ["attire", "Attire & Colors", "◉"],
+  ["budget", "Budget", "◎"], ["invites", "Invite Codes", "✦"], ["guests", "Guests & RSVP", "♡"], ["audio", "Audio Guestbook", "☎"],
+  ["messaging-compose", "📨 Compose", "✉"], ["messaging-templates", "📋 Templates", "▤"], ["messaging-tracker", "📊 Tracker", "◈"],
+  ["vendors", "Vendors", "◇"], ["attire", "Attire & Colors", "◉"],
   ["content", "Content", "▣"], ["settings", "Settings", "⚙"],
 ] as const;
 type Tab = (typeof TABS)[number][0];
@@ -62,6 +65,9 @@ export default function Admin() {
               {tab === "invites" && <InviteCodes go={go} />}
               {tab === "guests" && <Guests go={go} />}
               {tab === "audio" && <AudioGuestbook />}
+              {tab === "messaging-compose" && <ComposeTab />}
+              {tab === "messaging-templates" && <TemplatesTab />}
+              {tab === "messaging-tracker" && <TrackerTab />}
               {tab === "vendors" && <Vendors />}
               {tab === "attire" && <AttireEditor />}
               {tab === "content" && <Content />}
