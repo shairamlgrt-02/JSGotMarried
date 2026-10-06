@@ -1,5 +1,6 @@
 "use client";
-import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import Ambience from "@/components/public/Ambience";
 import { EASE_OUT, Reveal, Tilt } from "@/components/public/fx";
 import { Corners, Flourish } from "@/components/public/ornaments";
@@ -52,6 +53,36 @@ function Door({
   );
 }
 
+/** Small floating "RSVP by Oct 25" button, fixed to the bottom-right of the Hub. */
+function HubRsvpButton({ info }: { info: WeddingInfo }) {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setShow(true), 800);
+    return () => clearTimeout(t);
+  }, []);
+  const d = new Date(`${info.rsvp_deadline || "2026-10-25"}T12:00:00+03:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Asia/Bahrain" });
+  return (
+    <AnimatePresence>
+      {show && (
+        <motion.a
+          href="/rsvp"
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 24 }}
+          transition={{ duration: 0.5, ease: EASE_OUT }}
+          className="fixed z-50 bottom-5 right-5 flex items-center gap-3 bg-wine text-lace rounded-full pl-2 pr-5 py-2 shadow-[0_10px_24px_-6px_rgba(110,31,46,.6)] hover:bg-mocha transition-colors"
+        >
+          <span className="w-9 h-9 rounded-full bg-lace/15 grid place-items-center text-lg">✉</span>
+          <span className="leading-tight">
+            <span className="block micro">RSVP now</span>
+            <span className="block font-serif italic text-fine opacity-90">by {d}</span>
+          </span>
+        </motion.a>
+      )}
+    </AnimatePresence>
+  );
+}
+
 export default function Hub({ info }: { info: WeddingInfo }) {
   const couple = `${info.groom} & ${info.bride}`;
   return (
@@ -89,6 +120,7 @@ export default function Hub({ info }: { info: WeddingInfo }) {
           </div>
         </Reveal>
       </main>
+      <HubRsvpButton info={info} />
     </>
   );
 }

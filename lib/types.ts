@@ -56,7 +56,7 @@ export type VendorStatus = "quoted" | "contacted" | "booked" | "pending";
 export type Vendor = { id: string; type: string; name: string; quote: number; contact: string; status: VendorStatus; notes: string };
 export type Priority = "critical" | "high" | "medium";
 export type ChecklistItem = { id: string; task: string; category: Priority; due_date: string; completed: boolean };
-export type AttireGroup = "bride" | "groom" | "shai_family" | "jeg_family" | "bridesmaids" | "groomsmen" | "guests";
+export type AttireGroup = "bride" | "groom" | "shai_family" | "jeg_family" | "bridesmaids" | "groomsmen" | "guests" | "flower_girl" | "ring_bearer";
 export type Attire = { id: string; group: AttireGroup; label: string; colors: { name: string; hex: string; fabric?: string }[]; reserved: boolean; notes: string; swatch_url: string; order: number };
 export type EntourageRole =
   | "bride_family" | "groom_family"
@@ -85,6 +85,42 @@ export type Faq = { id: string; question: string; answer: string; order: number 
 /** One chapter of the couple's story — title + a little paragraph + one photo, swipeable on the site. */
 export type StoryChapter = { id: string; title: string; text: string; photo: string; order: number };
 
+/** A reusable message template with merge tags and assigned categories. */
+export type MessageTemplate = {
+  id: string;
+  name: string;
+  /** Short label like "Save the Date", "Reminder", "Thank You". */
+  label: string;
+  /** The message body with merge tags. */
+  body: string;
+  /** Which categories this template is meant for (comma-separated IDs stored as string). */
+  categories: string;
+  created_at?: string;
+};
+
+/** One row in the message tracker — one message to one recipient. */
+export type MessageLog = {
+  id: string;
+  template_id: string;
+  template_name: string;
+  /** The original template body before merge tags were applied. */
+  original_body: string;
+  /** The resolved message body (merge tags applied). */
+  body: string;
+  recipient_id: string;
+  recipient_name: string;
+  recipient_phone: string;
+  category: string;
+  /** Whether the couple has sent/copied the message. */
+  sent: boolean;
+  /** Whether the guest has responded (manually ticked). */
+  responded: boolean;
+  /** How many times a link in the message was opened. */
+  link_opens: number;
+  sent_at?: string | null;
+  created_at?: string;
+};
+
 export type TableMap = {
   wedding_info: WeddingInfo;
   schedule: ScheduleItem;
@@ -96,8 +132,10 @@ export type TableMap = {
   entourage: EntourageMember;
   faq: Faq;
   story: StoryChapter;
+  message_templates: MessageTemplate;
+  messages: MessageLog;
 };
 export type TableName = keyof TableMap;
-export const TABLES: TableName[] = ["wedding_info", "schedule", "budget", "guests", "vendors", "checklist", "attire", "entourage", "faq", "story"];
+export const TABLES: TableName[] = ["wedding_info", "schedule", "budget", "guests", "vendors", "checklist", "attire", "entourage", "faq", "story", "message_templates", "messages"];
 /** Tables the public site may read without logging in. */
 export const PUBLIC_TABLES: TableName[] = ["wedding_info", "schedule", "attire", "entourage", "faq", "story"];

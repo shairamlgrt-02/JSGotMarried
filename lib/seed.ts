@@ -139,4 +139,6 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     { id: "f4", question: "Is there parking?", answer: "Yes, parking is available at The Heaven, Damistan.", order: 4 },
     { id: "f5", question: "Can I post photos?", answer: "Please! Tag @shaiandjeg and use #JSGotMarried — #JSSayIDo and #JSWishComeTrue work beautifully too. We only ask for an unplugged ceremony.", order: 5 },
   ],
+  message_templates: [],
+  messages: [],
 };
