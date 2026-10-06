@@ -821,6 +821,7 @@ export function Rsvp({ info, invite, code, onReplied, dressNote }: { info: Weddi
     downloadKeepsake({
       groom: info.groom, bride: info.bride,
       guestName, plusOne: plusOne || undefined,
+      code: invite.code || code || undefined,
       dateISO: info.date, venue: info.venue_name, address: info.venue_address,
       program: WEDDING_PROGRAM_STOPS,
       dressNote: dressNote || "Black tie — details live in the attire guide",
@@ -946,7 +947,7 @@ export function Rsvp({ info, invite, code, onReplied, dressNote }: { info: Weddi
                   </div>
                   {f.attending === "yes" && (
                     <div className="flex justify-center items-center gap-2 sm:gap-3">
-                      <span className="font-serif italic text-taupe text-body mr-1">Number of guests</span>
+                      <span className="font-serif italic text-taupe text-body mr-1">Number of guests/seats</span>
                       {[1, 2].map((n) => <button key={n} type="button" disabled={seatCap < n} className={choice(f.pax === n) + (seatCap < n ? " opacity-35 pointer-events-none" : "")} onClick={() => setF({ ...f, pax: n })}>{n}</button>)}
                     </div>
                   )}

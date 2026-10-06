@@ -12,6 +12,11 @@ function clock(ms: number) {
   return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
+function setMusicDucked(duck: boolean) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent("jsos:music-duck", { detail: { duck } }));
+}
+
 /** A short, soft answering-machine tone played only after MediaRecorder successfully starts. */
 function playStartBeep(context: AudioContext | null) {
   if (!context) return;
@@ -123,8 +128,13 @@ export default function VoiceGuestbook({ code }: { code: string }) {
   const audio = useRef<HTMLAudioElement | null>(null);
   const beepContext = useRef<AudioContext | null>(null);
   const canRecord = Boolean(code);
+  const shouldDuckMusic = phase === "starting" || phase === "recording" || phase === "processing" || playing;
 
   useEffect(() => { setIsEmbedded(window.self !== window.top); }, []);
+
+  useEffect(() => {
+    setMusicDucked(shouldDuckMusic);
+  }, [shouldDuckMusic]);
 
   useEffect(() => {
     if (!clipUrl) return;
@@ -158,6 +168,7 @@ export default function VoiceGuestbook({ code }: { code: string }) {
       }
       stream.current?.getTracks().forEach((track) => track.stop());
       audio.current?.pause();
+      setMusicDucked(false);
       if (beepContext.current && beepContext.current.state !== "closed") void beepContext.current.close().catch(() => {});
       beepContext.current = null;
     };
@@ -174,6 +185,8 @@ export default function VoiceGuestbook({ code }: { code: string }) {
     setElapsedMs(0);
     setDurationMs(0);
     setPhase("starting");
+    setMusicDucked(true);
+    const duckStartedAt = Date.now();
     if (typeof window !== "undefined" && !window.isSecureContext) {
       setError("Microphone needs a secure HTTPS invitation. Please open the secure link and try again.");
       setPhase("idle");
@@ -193,6 +206,8 @@ export default function VoiceGuestbook({ code }: { code: string }) {
         void cueContext.resume().catch(() => {});
       }
       const liveStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+      const remainingFadeMs = Math.max(0, 380 - (Date.now() - duckStartedAt));
+      if (remainingFadeMs > 0) await new Promise((resolve) => window.setTimeout(resolve, remainingFadeMs));
       if (!alive.current) {
         liveStream.getTracks().forEach((track) => track.stop());
         if (cueContext && cueContext.state !== "closed") void cueContext.close().catch(() => {});
@@ -304,8 +319,12 @@ export default function VoiceGuestbook({ code }: { code: string }) {
     if (!player) return;
     if (!player.paused) { player.pause(); return; }
     if (player.ended) player.currentTime = 0;
+    setMusicDucked(true);
     try { await player.play(); }
-    catch { setError("Playback isn’t available in this browser. Please try again."); }
+    catch {
+      setMusicDucked(false);
+      setError("Playback isn’t available in this browser. Please try again.");
+    }
   };
 
   const isRecording = phase === "recording";
