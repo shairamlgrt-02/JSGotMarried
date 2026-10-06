@@ -102,6 +102,8 @@ export function Moments({ info }: { info: WeddingInfo }) {
   );
 }
 
+const BASE_MUSIC_VOLUME = 0.45;
+
 /** Floating music toggle — appears once a song is added in the binder. */
 export function MusicButton({ src }: { src?: string }) {
   const a = useRef<HTMLAudioElement>(null);
@@ -109,13 +111,58 @@ export function MusicButton({ src }: { src?: string }) {
   const wanted = useRef(false); // the guest wants music on (auto-start or manual)
   const manual = useRef(false); // the guest touched the music button: stop auto-starting
   const hiddenPause = useRef(false); // we paused it because the tab/app went away
-  useEffect(() => { if (a.current) a.current.volume = 0.45; }, [src]);
+  const ducked = useRef(false); // paused/faded while recording or replaying a voice guestbook note
+  const fadeTimer = useRef<number | null>(null);
+
+  const clearFade = () => {
+    if (fadeTimer.current !== null) {
+      window.clearInterval(fadeTimer.current);
+      fadeTimer.current = null;
+    }
+  };
+
+  const fadeVolume = (el: HTMLAudioElement, target: number, durationMs: number, onComplete?: () => void) => {
+    clearFade();
+    const startVol = Number.isFinite(el.volume) ? el.volume : BASE_MUSIC_VOLUME;
+    const diff = target - startVol;
+    if (Math.abs(diff) < 0.01 || durationMs <= 0) {
+      try { el.volume = Math.max(0, Math.min(1, target)); } catch {}
+      onComplete?.();
+      return;
+    }
+    const stepMs = 25;
+    const steps = Math.max(1, Math.round(durationMs / stepMs));
+    let step = 0;
+    fadeTimer.current = window.setInterval(() => {
+      step++;
+      const progress = Math.min(1, step / steps);
+      const eased = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+      try { el.volume = Math.max(0, Math.min(1, startVol + diff * eased)); } catch {}
+      if (progress >= 1) {
+        clearFade();
+        onComplete?.();
+      }
+    }, stepMs);
+  };
+
+  useEffect(() => { if (a.current) a.current.volume = BASE_MUSIC_VOLUME; }, [src]);
   useEffect(() => {
     const el = a.current;
     if (!el || !src) return;
-    const start = () => {
+    const start = (fadeIn = false) => {
+      if (ducked.current) return;
+      if (fadeIn) {
+        try { el.volume = 0; } catch {}
+      } else {
+        clearFade();
+        try { el.volume = BASE_MUSIC_VOLUME; } catch {}
+      }
       el.play()
-        .then(() => { wanted.current = true; setOn(true); })
+        .then(() => {
+          wanted.current = true;
+          setOn(true);
+          if (fadeIn) fadeVolume(el, BASE_MUSIC_VOLUME, 650);
+        })
         .catch(() => {}); // autoplay blocked → the gesture listeners below will retry
     };
     // try straight away; browsers that require a tap start on the first interaction
@@ -124,27 +171,81 @@ export function MusicButton({ src }: { src?: string }) {
     const remove = () => EVENTS.forEach((e) => window.removeEventListener(e, gesture));
     const gesture = () => {
       if (manual.current) return remove(); // guest took over: never auto-start again
+      if (ducked.current) return; // don't auto-start while recording/replaying voice note
       el.play()
-        .then(() => { wanted.current = true; setOn(true); remove(); })
+        .then(() => {
+          try { el.volume = BASE_MUSIC_VOLUME; } catch {}
+          wanted.current = true;
+          setOn(true);
+          remove();
+        })
         .catch(() => {});
     };
     EVENTS.forEach((e) => window.addEventListener(e, gesture, { passive: true }));
+
+    const onDuck = (event: Event) => {
+      const shouldDuck = Boolean((event as CustomEvent<{ duck?: boolean }>).detail?.duck);
+      if (shouldDuck) {
+        ducked.current = true;
+        if (!el.paused) {
+          fadeVolume(el, 0, 360, () => {
+            if (ducked.current && !el.paused) {
+              el.pause();
+              setOn(false);
+            }
+          });
+        }
+      } else if (ducked.current) {
+        ducked.current = false;
+        if (wanted.current && document.visibilityState !== "hidden") {
+          if (el.paused) {
+            start(true);
+          } else {
+            setOn(true);
+            fadeVolume(el, BASE_MUSIC_VOLUME, 650);
+          }
+        }
+      }
+    };
+    window.addEventListener("jsos:music-duck", onDuck);
+
     // stop when the guest leaves: app switch / tab hide on mobile, closing the browser
     const onVis = () => {
       if (document.visibilityState === "hidden") {
+        clearFade();
         if (!el.paused) { el.pause(); hiddenPause.current = true; }
       } else if (hiddenPause.current) {
         hiddenPause.current = false;
-        if (wanted.current) start();
+        if (wanted.current && !ducked.current) start(true);
       }
     };
-    const onHide = () => el.pause();
+    const onHide = () => { clearFade(); el.pause(); };
     document.addEventListener("visibilitychange", onVis);
     window.addEventListener("pagehide", onHide);
-    return () => { remove(); document.removeEventListener("visibilitychange", onVis); window.removeEventListener("pagehide", onHide); };
+    return () => {
+      clearFade();
+      remove();
+      window.removeEventListener("jsos:music-duck", onDuck);
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("pagehide", onHide);
+    };
   }, [src]);
   if (!src) return null;
-  const toggle = () => { const el = a.current; if (!el) return; manual.current = true; if (el.paused) { wanted.current = true; el.play().then(() => setOn(true)).catch(() => {}); } else { wanted.current = false; el.pause(); setOn(false); } };
+  const toggle = () => {
+    const el = a.current;
+    if (!el) return;
+    clearFade();
+    manual.current = true;
+    if (el.paused) {
+      wanted.current = true;
+      try { el.volume = BASE_MUSIC_VOLUME; } catch {}
+      el.play().then(() => setOn(true)).catch(() => {});
+    } else {
+      wanted.current = false;
+      el.pause();
+      setOn(false);
+    }
+  };
   return (
     <>
       <audio ref={a} src={src} loop preload="auto" />

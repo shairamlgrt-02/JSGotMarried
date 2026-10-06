@@ -3,7 +3,7 @@ import { Reorder, useDragControls } from "framer-motion";
 import { useMemo, useState } from "react";
 import { getMode, pushSeedSafely, refreshFaqCopy, refreshStoryCopy, resetLocal, uid } from "@/lib/db";
 import { entourageGroups } from "@/lib/entourage";
-import { STATUS, genCodeFor, inviteHref, inviteLink, inviteMessage, inviteStatus, mergeHousehold, onGuestList, planHouseholdMerges, tallyInvites, cleanCode, whoIsItFor, type InviteText } from "@/lib/guests";
+import { STATUS, cleanInviteNote, genCodeFor, inviteHref, inviteLink, inviteMessage, inviteStatus, mergeHousehold, planHouseholdMerges, tallyInvites, cleanCode, whoIsItFor, type InviteText } from "@/lib/guests";
 import { useCountdown, useTable } from "@/lib/hooks";
 import type { Attending, Attire, BudgetItem, BudgetStatus, ChecklistItem, EntourageMember, Guest, Priority, ScheduleItem, StoryChapter, Vendor, VendorStatus } from "@/lib/types";
 import { ENTOURAGE_ROLES, TABLES } from "@/lib/types";
@@ -290,13 +290,27 @@ export function Budget() {
 }
 
 /* ═════════════ 6. GUESTS & RSVP ═════════════
-   The list of people: every household whose link has been filled in, plus anyone you added by
-   hand. The links themselves — issuing them, sending them, who has opened what — live on the
-   Invite codes tab, and both read the same rows, so nothing is ever entered twice. */
+   The master guest list, catering & day-of check-in sheet: every invited guest, their official
+   plus-one, dietary requirements, song requests and RSVP wishes. */
+type GuestEntry = {
+  key: string;
+  g: Guest;
+  role: "primary" | "plus_one";
+  displayName: string;
+  companionName: string;
+  invitedAs: string;
+  idx: number;
+};
+
 export function Guests({ go }: { go: (tab: string) => void }) {
   const { rows, save, del, error } = useTable("guests", false);
   const { info } = useInfo();
-  const [filter, setFilter] = useState<"all" | Attending>("all");
+  const [filter, setFilter] = useState<"all" | Attending | "needs_review">("all");
+  const [detailFilter, setDetailFilter] = useState<"all" | "plus_one" | "dietary" | "song" | "message">("all");
+  const [expandPlusOnes, setExpandPlusOnes] = useState(true);
+  const [sortBy, setSortBy] = useState<
+    "latest" | "oldest" | "name_asc" | "name_desc" | "plus_asc" | "plus_desc" | "pax_desc" | "pax_asc" | "code_asc" | "code_desc" | "status"
+  >("latest");
   const [q, setQ] = useState("");
   const [msg, setMsg] = useState("");
   /** Codes owning more than one row — leftovers from the old "reply = a new row" behaviour. */
@@ -305,14 +319,151 @@ export function Guests({ go }: { go: (tab: string) => void }) {
   const day = new Date(info.date).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
   /** The invitation letter, re-sent from this list — the same text the Invite codes tab sends. */
   const text: InviteText = { couple, day, date: info.date, deadline: info.rsvp_deadline };
-  const shown = rows
-    .filter(onGuestList)
-    .filter((g) => filter === "all" || g.attending === filter)
-    .filter((g) => !q || `${g.name} ${g.phone}`.toLowerCase().includes(q.toLowerCase()))
-    .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
-  const pax = rows.filter((g) => g.attending === "yes").reduce((s, g) => s + g.pax, 0);
-  const pendingPax = rows.filter((g) => g.attending === "pending").reduce((s, g) => s + g.pax, 0);
-  const add = () => save({ id: uid(), name: "New guest", phone: "", pax: 1, attending: "pending", dietary: "", message: "", song_request: "", source: "manual", created_at: new Date().toISOString() });
+
+  const toggleSort = (asc: typeof sortBy, desc: typeof sortBy) => {
+    setSortBy((cur) => (cur === asc ? desc : asc));
+  };
+
+  /** Build the guest entries: primary guests plus (when enabled) each named plus-one as their own official guest row. */
+  const entries = useMemo<GuestEntry[]>(() => {
+    const list: GuestEntry[] = [];
+    rows.forEach((g, idx) => {
+      const invitedAs = whoIsItFor(g);
+      const primaryName = (g.name || "").trim() || invitedAs;
+      const plusName = (g.plus_one || "").trim();
+      list.push({
+        key: `${g.id}:primary`,
+        g,
+        role: "primary",
+        displayName: primaryName,
+        companionName: plusName,
+        invitedAs,
+        idx: idx * 2,
+      });
+      if (expandPlusOnes && plusName) {
+        list.push({
+          key: `${g.id}:plus_one`,
+          g,
+          role: "plus_one",
+          displayName: plusName,
+          companionName: primaryName,
+          invitedAs,
+          idx: idx * 2 + 1,
+        });
+      }
+    });
+    return list;
+  }, [rows, expandPlusOnes]);
+
+  const shown = useMemo(() => {
+    const query = q.trim().toLowerCase();
+    return entries
+      .filter(({ g }) => {
+        if (filter === "all") return true;
+        if (filter === "needs_review") return inviteStatus(g) === "needs_review";
+        return g.attending === filter;
+      })
+      .filter(({ g }) => {
+        if (detailFilter === "plus_one") return Boolean((g.plus_one || "").trim());
+        if (detailFilter === "dietary") return Boolean((g.dietary || "").trim());
+        if (detailFilter === "song") return Boolean((g.song_request || "").trim());
+        if (detailFilter === "message") return Boolean((g.message || "").trim());
+        return true;
+      })
+      .filter(({ g, displayName, companionName, invitedAs }) => {
+        if (!query) return true;
+        const haystack = `${displayName} ${companionName} ${invitedAs} ${g.name ?? ""} ${g.plus_one ?? ""} ${g.greet ?? ""} ${g.phone ?? ""} ${g.code ?? ""} ${cleanInviteNote(g.note)} ${g.dietary ?? ""} ${g.song_request ?? ""} ${g.message ?? ""}`.toLowerCase();
+        return haystack.includes(query);
+      })
+      .sort((a, b) => {
+        const timeA = a.g.created_at ?? "";
+        const timeB = b.g.created_at ?? "";
+        const nameA = a.displayName || a.invitedAs || "";
+        const nameB = b.displayName || b.invitedAs || "";
+        const plusA = a.companionName || "";
+        const plusB = b.companionName || "";
+        const codeA = cleanCode(a.g.code || "");
+        const codeB = cleanCode(b.g.code || "");
+        const statusOrder: Record<Attending, number> = { yes: 0, pending: 1, no: 2 };
+        switch (sortBy) {
+          case "latest":
+            return timeB.localeCompare(timeA) || a.role.localeCompare(b.role) || b.idx - a.idx;
+          case "oldest":
+            return timeA.localeCompare(timeB) || a.role.localeCompare(b.role) || a.idx - b.idx;
+          case "name_asc":
+            return nameA.localeCompare(nameB, undefined, { sensitivity: "base" }) || timeB.localeCompare(timeA);
+          case "name_desc":
+            return nameB.localeCompare(nameA, undefined, { sensitivity: "base" }) || timeB.localeCompare(timeA);
+          case "plus_asc":
+            return (plusA ? 0 : 1) - (plusB ? 0 : 1) || plusA.localeCompare(plusB, undefined, { sensitivity: "base" }) || nameA.localeCompare(nameB, undefined, { sensitivity: "base" });
+          case "plus_desc":
+            return (plusA ? 0 : 1) - (plusB ? 0 : 1) || plusB.localeCompare(plusA, undefined, { sensitivity: "base" }) || nameA.localeCompare(nameB, undefined, { sensitivity: "base" });
+          case "pax_desc":
+            return (Number(b.g.pax) || 0) - (Number(a.g.pax) || 0) || nameA.localeCompare(nameB, undefined, { sensitivity: "base" });
+          case "pax_asc":
+            return (Number(a.g.pax) || 0) - (Number(b.g.pax) || 0) || nameA.localeCompare(nameB, undefined, { sensitivity: "base" });
+          case "code_asc":
+            return codeA.localeCompare(codeB) || a.role.localeCompare(b.role) || timeB.localeCompare(timeA);
+          case "code_desc":
+            return codeB.localeCompare(codeA) || a.role.localeCompare(b.role) || timeB.localeCompare(timeA);
+          case "status":
+            return (statusOrder[a.g.attending] ?? 9) - (statusOrder[b.g.attending] ?? 9) || timeB.localeCompare(timeA);
+        }
+      });
+  }, [entries, filter, detailFilter, q, sortBy]);
+
+  const pax = rows.filter((g) => g.attending === "yes").reduce((s, g) => s + (Number(g.pax) || 0), 0);
+  const pendingPax = rows.filter((g) => g.attending === "pending").reduce((s, g) => s + (Number(g.pax) || 0), 0);
+  const plusOneCount = rows.filter((g) => g.attending !== "no" && Boolean((g.plus_one || "").trim())).length;
+  const needsReviewCount = rows.filter((g) => inviteStatus(g) === "needs_review").length;
+  const dietaryCount = rows.filter((g) => g.attending !== "no" && Boolean((g.dietary || "").trim())).length;
+  const songCount = rows.filter((g) => Boolean((g.song_request || "").trim())).length;
+  const messageCount = rows.filter((g) => Boolean((g.message || "").trim())).length;
+
+  const formatDay = (iso?: string | null) =>
+    iso ? new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+
+  const exportCsv = () => {
+    const sourceList = shown.length ? shown : entries;
+    const csvRows = sourceList.map(({ g, role, displayName, companionName, invitedAs }) => ({
+      guest_name: displayName || "(Unnamed guest)",
+      guest_type: role === "plus_one" ? "Plus-one (Official Guest)" : "Primary Guest",
+      plus_one_or_partner: companionName,
+      invited_as: invitedAs,
+      code: cleanCode(g.code || ""),
+      status: STATUS[inviteStatus(g)].label,
+      attending: g.attending,
+      party_seats: Number(g.pax) || 0,
+      whatsapp: g.phone || "",
+      dietary: g.dietary || "",
+      song_request: g.song_request || "",
+      message: g.message || "",
+      notes: cleanInviteNote(g.note),
+      updated_at: formatDay(g.created_at),
+    }));
+    const content = csvRows.length
+      ? toCsv(csvRows)
+      : "guest_name,guest_type,plus_one_or_partner,invited_as,code,status,attending,party_seats,whatsapp,dietary,song_request,message,notes,updated_at\n";
+    download("guests-rsvp.csv", content);
+  };
+
+  const add = () =>
+    save({
+      id: uid(),
+      name: "New guest",
+      greet: "New guest",
+      phone: "",
+      pax: 1,
+      attending: "pending",
+      dietary: "",
+      message: "",
+      song_request: "",
+      plus_one: "",
+      note: "",
+      source: "manual",
+      created_at: new Date().toISOString(),
+    });
+
   /** Fold every extra row of a household back into one: the reply wins, the leftovers go. */
   async function mergeDuplicates() {
     if (!merges.length) return;
@@ -328,74 +479,225 @@ export function Guests({ go }: { go: (tab: string) => void }) {
     }
     setMsg(`Merged ✓ ${merges.length} household ${merges.length === 1 ? "row" : "rows"} — one row per invitation code again.`);
   }
+
   return (
     <>
-      <PageHead kicker="Everyone who has answered" title="The guest list.">
+      <PageHead kicker="Master check-in · plus-ones · catering & songs" title="The guest list.">
         <Btn variant="ghost" onClick={() => go("invites")}>Invite codes →</Btn>
         <Btn onClick={add}>+ Add guest</Btn>
-        <Btn variant="ghost" onClick={() => download("guests.csv", toCsv(rows))}>Export CSV</Btn>
+        <Btn variant="ghost" onClick={exportCsv}>Export CSV ({shown.length || entries.length})</Btn>
         {merges.length > 0 && <Btn variant="ghost" onClick={mergeDuplicates}>Merge {merges.length} duplicate{merges.length === 1 ? "" : "s"}</Btn>}
       </PageHead>
       {msg && <p className="mb-4 text-sm text-moss">{msg}</p>}
       <p className="text-sm text-ink/60 mb-5 max-w-3xl">
-        This is the list itself: every household that has <b>filled in its link</b>, plus anyone you added by hand (a phone RSVP, a walk-in).
-        To hand links out — or chase the people who haven't answered — use <button className="underline text-wine" onClick={() => go("invites")}>Invite codes</button>;
-        a reply is written onto <i>the same row</i> you invited, so nobody is ever duplicated.
+        Your master check-in, catering and DJ sheet. Every official <b>plus-one</b> is listed and searchable as a guest right alongside
+        the primary guest so you can double-check any name at a glance, review dietary notes and song requests, or export the full roster to CSV.
       </p>
       {error && <div className="mb-4 text-red-300">{error}</div>}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-5">
-        <Card className="!bg-moss !text-paper"><Stat label="Catering headcount" value={pax} sub={`+ up to ${pendingPax} pending`} /></Card>
-        {ATT.map((a) => <Card key={a}><Stat label={a === "yes" ? "Attending" : a === "no" ? "Declined" : "Pending"} value={rows.filter((g) => g.attending === a).length} sub="parties" /></Card>)}
+        <Card className="!bg-moss !text-paper">
+          <Stat label="Confirmed seats" value={pax} sub={`${plusOneCount} official plus-one${plusOneCount === 1 ? "" : "s"} · +${pendingPax} pending`} />
+        </Card>
+        <Card>
+          <Stat
+            label="RSVP status"
+            value={`${rows.filter((g) => g.attending === "yes").length} yes`}
+            sub={`${rows.filter((g) => g.attending === "pending").length} pending · ${rows.filter((g) => g.attending === "no").length} declined`}
+          />
+        </Card>
+        <Card>
+          <Stat
+            label="Plus-ones"
+            value={plusOneCount}
+            sub={needsReviewCount ? `${needsReviewCount} waiting on your approval` : "all plus-ones reviewed"}
+          />
+        </Card>
+        <Card>
+          <Stat
+            label="Dietary & songs"
+            value={`${dietaryCount} / ${songCount}`}
+            sub={`${dietaryCount} dietary · ${songCount} song${songCount === 1 ? "" : "s"} · ${messageCount} note${messageCount === 1 ? "" : "s"}`}
+          />
+        </Card>
       </div>
       <Card>
-        <div className="flex flex-wrap gap-2 mb-4">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or number…" className="flex-1 min-w-[200px] bg-white/60 rounded-full px-5 py-2.5 outline-none border border-ink/10 focus:border-wine" />
-          {(["all", ...ATT] as const).map((f) => <Btn key={f} variant={filter === f ? "dark" : "ghost"} onClick={() => setFilter(f)}>{f}</Btn>)}
+        <div className="flex flex-wrap gap-2 mb-3 items-center">
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search guest name, plus-one, code, number, dietary or song…"
+            className="flex-1 min-w-[220px] bg-white/60 rounded-full px-5 py-2.5 outline-none border border-ink/10 focus:border-wine"
+          />
+          <label className="flex items-center gap-1.5 bg-white/60 rounded-full px-3.5 py-2 border border-ink/10 text-xs">
+            <span className="label !text-[9px] text-ink/50">Filter</span>
+            <select value={detailFilter} onChange={(e) => setDetailFilter(e.target.value as typeof detailFilter)} className="bg-transparent outline-none font-medium text-ink cursor-pointer">
+              <option value="all">All details</option>
+              <option value="plus_one">Has plus-one ({plusOneCount})</option>
+              <option value="dietary">Has dietary note ({dietaryCount})</option>
+              <option value="song">Has song request ({songCount})</option>
+              <option value="message">Has RSVP note ({messageCount})</option>
+            </select>
+          </label>
+          <label className="flex items-center gap-1.5 bg-white/60 rounded-full px-3.5 py-2 border border-ink/10 text-xs">
+            <span className="label !text-[9px] text-ink/50">Sort</span>
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)} className="bg-transparent outline-none font-medium text-ink cursor-pointer">
+              <option value="latest">Latest to oldest</option>
+              <option value="oldest">Oldest to latest</option>
+              <option value="name_asc">Guest name: A → Z</option>
+              <option value="name_desc">Guest name: Z → A</option>
+              <option value="plus_asc">Plus-one: A → Z</option>
+              <option value="plus_desc">Plus-one: Z → A</option>
+              <option value="pax_desc">Seats: High → Low</option>
+              <option value="pax_asc">Seats: Low → High</option>
+              <option value="code_asc">Code: A → Z</option>
+              <option value="code_desc">Code: Z → A</option>
+              <option value="status">Attending status</option>
+            </select>
+          </label>
+        </div>
+        <div className="flex flex-wrap gap-2 mb-4 items-center justify-between">
+          <div className="flex flex-wrap gap-2 items-center">
+            {([
+              ["all", `all ${entries.length}`],
+              ["yes", `attending ${entries.filter((e) => e.g.attending === "yes").length}`],
+              ["needs_review", `needs review ${entries.filter((e) => inviteStatus(e.g) === "needs_review").length}`],
+              ["pending", `pending ${entries.filter((e) => e.g.attending === "pending").length}`],
+              ["no", `declined ${entries.filter((e) => e.g.attending === "no").length}`],
+            ] as const).map(([f, label]) => (
+              <Btn key={f} variant={filter === f ? "dark" : "ghost"} onClick={() => setFilter(f)} className="!px-3 !py-1.5">
+                {label}
+              </Btn>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setExpandPlusOnes((v) => !v)}
+            className={`label !text-[10px] rounded-full px-3.5 py-1.5 border transition-colors ${expandPlusOnes ? "bg-wine/10 text-wine border-wine/30" : "border-ink/15 text-ink/60 hover:border-wine"}`}
+          >
+            {expandPlusOnes ? "✦ Showing plus-ones as individual guests" : "Showing 1 row per household"}
+          </button>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left min-w-[1120px] text-sm">
-            <thead><tr className="label text-ink/50 border-b border-ink/10">
-              <th className="py-3 px-2">Name</th><th className="px-2">WhatsApp</th><th className="px-2 w-16">Pax</th><th className="px-2">Attending</th><th className="px-2">Dietary</th><th className="px-2">Song</th><th className="px-2">Message</th><th className="px-2">Source</th><th className="px-2">Invite</th><th />
+          <table className="w-full text-left min-w-[1220px] text-sm">
+            <thead><tr className="label text-ink/50 border-b border-ink/10 select-none">
+              <th className="py-3 px-2 cursor-pointer hover:text-wine" onClick={() => toggleSort("name_asc", "name_desc")}>
+                Guest {sortBy === "name_asc" ? "↑" : sortBy === "name_desc" ? "↓" : "↕"}
+              </th>
+              <th className="px-2 cursor-pointer hover:text-wine" onClick={() => toggleSort("plus_asc", "plus_desc")}>
+                Plus-one / Partner {sortBy === "plus_asc" ? "↑" : sortBy === "plus_desc" ? "↓" : "↕"}
+              </th>
+              <th className="px-2">WhatsApp</th>
+              <th className="px-2 w-16 cursor-pointer hover:text-wine" onClick={() => toggleSort("pax_desc", "pax_asc")}>
+                Seats {sortBy === "pax_desc" ? "↓" : sortBy === "pax_asc" ? "↑" : "↕"}
+              </th>
+              <th className="px-2 cursor-pointer hover:text-wine" onClick={() => setSortBy((s) => (s === "status" ? "latest" : "status"))}>
+                Attending {sortBy === "status" ? "↓" : "↕"}
+              </th>
+              <th className="px-2">Dietary</th>
+              <th className="px-2">Song</th>
+              <th className="px-2">Message</th>
+              <th className="px-2 cursor-pointer hover:text-wine" onClick={() => toggleSort("code_asc", "code_desc")}>
+                Invite {sortBy === "code_asc" ? "↑" : sortBy === "code_desc" ? "↓" : "↕"}
+              </th>
+              <th className="px-2 cursor-pointer hover:text-wine" onClick={() => toggleSort("latest", "oldest")}>
+                Date {sortBy === "latest" ? "↓" : sortBy === "oldest" ? "↑" : "↕"}
+              </th>
+              <th />
             </tr></thead>
             <tbody className="divide-y divide-ink/10">
-              {shown.map((g: Guest) => (
-                <tr key={g.id} className="align-top">
-                  <td className="px-1 py-1 font-medium"><EditText value={g.name} onSave={(v) => save({ ...g, name: v })} /></td>
-                  <td className="px-1"><EditText value={g.phone} onSave={(v) => save({ ...g, phone: v })} />{g.phone && <a className="label !text-[9px] text-moss px-2" target="_blank" rel="noreferrer" href={`https://wa.me/${g.phone.replace(/\D/g, "")}`}>Message ↗</a>}</td>
-                  <td className="px-1"><EditText type="number" value={g.pax} onSave={(v) => save({ ...g, pax: Math.max(0, Math.round(num(v))) })} />{g.plus_one ? <div className="text-[10px] text-ink/50 mt-0.5">+ {g.plus_one}</div> : null}</td>
-                  <td className="px-1"><Select value={g.attending} options={ATT} onChange={(v) => save({ ...g, attending: v })} /></td>
-                  <td className="px-1"><EditText value={g.dietary} onSave={(v) => save({ ...g, dietary: v })} /></td>
-                  <td className="px-1"><EditText value={g.song_request} onSave={(v) => save({ ...g, song_request: v })} /></td>
-                  <td className="px-1 max-w-[260px]"><EditText value={g.message} onSave={(v) => save({ ...g, message: v })} /></td>
-                  <td className="px-2 py-2"><Tag>{g.source === "RSVP form" ? "quoted" : "pending"}</Tag><div className="text-[10px] text-ink/40 mt-1">{g.source}</div></td>
-                  <td className="px-2 py-2 whitespace-nowrap">
-                    <Tag>{STATUS[inviteStatus(g)].label}</Tag>
-                    <div className="flex flex-wrap gap-x-2 gap-y-1 mt-1 max-w-[150px]">
-                      {!g.code ? (
-                        <button className="label !text-[9px] text-wine hover:text-burgundy" onClick={() => save({ ...g, code: genCodeFor(rows) })}>issue code</button>
+              {shown.map(({ key, g, role, displayName, companionName, invitedAs }) => {
+                const isPlusOneRow = role === "plus_one";
+                return (
+                  <tr key={key} className={`align-top ${isPlusOneRow ? "bg-wine/[0.03]" : ""}`}>
+                    <td className="px-1 py-1.5 font-medium min-w-[180px]">
+                      {isPlusOneRow ? (
+                        <>
+                          <EditText value={g.plus_one ?? ""} placeholder="Plus-one's full name" onSave={(v) => save({ ...g, plus_one: v })} />
+                          <div className="px-2 text-[10px] text-wine font-medium">✦ Official plus-one of {companionName || invitedAs}</div>
+                        </>
                       ) : (
                         <>
-                          <span className="label !text-[9px] text-ink/60">{cleanCode(g.code)}</span>
-                          <button className="label !text-[9px] text-moss" onClick={() => navigator.clipboard?.writeText(inviteLink(g.code!, location.origin))}>copy link</button>
-                          <a className="label !text-[9px] text-wine hover:text-burgundy" target="_blank" rel="noreferrer"
-                            href={inviteHref(g.code!, g.phone || "", { ...text, greet: g.greet, name: g.name, seats: Number(g.pax) || 0 })} title={g.phone ? "Send the invitation on WhatsApp" : "Send the invitation on WhatsApp — pick the contact there"}>send ↗</a>
-                          <button className="label !text-[9px] text-ink/50 hover:text-wine" onClick={() => go("invites")}>ledger →</button>
+                          <EditText
+                            value={g.name || g.greet || ""}
+                            placeholder="Guest's full name"
+                            onSave={(v) => save(g.name ? { ...g, name: v } : { ...g, name: v, greet: g.greet || v })}
+                          />
+                          {invitedAs && g.name && invitedAs.toLowerCase() !== g.name.trim().toLowerCase() && (
+                            <div className="px-2 text-[10px] text-ink/45">Invited as: {invitedAs}</div>
+                          )}
+                          {cleanInviteNote(g.note) && (
+                            <div className="px-2 text-[10px] text-ink/45 italic">{cleanInviteNote(g.note)}</div>
+                          )}
                         </>
                       )}
-                      {g.approved === false && (
-                        <>
-                          <button className="label !text-[9px] text-moss" onClick={() => save({ ...g, approved: true })}>approve</button>
-                          <button className="label !text-[9px] text-ink/40 hover:text-burgundy" onClick={() => save({ ...g, attending: "no", approved: true })}>decline</button>
-                        </>
+                    </td>
+                    <td className="px-1 py-1.5 min-w-[160px]">
+                      {isPlusOneRow ? (
+                        <div className="px-2 py-1.5 text-xs text-ink/60">
+                          Guest of <b>{companionName || invitedAs}</b>
+                        </div>
+                      ) : (
+                        <EditText
+                          value={g.plus_one ?? ""}
+                          placeholder={Number(g.pax) >= 2 ? "Plus-one name" : "Add plus-one…"}
+                          onSave={(v) => save({ ...g, plus_one: v, pax: v.trim() && (Number(g.pax) || 1) < 2 ? 2 : g.pax })}
+                          className="text-ink/75"
+                        />
                       )}
-                    </div>
-                  </td>
-                  <td className="px-1"><button onClick={() => confirm(`Remove ${g.name}?`) && del(g.id)} className="text-ink/30 hover:text-burgundy px-2 py-2">✕</button></td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-1 min-w-[130px]">
+                      <EditText value={g.phone} onSave={(v) => save({ ...g, phone: v })} />
+                      {g.phone && <a className="label !text-[9px] text-moss px-2" target="_blank" rel="noreferrer" href={`https://wa.me/${g.phone.replace(/\D/g, "")}`}>Message ↗</a>}
+                    </td>
+                    <td className="px-1">
+                      <EditText type="number" value={g.pax} onSave={(v) => save({ ...g, pax: Math.max(0, Math.round(num(v))) })} className="tabular-nums" />
+                      <div className="px-2 text-[10px] text-ink/45">{isPlusOneRow ? "Seat 2" : g.plus_one ? "Seat 1 (+1)" : `${g.pax} seat${g.pax === 1 ? "" : "s"}`}</div>
+                    </td>
+                    <td className="px-1">
+                      <Select value={g.attending} options={ATT} onChange={(v) => save({ ...g, attending: v })} />
+                    </td>
+                    <td className="px-1 min-w-[130px]"><EditText value={g.dietary} placeholder="None" onSave={(v) => save({ ...g, dietary: v })} /></td>
+                    <td className="px-1 min-w-[130px]"><EditText value={g.song_request} placeholder="—" onSave={(v) => save({ ...g, song_request: v })} /></td>
+                    <td className="px-1 max-w-[240px]"><EditText value={g.message} placeholder="—" onSave={(v) => save({ ...g, message: v })} /></td>
+                    <td className="px-2 py-2 whitespace-nowrap">
+                      <Tag>{STATUS[inviteStatus(g)].label}</Tag>
+                      <div className="flex flex-wrap gap-x-2 gap-y-1 mt-1 max-w-[150px]">
+                        {!g.code ? (
+                          <button className="label !text-[9px] text-wine hover:text-burgundy" onClick={() => save({ ...g, code: genCodeFor(rows) })}>issue code</button>
+                        ) : (
+                          <>
+                            <span className="label !text-[9px] text-ink/60">{cleanCode(g.code)}</span>
+                            <button className="label !text-[9px] text-moss" onClick={() => navigator.clipboard?.writeText(inviteLink(g.code!, location.origin))}>copy link</button>
+                            <a className="label !text-[9px] text-wine hover:text-burgundy" target="_blank" rel="noreferrer"
+                              href={inviteHref(g.code!, g.phone || "", { ...text, greet: g.greet, name: g.name, seats: Number(g.pax) || 0 })} title={g.phone ? "Send the invitation on WhatsApp" : "Send the invitation on WhatsApp — pick the contact there"}>send ↗</a>
+                            <button className="label !text-[9px] text-ink/50 hover:text-wine" onClick={() => go("invites")}>ledger →</button>
+                          </>
+                        )}
+                        {g.approved === false && (
+                          <>
+                            <button className="label !text-[9px] text-moss" onClick={() => save({ ...g, approved: true })}>approve</button>
+                            <button className="label !text-[9px] text-ink/40 hover:text-burgundy" onClick={() => save({ ...g, attending: "no", approved: true })}>decline</button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-2 py-2 whitespace-nowrap text-[11px] text-ink/55">
+                      <div>{formatDay(g.created_at) || "—"}</div>
+                      <div className="text-[10px] text-ink/40">{g.source === "RSVP form" ? "RSVP reply" : "Binder"}</div>
+                    </td>
+                    <td className="px-1">
+                      {isPlusOneRow ? (
+                        <button onClick={() => confirm(`Remove plus-one ${displayName}?`) && save({ ...g, plus_one: "", pax: 1 })} title="Remove plus-one" className="text-ink/30 hover:text-burgundy px-2 py-2">✕</button>
+                      ) : (
+                        <button onClick={() => confirm(`Remove ${displayName || "this guest"}?`) && del(g.id)} className="text-ink/30 hover:text-burgundy px-2 py-2">✕</button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
-          {!shown.length && <div className="py-14 text-center text-ink/40 font-serif text-2xl italic">No RSVPs yet — share the link! ✦</div>}
+          {!shown.length && <div className="py-14 text-center text-ink/40 font-serif text-2xl italic">{rows.length ? "No guests match this filter — try “all”." : "No guests yet — add guests here or generate codes in Invite Codes! ✦"}</div>}
         </div>
       </Card>
     </>
@@ -833,7 +1135,7 @@ export function PrintBinder() {
       <H>Checklist</H><T head={["", "Task", "Priority", "Due"]} rows={[...tasks].sort((a, b) => a.due_date.localeCompare(b.due_date)).map((t) => [t.completed ? "✓" : "☐", t.task, t.category, t.due_date])} />
       <H>Attire</H><T head={["Group", "Colors", "Notes"]} rows={attire.map((a) => [a.label, a.colors.map((c) => c.name).join(", "), a.notes])} />
       <H>{`Guests (${guests.filter((g) => g.attending === "yes").reduce((s, g) => s + g.pax, 0)} pax confirmed)`}</H>
-      <T head={["Name", "Phone", "Pax", "Attending", "Dietary"]} rows={guests.map((g) => [g.name, g.phone, g.pax, g.attending, g.dietary])} />
+      <T head={["Name", "Plus-one", "Code", "Phone", "Pax", "Attending", "Dietary"]} rows={guests.map((g) => [g.name || whoIsItFor(g), g.plus_one || "", cleanCode(g.code || ""), g.phone, g.pax, g.attending, g.dietary])} />
     </div>
   );
 }

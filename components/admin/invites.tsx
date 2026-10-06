@@ -48,6 +48,10 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
   const info = infoRows[0];
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const [filter, setFilter] = useState<"all" | InviteStatus>("all");
+  const [seatFilter, setSeatFilter] = useState<"all" | "1" | "2">("all");
+  const [sortBy, setSortBy] = useState<
+    "latest" | "oldest" | "for_asc" | "for_desc" | "name_asc" | "name_desc" | "pax_desc" | "pax_asc" | "code_asc" | "code_desc" | "status"
+  >("latest");
   const [q, setQ] = useState("");
   const [msg, setMsg] = useState("");
   const [copied, setCopied] = useState("");
@@ -76,14 +80,52 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
   /** The same letter, addressed: who the link is for, and the seats it is reserved for. */
   const textFor = (g: Guest): InviteText => ({ ...text, greet: g.greet, name: g.name, seats: Number(g.pax) || 0 });
 
+  const toggleSort = (asc: typeof sortBy, desc: typeof sortBy) => {
+    setSortBy((cur) => (cur === asc ? desc : asc));
+  };
+
   const ledger = useMemo(() => {
-    const withStatus = rows.map((g) => ({ g, s: inviteStatus(g) }));
+    const withStatus = rows.map((g, idx) => ({ g, s: inviteStatus(g), idx }));
     const filtered = withStatus
       .filter((x) => filter === "all" || x.s === filter)
-      .filter((x) => !q || `${x.g.greet ?? ""} ${x.g.name} ${x.g.phone} ${x.g.code} ${cleanInviteNote(x.g.note)} ${x.g.plus_one ?? ""}`.toLowerCase().includes(q.toLowerCase()))
-      .sort((a, b) => ORDER.indexOf(a.s) - ORDER.indexOf(b.s) || whoIsItFor(a.g).localeCompare(whoIsItFor(b.g)));
+      .filter((x) => seatFilter === "all" || (seatFilter === "1" ? Number(x.g.pax) === 1 : Number(x.g.pax) >= 2))
+      .filter((x) => !q || `${x.g.greet ?? ""} ${x.g.name} ${x.g.plus_one ?? ""} ${x.g.phone} ${x.g.code} ${cleanInviteNote(x.g.note)} ${x.g.dietary ?? ""} ${x.g.song_request ?? ""} ${x.g.message ?? ""}`.toLowerCase().includes(q.toLowerCase()))
+      .sort((a, b) => {
+        const timeA = a.g.created_at ?? "";
+        const timeB = b.g.created_at ?? "";
+        const forA = whoIsItFor(a.g);
+        const forB = whoIsItFor(b.g);
+        const nameA = `${a.g.name || ""} ${a.g.plus_one || ""}`.trim() || forA;
+        const nameB = `${b.g.name || ""} ${b.g.plus_one || ""}`.trim() || forB;
+        const codeA = cleanCode(a.g.code || "");
+        const codeB = cleanCode(b.g.code || "");
+        switch (sortBy) {
+          case "latest":
+            return timeB.localeCompare(timeA) || b.idx - a.idx;
+          case "oldest":
+            return timeA.localeCompare(timeB) || a.idx - b.idx;
+          case "for_asc":
+            return forA.localeCompare(forB, undefined, { sensitivity: "base" }) || timeB.localeCompare(timeA);
+          case "for_desc":
+            return forB.localeCompare(forA, undefined, { sensitivity: "base" }) || timeB.localeCompare(timeA);
+          case "name_asc":
+            return nameA.localeCompare(nameB, undefined, { sensitivity: "base" }) || timeB.localeCompare(timeA);
+          case "name_desc":
+            return nameB.localeCompare(nameA, undefined, { sensitivity: "base" }) || timeB.localeCompare(timeA);
+          case "pax_desc":
+            return (Number(b.g.pax) || 0) - (Number(a.g.pax) || 0) || forA.localeCompare(forB, undefined, { sensitivity: "base" });
+          case "pax_asc":
+            return (Number(a.g.pax) || 0) - (Number(b.g.pax) || 0) || forA.localeCompare(forB, undefined, { sensitivity: "base" });
+          case "code_asc":
+            return codeA.localeCompare(codeB) || timeB.localeCompare(timeA);
+          case "code_desc":
+            return codeB.localeCompare(codeA) || timeB.localeCompare(timeA);
+          case "status":
+            return ORDER.indexOf(a.s) - ORDER.indexOf(b.s) || timeB.localeCompare(timeA);
+        }
+      });
     return filtered;
-  }, [rows, filter, q]);
+  }, [rows, filter, seatFilter, sortBy, q]);
 
   const flash = (t: string) => { setMsg(t); setTimeout(() => setMsg(""), 6000); };
   const mark = (key: string) => { setCopied(key); setTimeout(() => setCopied(""), 1800); };
@@ -101,14 +143,15 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
      * left blank on purpose, because that is the field the guest's reply card pre-fills, and it is
      * theirs to write.
      */
-    const next = (greet: string, phone: string, pax: number, note: string): Guest => {
+    const baseTime = Date.now();
+    const next = (greet: string, phone: string, pax: number, note: string, idx: number): Guest => {
       const code = genCode(taken);
       taken.add(code);
-      return { id: uid(), name: "", greet, phone, pax, attending: "pending", dietary: "", message: "", song_request: "", note, source: "manual", code, created_at: new Date().toISOString() };
+      return { id: uid(), name: "", greet, phone, pax, attending: "pending", dietary: "", message: "", song_request: "", note, source: "manual", code, created_at: new Date(baseTime + idx).toISOString() };
     };
     const created = kind === "names"
-      ? fresh.map((p) => next(p.name, p.phone, p.pax, p.note))
-      : Array.from({ length: Math.max(1, Math.min(500, Math.round(blanks) || 1)) }, () => next("", "", seatDefault, ""));
+      ? fresh.map((p, i) => next(p.name, p.phone, p.pax, p.note, i))
+      : Array.from({ length: Math.max(1, Math.min(500, Math.round(blanks) || 1)) }, (_, i) => next("", "", seatDefault, "", i));
     if (created.length) await save(created);
     const links = inviteSheet(created, origin);
     if (copyAfter && links) await copyText(links);
@@ -245,8 +288,34 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
       </div>
 
       <Card>
+        <div className="flex flex-wrap gap-2 mb-3 items-center">
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a name, plus-one, number or code…" className="flex-1 min-w-[200px] bg-white/60 rounded-full px-5 py-2.5 outline-none border border-ink/10 focus:border-wine" />
+          <label className="flex items-center gap-1.5 bg-white/60 rounded-full px-3.5 py-2 border border-ink/10 text-xs">
+            <span className="label !text-[9px] text-ink/50">Seats</span>
+            <select value={seatFilter} onChange={(e) => setSeatFilter(e.target.value as typeof seatFilter)} className="bg-transparent outline-none font-medium text-ink cursor-pointer">
+              <option value="all">All seats</option>
+              <option value="1">1 seat</option>
+              <option value="2">2+ seats</option>
+            </select>
+          </label>
+          <label className="flex items-center gap-1.5 bg-white/60 rounded-full px-3.5 py-2 border border-ink/10 text-xs">
+            <span className="label !text-[9px] text-ink/50">Sort</span>
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)} className="bg-transparent outline-none font-medium text-ink cursor-pointer">
+              <option value="latest">Latest to oldest</option>
+              <option value="oldest">Oldest to latest</option>
+              <option value="for_asc">Who it&apos;s for: A → Z</option>
+              <option value="for_desc">Who it&apos;s for: Z → A</option>
+              <option value="name_asc">Their name / Plus-one: A → Z</option>
+              <option value="name_desc">Their name / Plus-one: Z → A</option>
+              <option value="pax_desc">Seats: High → Low</option>
+              <option value="pax_asc">Seats: Low → High</option>
+              <option value="code_asc">Code: A → Z</option>
+              <option value="code_desc">Code: Z → A</option>
+              <option value="status">Status (action first)</option>
+            </select>
+          </label>
+        </div>
         <div className="flex flex-wrap gap-2 mb-4 items-center">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a name, number or code…" className="flex-1 min-w-[200px] bg-white/60 rounded-full px-5 py-2.5 outline-none border border-ink/10 focus:border-wine" />
           {filterChips.map((f) => (
             <Btn key={f} variant={filter === f ? "dark" : "ghost"} onClick={() => setFilter(f)} className="!px-3 !py-1.5">
               {f === "all" ? "all" : STATUS[f].label} <span className="opacity-60">{countFor(f)}</span>
@@ -256,9 +325,28 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
 
         <div className="overflow-x-auto">
           <table className="w-full text-left min-w-[1240px] text-sm">
-            <thead><tr className="label text-ink/50 border-b border-ink/10">
-              <th className="py-3 px-2">Who it&apos;s for</th><th className="px-2">Their name</th><th className="px-2">WhatsApp</th><th className="px-2 w-16">Seats</th>
-              <th className="px-2">Code</th><th className="px-2">Link</th><th className="px-2">Status</th><th className="px-2">Their answer</th><th />
+            <thead><tr className="label text-ink/50 border-b border-ink/10 select-none">
+              <th className="py-3 px-2 cursor-pointer hover:text-wine" onClick={() => toggleSort("for_asc", "for_desc")}>
+                Who it&apos;s for {sortBy === "for_asc" ? "↑" : sortBy === "for_desc" ? "↓" : "↕"}
+              </th>
+              <th className="px-2 cursor-pointer hover:text-wine" onClick={() => toggleSort("name_asc", "name_desc")}>
+                Their name {sortBy === "name_asc" ? "↑" : sortBy === "name_desc" ? "↓" : "↕"}
+              </th>
+              <th className="px-2">WhatsApp</th>
+              <th className="px-2 w-16 cursor-pointer hover:text-wine" onClick={() => toggleSort("pax_desc", "pax_asc")}>
+                Seats {sortBy === "pax_desc" ? "↓" : sortBy === "pax_asc" ? "↑" : "↕"}
+              </th>
+              <th className="px-2 cursor-pointer hover:text-wine" onClick={() => toggleSort("code_asc", "code_desc")}>
+                Code {sortBy === "code_asc" ? "↑" : sortBy === "code_desc" ? "↓" : "↕"}
+              </th>
+              <th className="px-2">Link</th>
+              <th className="px-2 cursor-pointer hover:text-wine" onClick={() => setSortBy((s) => (s === "status" ? "latest" : "status"))}>
+                Status {sortBy === "status" ? "↓" : "↕"}
+              </th>
+              <th className="px-2 cursor-pointer hover:text-wine" onClick={() => toggleSort("latest", "oldest")}>
+                Their answer / Date {sortBy === "latest" ? "↓" : sortBy === "oldest" ? "↑" : "↕"}
+              </th>
+              <th />
             </tr></thead>
             <tbody className="divide-y divide-ink/10">
               {ledger.map(({ g, s }) => (

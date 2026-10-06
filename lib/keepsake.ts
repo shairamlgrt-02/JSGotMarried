@@ -12,6 +12,7 @@ export type KeepsakeData = {
   bride: string;
   guestName: string;   // the guest's own name — the card speaks to them, not about them
   plusOne?: string;
+  code?: string;       // personal invitation code (e.g. "JS-7KQF") for tracking
   dateISO: string;
   venue: string;
   address: string;
@@ -173,6 +174,13 @@ function draw(g: CanvasRenderingContext2D, d: KeepsakeData, photo: HTMLImageElem
     ? `Two seats — for ${d.guestName} & ${d.plusOne} — we can't wait to celebrate with you.`
     : `We can't wait to celebrate with you, ${d.guestName.split(" ")[0]}.`;
   y = wrap(g, seatsLine, y, serif(30, "i400"), MOCHA, 40);
+  const inviteCode = (d.code || "").trim().toUpperCase();
+  if (inviteCode) {
+    y += 80;
+    caps(g, "Invitation code", y, 24, TAUPE, 0.3);
+    y += 52;
+    caps(g, inviteCode, y, 38, WINE, 0.24);
+  }
   y += 110;
 
   // the programme, in short
@@ -197,7 +205,8 @@ function draw(g: CanvasRenderingContext2D, d: KeepsakeData, photo: HTMLImageElem
 
 async function render(d: KeepsakeData, withPhoto: boolean): Promise<Blob | null> {
   const c = document.createElement("canvas");
-  const height = MIN_HEIGHT + Math.max(0, d.program.length - 4) * PROGRAM_ROW_HEIGHT;
+  const hasCode = Boolean((d.code || "").trim());
+  const height = MIN_HEIGHT + Math.max(0, d.program.length - 4) * PROGRAM_ROW_HEIGHT + (hasCode ? 132 : 0);
   c.width = W; c.height = height;
   const g = c.getContext("2d");
   if (!g) return null;

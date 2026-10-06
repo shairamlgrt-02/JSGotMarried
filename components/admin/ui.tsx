@@ -126,14 +126,18 @@ export function fileToDataUrl(file: File, max = 1400): Promise<string> {
 
 export function toCsv(rows: Record<string, unknown>[]) {
   if (!rows.length) return "";
-  const keys = Object.keys(rows[0]);
+  const keys = Array.from(new Set(rows.flatMap((r) => Object.keys(r))));
   const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   return [keys.join(","), ...rows.map((r) => keys.map((k) => esc(r[k])).join(","))].join("\n");
 }
 export function download(name: string, content: string, type = "text/csv") {
+  const payload = type.startsWith("text/csv") && content && !content.startsWith("\uFEFF") ? `\uFEFF${content}` : content;
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([content], { type }));
-  a.download = name; a.click();
+  a.href = URL.createObjectURL(new Blob([payload], { type: type.startsWith("text/csv") ? "text/csv;charset=utf-8;" : type }));
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 export const money = (n: number, cur = "BHD") => `${n.toLocaleString("en-US", { maximumFractionDigits: 2 })} ${cur}`;
