@@ -51,7 +51,46 @@ export type Guest = {
   sent_at?: string | null;
   /** First time the guest opened their personal link — the `opened` stage. */
   viewed_at?: string | null;
+  /**
+   * Guest category tag for grouping & messaging (e.g. "bride_family", "work", "college").
+   * Used by the messaging module to target groups.
+   */
+  category?: string;
 };
+
+/** Guest category a couple can assign to each household for grouping/messaging. */
+export type GuestCategoryId =
+  | ""
+  | "bride_family"
+  | "groom_family"
+  | "sponsor"
+  | "entourage"
+  | "bride_friends"
+  | "groom_friends"
+  | "couple_friends"
+  | "work"
+  | "college_school"
+  | "childhood"
+  | "neighbor"
+  | "online"
+  | "vip";
+
+export const GUEST_CATEGORIES: { id: GuestCategoryId; label: string; icon: string }[] = [
+  { id: "",               label: "Uncategorized",  icon: "·" },
+  { id: "bride_family",   label: "Bride's Family", icon: "♡" },
+  { id: "groom_family",   label: "Groom's Family", icon: "♡" },
+  { id: "sponsor",        label: "Principal Sponsors", icon: "✦" },
+  { id: "entourage",      label: "Entourage",      icon: "✿" },
+  { id: "bride_friends",  label: "Bride's Friends", icon: "❀" },
+  { id: "groom_friends",  label: "Groom's Friends", icon: "◆" },
+  { id: "couple_friends", label: "Couple Friends", icon: "❂" },
+  { id: "work",           label: "Work / Colleagues", icon: "▤" },
+  { id: "college_school", label: "College / School",  icon: "✎" },
+  { id: "childhood",      label: "Childhood Friends", icon: "☀" },
+  { id: "neighbor",       label: "Neighbours",     icon: "⌂" },
+  { id: "online",         label: "Online Friends", icon: "☁" },
+  { id: "vip",            label: "VIP / Honored",  icon: "★" },
+];
 export type VendorStatus = "quoted" | "contacted" | "booked" | "pending";
 export type Vendor = { id: string; type: string; name: string; quote: number; contact: string; status: VendorStatus; notes: string };
 export type Priority = "critical" | "high" | "medium";

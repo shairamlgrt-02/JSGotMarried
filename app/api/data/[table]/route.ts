@@ -81,11 +81,17 @@ export async function POST(req: NextRequest, { params }: { params: { table: stri
 
     const finalError = result.error;
     if (finalError && columnError(finalError.message)) {
-      const missingLabels = ["greet", "note"].filter((column) => new RegExp(`\\b${column}\\b`, "i").test(finalError.message));
-      if (missingLabels.length) {
-        const labels = missingLabels.map((column) => column === "greet" ? "Who it's for" : "notes").join(" and ");
+      const knownColumns: { col: string; label: string; ddl: string }[] = [
+        { col: "greet", label: "Who it's for", ddl: "ALTER TABLE public.guests ADD COLUMN IF NOT EXISTS greet text DEFAULT '';" },
+        { col: "note", label: "notes", ddl: "ALTER TABLE public.guests ADD COLUMN IF NOT EXISTS note text DEFAULT '';" },
+        { col: "category", label: "guest categories", ddl: "ALTER TABLE public.guests ADD COLUMN IF NOT EXISTS category text DEFAULT '';" },
+      ];
+      const missing = knownColumns.filter(({ col }) => new RegExp(`\\b${col}\\b`, "i").test(finalError.message));
+      if (missing.length) {
+        const labels = missing.map((m) => m.label).join(" and ");
+        const ddl = missing.map((m) => m.ddl).join(" ");
         return NextResponse.json({
-          error: `Couldn't save ${labels}: this Supabase project's guests table is missing a required column. In Supabase → SQL Editor, run: ALTER TABLE public.guests ADD COLUMN IF NOT EXISTS greet text DEFAULT ''; ALTER TABLE public.guests ADD COLUMN IF NOT EXISTS note text DEFAULT ''; Then reload the Binder and try again. This edit was not saved.`,
+          error: `Couldn't save ${labels}: this Supabase project's guests table is missing a required column. In Supabase → SQL Editor, run: ${ddl} Then reload the Binder and try again. This edit was not saved.`,
         }, { status: 409 });
       }
     }
