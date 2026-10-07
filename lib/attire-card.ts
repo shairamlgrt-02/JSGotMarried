@@ -1,13 +1,12 @@
-import { ATTIRE_STYLES, type FigureStyle } from "./attire-art";
+import { ATTIRE_STYLES, defaultFigureHexes, shadeFamily, type AttireSwatch, type FigureStyle } from "./attire-art";
 
-type Swatch = { name: string; hex: string; fabric?: string };
-type ReservedGroup = { label: string; colors: Pick<Swatch, "name" | "hex">[] };
+type ReservedGroup = { label: string; colors: Pick<AttireSwatch, "name" | "hex">[] };
 
 export type AttireCardData = {
   couple: string;
   date: string;
-  colors: Swatch[];
-  selectedColor: Swatch;
+  /** The guest palette exactly as the couple saved it — the figures and the swatch list are both built from it. */
+  colors: AttireSwatch[];
   reserved: ReservedGroup[];
 };
 
@@ -54,6 +53,14 @@ function drawTextFit(ctx: CanvasRenderingContext2D, text: string, x: number, y: 
   const width = ctx.measureText(text).width;
   if (width > maxWidth) ctx.font = font.replace(/\d+(?:\.\d+)?px/, `${Math.max(10, size * maxWidth / width)}px`);
   ctx.fillText(text, x, y);
+}
+
+function drawTrackedLeft(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, font: string, color = INK, spacing = 2) {
+  setFont(ctx, font, color, "left");
+  for (const char of Array.from(text)) {
+    ctx.fillText(char, x, y);
+    x += ctx.measureText(char).width + spacing;
+  }
 }
 
 function drawTracked(ctx: CanvasRenderingContext2D, text: string, centerX: number, y: number, font: string, color = INK, spacing = 2) {
@@ -141,6 +148,36 @@ function drawSwatch(ctx: CanvasRenderingContext2D, color: string, x: number, y: 
   ctx.stroke();
 }
 
+/**
+ * The guest palette, family by family: glossy greens, then shining browns, each under its own
+ * heading. Returns the y where the block ends so the sections below can keep flowing.
+ */
+function drawPalette(ctx: CanvasRenderingContext2D, palette: AttireSwatch[], top: number): number {
+  const columns = 6;
+  const cellWidth = (WIDTH - 160) / columns;
+  const rowHeight = 74;
+  const headingGap = 32;
+  const groups = ([
+    ["GLOSSY GREENS", palette.filter((s) => shadeFamily(s.hex) === "green")],
+    ["SHINING BROWNS", palette.filter((s) => shadeFamily(s.hex) === "brown")],
+    ["ALSO WELCOME", palette.filter((s) => shadeFamily(s.hex) === "other")],
+  ] as [string, AttireSwatch[]][]).filter(([, items]) => items.length > 0);
+  let y = top;
+  for (const [label, items] of groups) {
+    drawTrackedLeft(ctx, `${label} · ${items.length}`, 80, y + 12, '600 15px "Cormorant Garamond", Georgia, serif', TAUPE, 2.4);
+    const firstRow = y + headingGap;
+    items.forEach((swatch, index) => {
+      const x = 80 + (index % columns) * cellWidth;
+      const rowTop = firstRow + Math.floor(index / columns) * rowHeight;
+      drawSwatch(ctx, swatch.hex, x, rowTop, 44);
+      drawTextFit(ctx, swatch.name, x + 53, rowTop + 19, '600 20px "Cormorant Garamond", Georgia, serif', INK, cellWidth - 60);
+      if (swatch.fabric) drawTextFit(ctx, swatch.fabric, x + 53, rowTop + 39, 'italic 15px "Cormorant Garamond", Georgia, serif', TAUPE, cellWidth - 60);
+    });
+    y = firstRow + Math.ceil(items.length / columns) * rowHeight;
+  }
+  return y - (rowHeight - 62);
+}
+
 function uniqueReservedColors(groups: ReservedGroup[]) {
   const seen = new Set<string>();
   return groups.flatMap((group) => group.colors).filter((color) => {
@@ -184,7 +221,7 @@ function paintCard(ctx: CanvasRenderingContext2D, data: AttireCardData, figures:
   drawTracked(ctx, "BLACK TIE · GLOSSY GREENS & SHINING BROWNS", WIDTH / 2, 275, '600 20px "Cormorant Garamond", Georgia, serif', INK, 1.6);
   drawText(ctx, "Men: tuxedo, formal vest or suit & tie.", WIDTH / 2, 315, '500 22px "Cormorant Garamond", Georgia, serif', INK);
   drawText(ctx, "Women: floor-length column, sheath or slim A-line.", WIDTH / 2, 340, '500 22px "Cormorant Garamond", Georgia, serif', INK);
-  drawText(ctx, `Figures shown in ${data.selectedColor.name} · all guest-palette shades are welcome`, WIDTH / 2, 366, 'italic 18px "Cormorant Garamond", Georgia, serif', TAUPE);
+  drawText(ctx, "The six looks wear six different shades — tap any shade in the online guide to try it on", WIDTH / 2, 366, 'italic 18px "Cormorant Garamond", Georgia, serif', TAUPE);
   ctx.strokeStyle = "rgba(137,121,109,.38)";
   ctx.beginPath(); ctx.moveTo(82, 389); ctx.lineTo(WIDTH - 82, 389); ctx.stroke();
 
@@ -195,31 +232,21 @@ function paintCard(ctx: CanvasRenderingContext2D, data: AttireCardData, figures:
   ctx.strokeStyle = "rgba(137,121,109,.38)";
   ctx.beginPath(); ctx.moveTo(WIDTH / 2, 402); ctx.lineTo(WIDTH / 2, 720); ctx.stroke();
 
+  const palette: AttireSwatch[] = data.colors.length ? data.colors : [{ name: "Emerald", hex: "#0A5C33" }];
+  // Six different shades on the six looks — three greens, three browns — so the printed card can
+  // never be read as “the theme is all green”.
+  const figureHexes = defaultFigureHexes(palette);
   ATTIRE_STYLES.forEach((style, index) => {
     const figure = figures[index];
-    if (figure) drawFigure(ctx, style, figure, centers[index], 432, 260, columnWidth * 0.78, data.selectedColor.hex);
+    if (figure) drawFigure(ctx, style, figure, centers[index], 432, 260, columnWidth * 0.78, figureHexes[index] ?? palette[0].hex);
   });
 
   ctx.strokeStyle = "rgba(137,121,109,.38)";
   ctx.beginPath(); ctx.moveTo(82, 738); ctx.lineTo(WIDTH - 82, 738); ctx.stroke();
   drawTracked(ctx, "OUR GUEST PALETTE", WIDTH / 2, 777, '600 18px "Cormorant Garamond", Georgia, serif', WINE, 3.2);
 
-  const palette = data.colors.length ? data.colors : [data.selectedColor];
-  const columns = 6;
-  const paletteWidth = WIDTH - 160;
-  const cellWidth = paletteWidth / columns;
-  palette.forEach((swatch, index) => {
-    const row = Math.floor(index / columns);
-    const column = index % columns;
-    const x = 80 + column * cellWidth;
-    const y = 805 + row * 78;
-    drawSwatch(ctx, swatch.hex, x, y, 44);
-    drawTextFit(ctx, swatch.name, x + 53, y + 19, '600 20px "Cormorant Garamond", Georgia, serif', INK, cellWidth - 60);
-    if (swatch.fabric) drawTextFit(ctx, swatch.fabric, x + 53, y + 39, 'italic 15px "Cormorant Garamond", Georgia, serif', TAUPE, cellWidth - 60);
-  });
-
-  const paletteRows = Math.max(1, Math.ceil(palette.length / columns));
-  const reservedTitleY = 805 + paletteRows * 78 + 10;
+  const paletteBottom = drawPalette(ctx, palette, 805);
+  const reservedTitleY = paletteBottom + 34;
   ctx.strokeStyle = "rgba(137,121,109,.38)";
   ctx.beginPath(); ctx.moveTo(82, reservedTitleY - 18); ctx.lineTo(WIDTH - 82, reservedTitleY - 18); ctx.stroke();
   drawTracked(ctx, "RESERVED SHADES", WIDTH / 2, reservedTitleY, '600 17px "Cormorant Garamond", Georgia, serif', WINE, 3);
