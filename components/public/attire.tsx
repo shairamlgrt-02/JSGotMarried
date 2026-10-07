@@ -81,8 +81,9 @@ const NO_FABRIC = [
 const TAP_LOOP: Transition = { duration: 2.4, times: [0, 0.16, 0.4, 1], repeat: Infinity, repeatDelay: 1.5, ease: "easeInOut" };
 
 /**
- * The tap-to-try-on nudge that sits right above the swatches: a finger presses a paint chip and a
- * ring answers — so “tap a shade and all six change” is shown, not just written down.
+ * The tap-to-try-on nudge that sits right above the swatches: a finger points down at the palette
+ * below, presses a paint chip and a ring answers — so “tap a shade and all six change” is shown,
+ * not just written down.
  */
 function TapHint({ label }: { label: string }) {
   const reduce = useReducedMotion();
@@ -94,8 +95,9 @@ function TapHint({ label }: { label: string }) {
           animate={reduce ? undefined : { scale: [1, 0.84, 1, 1] }} transition={TAP_LOOP} />
         <motion.span className="absolute -inset-1 rounded-[11px] border-2 border-lace/70"
           animate={reduce ? undefined : { opacity: [0, 0, 0.8, 0], scale: [0.7, 0.7, 1.3, 1.45] }} transition={TAP_LOOP} />
-        <motion.span className="absolute -top-2.5 text-[15px] leading-none"
-          animate={reduce ? undefined : { y: [-9, 3, -9, -9], opacity: [0, 1, 1, 0] }} transition={TAP_LOOP}>👆</motion.span>
+        {/* the fingertip of 👇 is the bottom of the glyph: it hovers over the chip, dips to press it, lifts again */}
+        <motion.span className="absolute -top-3 text-[15px] leading-none"
+          animate={reduce ? undefined : { y: [-6, 3, -6, -6], opacity: [0, 1, 1, 0] }} transition={TAP_LOOP}>👇</motion.span>
       </span>
       <span className="micro text-left text-balance">{label}</span>
     </span>
@@ -188,7 +190,7 @@ export function AttireGuide({ guests, couple, date, reserved = [] }: { guests?: 
               {caption}
             </motion.span>
           </p>
-          <div className="mt-3.5"><TapHint label={tried ? "Tap another shade to re-dress all six" : "Tap a shade to try it on all six"} /></div>
+          <div className="mt-3.5"><TapHint label={tried ? "Tap another shade below to re-dress all six" : "Tap a shade below to try it on"} /></div>
           <div className="relative mt-3 md:mt-4 max-w-2xl mx-auto w-full">
             {/* while nobody has tried a shade on, a slow sheen travels over the palette */}
             {!tried && !reduce && (

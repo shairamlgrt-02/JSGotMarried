@@ -1,11 +1,14 @@
+import type { ProgramStop } from "./program";
+
 /**
  * The guest's downloadable invitation card — a personal keepsake PNG drawn on a canvas the moment
  * they ask for it (no server, no upload: everything happens in their own browser, addressed to
  * *them* by name — nobody confirmed "on their behalf").
  *
  * One picture carries the whole invitation in short: their seats, the date & time, the venue,
- * the programme, arrival guidance, the dress code in one line, the couple's verse —
- * and the couple's photo, oval-framed like the front of the real invitation.
+ * the order of the day (with the closed-door note under the ceremony and the "everyone welcome"
+ * note under the toast), the dress code in one line, the couple's verse — and the couple's photo,
+ * oval-framed like the front of the real invitation.
  */
 export type KeepsakeData = {
   groom: string;
@@ -16,7 +19,7 @@ export type KeepsakeData = {
   dateISO: string;
   venue: string;
   address: string;
-  program: { time: string; title: string }[];
+  program: ProgramStop[];
   dressNote: string;   // one short line, e.g. "Black tie in glossy greens and warm shining browns"
   hashtags: string[];
   photo?: string;      // data URL / same-origin path (external links are skipped so the file stays downloadable)
@@ -29,9 +32,17 @@ const VERSE =
   "“Nevertheless neither is the man without the woman, neither the woman without the man, in the Lord.”";
 const VERSE_REF = "1 CORINTHIANS 11:11";
 const W = 1200;
-const MIN_HEIGHT = 2280;
-const PROGRAM_ROW_HEIGHT = 52;
+/** The card is cut to its content (see render) and never shorter than this — a tall invitation, not a square. */
+const MIN_HEIGHT = 1800;
+/** Room left under the last line of text, inside the double border. */
+const FOOT = 150;
 const CX = W / 2;
+
+/* the order of the day: times end at TIME_R, a small dot sits on the axis, titles start at TITLE_L */
+const TIME_R = CX - 125;
+const AXIS_X = CX - 95;
+const TITLE_L = CX - 65;
+const TITLE_W = W - 110 - TITLE_L; // the measure for a note that wraps under its title
 
 const INK = "#33271F";
 const MOCHA = "#46362C";
@@ -82,6 +93,24 @@ function wrap(g: CanvasRenderingContext2D, text: string, y: number, font: string
   }
   lines.push(cur);
   lines.forEach((l, i) => g.fillText(l, CX, y + i * leading));
+  return y + (lines.length - 1) * leading;
+}
+
+/** Wrap left-aligned text from `x` within `maxW`; returns the y of the LAST line drawn. */
+function wrapLeft(g: CanvasRenderingContext2D, text: string, x: number, y: number, font: string, color: string, leading: number, maxW: number) {
+  g.font = font;
+  g.fillStyle = color;
+  g.textAlign = "left";
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let cur = "";
+  for (const w of words) {
+    const tryLine = cur ? `${cur} ${w}` : w;
+    if (g.measureText(tryLine).width <= maxW || !cur) cur = tryLine;
+    else { lines.push(cur); cur = w; }
+  }
+  lines.push(cur);
+  lines.forEach((l, i) => g.fillText(l, x, y + i * leading));
   return y + (lines.length - 1) * leading;
 }
 
@@ -183,14 +212,30 @@ function draw(g: CanvasRenderingContext2D, d: KeepsakeData, photo: HTMLImageElem
   }
   y += 110;
 
-  // the programme, in short
-  caps(g, "The celebration", y, 25, TAUPE, 0.3);
-  y += 58;
+  // the order of the day — the hour in a column of its own, the stop beside it, and under the two
+  // stops that need it, the one line a guest must not miss (seated before 4:00 · everyone welcome 5:30)
+  caps(g, "The order of the day", y, 25, TAUPE, 0.3);
+  y += 64;
   d.program.forEach((p) => {
-    line(g, `${p.time} — ${p.title}`, y, serif(31, "i400"), MOCHA);
-    y += 52;
+    g.font = serif(31, "600");
+    g.fillStyle = WINE;
+    g.textAlign = "right";
+    g.fillText(p.time, TIME_R, y);
+    g.fillStyle = EDGE;
+    g.beginPath();
+    g.arc(AXIS_X, y - 10, 3.5, 0, Math.PI * 2);
+    g.fill();
+    g.font = serif(31, "400");
+    g.fillStyle = MOCHA;
+    g.textAlign = "left";
+    g.fillText(p.title, TITLE_L, y);
+    y += 50;
+    if (p.note) {
+      y = wrapLeft(g, p.note, TITLE_L, y - 14, serif(24, "i400"), WINE, 31, TITLE_W);
+      y += 48;
+    }
   });
-  y += 30;
+  y += 24;
 
   y = wrap(g, `Dress code — ${d.dressNote}`, y, serif(28, "i400"), TAUPE, 38);
   y += 78;
@@ -199,19 +244,26 @@ function draw(g: CanvasRenderingContext2D, d: KeepsakeData, photo: HTMLImageElem
   y = wrap(g, VERSE, y, serif(30, "i500"), WINE, 42);
   y += 58;
   caps(g, VERSE_REF, y, 22, TAUPE, 0.3);
-  y += 60;
-  if (d.hashtags.length) caps(g, d.hashtags.join(" · "), y, 22, TAUPE, 0.24);
+  if (d.hashtags.length) {
+    y += 60;
+    caps(g, d.hashtags.join(" · "), y, 22, TAUPE, 0.24);
+  }
+  return y;
 }
 
 async function render(d: KeepsakeData, withPhoto: boolean): Promise<Blob | null> {
   const c = document.createElement("canvas");
-  const hasCode = Boolean((d.code || "").trim());
-  const height = MIN_HEIGHT + Math.max(0, d.program.length - 4) * PROGRAM_ROW_HEIGHT + (hasCode ? 132 : 0);
-  c.width = W; c.height = height;
   const g = c.getContext("2d");
   if (!g) return null;
   const photo = withPhoto && d.photo ? await loadImage(d.photo) : null;
   if (withPhoto && d.photo && !photo) return null; // photo wouldn't load — caller retries without it
+  // Two passes: a measuring pass on a generous canvas tells us where the last line lands, then the
+  // card is cut to that height — so a wrapped note or a long name can never run into the border.
+  const PROBE = 4000;
+  c.width = W; c.height = PROBE;
+  const lastLine = draw(g, d, photo, PROBE);
+  const height = Math.max(MIN_HEIGHT, Math.ceil(lastLine + FOOT));
+  c.height = height; // resizing clears the canvas and resets the context — draw() sets every style it uses
   draw(g, d, photo, height);
   return await new Promise<Blob | null>((res) => c.toBlob(res, "image/png"));
 }

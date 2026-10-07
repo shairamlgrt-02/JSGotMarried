@@ -45,7 +45,10 @@ they use, so nobody has to know what an `.ics` is:
 
 Both carry the same times (ceremony → send-off, 4–10 PM Bahrain time), the venue with its map link,
 a note with the couple's hashtags and the guest's own invitation link, plus a **reminder the day
-before** they can change in their app. The row for the phone in hand is marked *Suggested*.
+before** they can change in their app. The row for the phone in hand is marked *Suggested*. The
+note also carries the one rule of the day — *be seated before 4:00 PM, the doors close as the procession
+begins; everyone is welcome from 5:30 PM* — so a guest who only ever reads their calendar still
+arrives in time (the hour is the ceremony time from **Details**).
 
 * **Everything comes from the binder.** The date, time, names and venue are read from
   `wedding_info`, so moving the wedding in **Details** moves every calendar with no redeploy — and
@@ -57,6 +60,22 @@ before** they can change in their app. The row for the phone in hand is marked *
 * **A real URL, on purpose.** iOS Safari blocks top-level `data:` navigations and drops blob
   downloads into Files, so the `.ics` is a server response instead (`app/api/calendar/route.ts`,
   `Content-Disposition: inline`). Edit the wording, the title or the reminder in `lib/calendar.ts`.
+
+## The programme (and the keepsake card)
+The order of the day lives in **one file, `lib/program.ts`**, and three surfaces read it so they can
+never disagree: the six-stop timeline and the three "How the day unfolds" cards in the **Program**
+section, the guest's downloadable **invitation card** (the PNG offered after they reply), and — for
+the two times that matter — the FAQ and the calendar note.
+
+| | Where it shows |
+|---|---|
+| `WEDDING_PROGRAM_STOPS` | the timeline, and the *Order of the day* on the keepsake card. A stop's short `tag` ("Doors close at 4:00 PM", "Everyone welcome") sits under its name on the timeline; its one-line `note` is printed under it on the card. |
+| `WEDDING_PROGRAM_HIGHLIGHTS` | the three cards: the span of hours on the ribbon and the couple's own warm description underneath. Wrap the parts a guest must not miss in `*asterisks*` — `*4:00 PM*`, `*everyone is welcome*` — and the card sets them in bold wine. |
+| `CEREMONY_DOORS_CLOSE` · `ALL_WELCOME_FROM` | the two facts guests must not miss, written once: the ceremony is intimate and **closed-door — be seated before 4:00 PM, the doors close the moment the procession begins**; from **5:30 PM everyone is welcome** for the Welcome Toast & Snacks, then the reception at 6:30. |
+
+Edit the words there and the next deploy carries them to the site and to every card a guest saves
+afterwards. The FAQ's *Can I watch the ceremony?* answer repeats the same two facts; on a project
+seeded before this wording, press **Content → FAQ → Refresh wording** once to update it.
 
 ## Invite codes: generate, send, track (`Invite Codes`)
 One row per household, one code per row, one reply per code — and a ledger that tells you where
@@ -226,6 +245,8 @@ lib/guests.ts                codes: matching, statuses, bulk paste, links
 lib/invite-gate.ts           what a sealed visitor may read (server side)
 components/public/…          sections + effects (Lenis, cursor, vines, magnetic, split text)
 components/admin/…           binder tabs + UI kit
+lib/program.ts               the order of the day — timeline, highlight cards, keepsake, in one place
+lib/keepsake.ts              the guest's downloadable invitation card (canvas → PNG, in the browser)
 lib/calendar.ts              the wedding event: .ics + Google Calendar + how the dates read
 lib/seed.ts                  all starter data (budget, vendors, checklist, attire…)
 lib/db.ts                    Supabase-via-API or localStorage data layer
