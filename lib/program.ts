@@ -47,9 +47,10 @@ export type ProgramMoment = {
   /** How long it runs — the ribbon on the card. */
   span: string;
   title: string;
-  /** The one thing to remember, set apart from the description. */
-  badge: string;
-  /** Two short sentences at most — short but sweet. */
+  /**
+   * The couple's own words — warm, first person, a few sentences. Wrap the parts a guest must not
+   * miss in *asterisks* (the hour, "everyone is welcome") and the card sets them in bold wine.
+   */
   detail: string;
 };
 
@@ -58,21 +59,18 @@ export const WEDDING_PROGRAM_HIGHLIGHTS: ProgramMoment[] = [
     time: "4:00 PM",
     span: "4:00 – 5:00 PM",
     title: "The Ceremony",
-    badge: `Closed doors · be seated by ${CEREMONY_DOORS_CLOSE}`,
-    detail: `An intimate, closed-door ceremony. If you wish to witness our vows, please be seated by ${CEREMONY_DOORS_CLOSE} — the doors close as the procession begins.`,
+    detail: `We chose to keep our ceremony *intimate* — our families, our entourage and a few honoured guests. But we could never say no to anyone who wishes to witness us say “I do”: you are *more than welcome to join us*. Just please be seated by *${CEREMONY_DOORS_CLOSE}*, as the *doors close the moment the procession begins*.`,
   },
   {
     time: "5:30 PM",
     span: "5:30 – 6:30 PM",
     title: "Welcome Toast & Snacks",
-    badge: `Everyone welcome from ${ALL_WELCOME_FROM}`,
-    detail: `From ${ALL_WELCOME_FROM}, everyone is welcome. Meet us at the majlis for a toast, snacks and photos before the reception begins.`,
+    detail: `From *${ALL_WELCOME_FROM}, everyone is welcome*! Come find us at the majlis just outside the hall for a toast, snacks, photo moments and little activities. This is the hour we get to hug you, laugh with you and take all the pictures — before the reception begins at *6:30 PM*.`,
   },
   {
     time: "6:30 PM",
     span: "6:30 – 10:00 PM",
     title: "The Reception",
-    badge: "Dinner & dancing until 10:00 PM",
-    detail: "Dinner, our film on the big screen, games, giveaways — and dancing until the send-off.",
+    detail: "Then, the party. At *6:30 PM* we sit down to dinner, watch our film on the big screen, play games, give away a few surprises — and *dance until the very end*. We can’t wait to celebrate with you.",
   },
 ];

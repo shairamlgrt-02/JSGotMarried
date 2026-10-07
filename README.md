@@ -70,7 +70,7 @@ the two times that matter — the FAQ and the calendar note.
 | | Where it shows |
 |---|---|
 | `WEDDING_PROGRAM_STOPS` | the timeline, and the *Order of the day* on the keepsake card. A stop's short `tag` ("Doors close 3:45 PM", "Everyone welcome") sits under its name on the timeline; its one-line `note` is printed under it on the card. |
-| `WEDDING_PROGRAM_HIGHLIGHTS` | the three cards: the span of hours on the ribbon, the one thing to remember on the small wine strip, and a description of two short sentences. |
+| `WEDDING_PROGRAM_HIGHLIGHTS` | the three cards: the span of hours on the ribbon and the couple's own warm description underneath. Wrap the parts a guest must not miss in `*asterisks*` — `*3:45 PM*`, `*everyone is welcome*` — and the card sets them in bold wine. |
 | `CEREMONY_DOORS_CLOSE` · `ALL_WELCOME_FROM` | the two facts guests must not miss, written once: the ceremony is intimate and **closed-door — be seated by 3:45 PM, the doors close the moment the procession begins**; from **5:30 PM everyone is welcome** for the Welcome Toast & Snacks, then the reception at 6:30. |
 
 Edit the words there and the next deploy carries them to the site and to every card a guest saves

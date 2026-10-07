@@ -315,6 +315,12 @@ function ProgramIcon({ title }: { title: string }) {
   return <svg viewBox="0 0 24 24" className="w-6 h-6" fill="currentColor"><path d="M12 2l2.6 6.6L21 9.3l-5 4.4 1.6 6.8L12 16.8 6.4 20.5 8 13.7 3 9.3l6.4-.7z" /></svg>;
 }
 
+/** `*words*` in the programme copy become the bold wine emphasis a guest's eye lands on first. */
+function Highlight({ text }: { text: string }) {
+  const parts = text.split(/\*([^*]+)\*/g); // odd indices are the starred phrases
+  return <>{parts.map((part, i) => (i % 2 ? <b key={i} className="font-semibold text-wine">{part}</b> : part))}</>;
+}
+
 /** One fixed, six-stop timeline; the mobile view fits without a horizontal swipe. */
 export function Schedule() {
   const reduceMotion = useReducedMotion();
@@ -404,9 +410,7 @@ export function Schedule() {
                   </motion.span>
                 </div>
                 <h3 className="relative mt-2 pr-1 font-serif text-sm leading-tight text-mocha sm:text-base">{moment.title}</h3>
-                {/* the one thing to remember — doors, welcome, dancing — set apart from the description */}
-                <p className="mt-1.5 border-l-2 border-wine/50 pl-2 font-serif text-[9.5px] font-semibold uppercase leading-snug tracking-[0.12em] text-wine sm:text-[10.5px]">{moment.badge}</p>
-                <p className="mt-2 font-serif text-xs leading-[1.35] text-mocha/85 sm:text-sm">{moment.detail}</p>
+                <p className="mt-2 font-serif text-xs leading-[1.4] text-mocha/85 sm:text-sm"><Highlight text={moment.detail} /></p>
               </motion.article>
             ))}
           </div>
