@@ -59,7 +59,7 @@ export const WEDDING_PROGRAM_HIGHLIGHTS: ProgramMoment[] = [
     time: "4:00 PM",
     span: "4:00 – 5:00 PM",
     title: "The Ceremony",
-    detail: `We chose to keep our ceremony *intimate* — our families, our entourage and a few honoured guests. But we could never say no to anyone who wishes to witness us say “I do”: you are *more than welcome to join us*. Just please be seated by *${CEREMONY_DOORS_CLOSE}*, as the *doors close the moment the procession begins*.`,
+    detail: `We chose to keep our ceremony *intimate* — our families, our entourage and a few honoured guests. If your heart wishes to be there as we say “I do”, you are *more than welcome to join us*. Just please be seated by *${CEREMONY_DOORS_CLOSE}*, as the *doors close the moment the procession begins*.`,
   },
   {
     time: "5:30 PM",
