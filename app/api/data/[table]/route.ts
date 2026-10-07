@@ -84,7 +84,7 @@ export async function POST(req: NextRequest, { params }: { params: { table: stri
       const knownColumns: { col: string; label: string; ddl: string }[] = [
         { col: "greet", label: "Who it's for", ddl: "ALTER TABLE public.guests ADD COLUMN IF NOT EXISTS greet text DEFAULT '';" },
         { col: "note", label: "notes", ddl: "ALTER TABLE public.guests ADD COLUMN IF NOT EXISTS note text DEFAULT '';" },
-        { col: "category", label: "guest categories", ddl: "ALTER TABLE public.guests ADD COLUMN IF NOT EXISTS category text DEFAULT '';" },
+        { col: "tags", label: "guest tags", ddl: "ALTER TABLE public.guests ADD COLUMN IF NOT EXISTS tags text DEFAULT '';" },
       ];
       const missing = knownColumns.filter(({ col }) => new RegExp(`\\b${col}\\b`, "i").test(finalError.message));
       if (missing.length) {

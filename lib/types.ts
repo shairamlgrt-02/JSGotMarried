@@ -52,45 +52,104 @@ export type Guest = {
   /** First time the guest opened their personal link — the `opened` stage. */
   viewed_at?: string | null;
   /**
-   * Guest category tag for grouping & messaging (e.g. "bride_family", "work", "college").
-   * Used by the messaging module to target groups.
+   * Who this household belongs to — one or more tags from `GUEST_TAGS` (or the couple's own),
+   * stored as a CSV of tag ids so the column stays a plain `text` in Supabase. A maid of honor
+   * who is also the bride's cousin carries both, and each tag on its own is a group the couple
+   * can filter by and message. Replaces the old single `category`.
    */
-  category?: string;
+  tags?: string;
 };
 
-/** Guest category a couple can assign to each household for grouping/messaging. */
-export type GuestCategoryId =
-  | ""
-  | "bride_family"
-  | "groom_family"
-  | "sponsor"
-  | "entourage"
-  | "bride_friends"
-  | "groom_friends"
-  | "couple_friends"
-  | "work"
-  | "college_school"
-  | "childhood"
-  | "neighbor"
-  | "online"
-  | "vip";
+/** The icon a custom (couple-typed) tag is shown with; presets each carry their own. */
+export const CUSTOM_TAG_ICON = "◇";
 
-export const GUEST_CATEGORIES: { id: GuestCategoryId; label: string; icon: string }[] = [
-  { id: "",               label: "Uncategorized",  icon: "·" },
-  { id: "bride_family",   label: "Bride's Family", icon: "♡" },
-  { id: "groom_family",   label: "Groom's Family", icon: "♡" },
-  { id: "sponsor",        label: "Principal Sponsors", icon: "✦" },
-  { id: "entourage",      label: "Entourage",      icon: "✿" },
-  { id: "bride_friends",  label: "Bride's Friends", icon: "❀" },
-  { id: "groom_friends",  label: "Groom's Friends", icon: "◆" },
-  { id: "couple_friends", label: "Couple Friends", icon: "❂" },
-  { id: "work",           label: "Work / Colleagues", icon: "▤" },
-  { id: "college_school", label: "College / School",  icon: "✎" },
-  { id: "childhood",      label: "Childhood Friends", icon: "☀" },
-  { id: "neighbor",       label: "Neighbours",     icon: "⌂" },
-  { id: "online",         label: "Online Friends", icon: "☁" },
-  { id: "vip",            label: "VIP / Honored",  icon: "★" },
-];
+/**
+ * The one dictionary of guest tags. Every surface reads this — the binder's Tags column, the
+ * filter dropdown, the CSV export and the messaging module's recipient picker — so a label or an
+ * icon changes in one place. Insertion order is display order everywhere.
+ *
+ * Custom tags are allowed too: their id *is* their label ("Church choir"), which keeps them
+ * storable in the same CSV without a table of their own. `guestTagLabel` hands back the id when
+ * it isn't a preset, so nothing needs to know the difference.
+ */
+export const GUEST_TAGS = {
+  bride_family:   { label: "Bride's Family",     icon: "♡" },
+  groom_family:   { label: "Groom's Family",     icon: "♡" },
+  sponsors:       { label: "Principal Sponsors", icon: "✦" },
+  entourage:      { label: "Entourage",          icon: "✿" },
+  bridesmaids:    { label: "Bridesmaids",        icon: "✿" },
+  groomsmen:      { label: "Groomsmen",          icon: "◆" },
+  maid_of_honor:  { label: "Maid of Honor",      icon: "♛" },
+  best_man:       { label: "Best Man",           icon: "♚" },
+  honored:        { label: "Honored Guests",     icon: "★" },
+  bride_friends:  { label: "Bride's Friends",    icon: "❀" },
+  groom_friends:  { label: "Groom's Friends",    icon: "◆" },
+  couple_friends: { label: "Couple Friends",     icon: "❂" },
+  work:           { label: "Work/Colleagues",    icon: "▤" },
+  college:        { label: "College/School",     icon: "✎" },
+  childhood:      { label: "Childhood Friends",  icon: "☀" },
+  neighbours:     { label: "Neighbours",         icon: "⌂" },
+  online:         { label: "Online Friends",     icon: "☁" },
+  vip:            { label: "VIP",                icon: "★" },
+} as const;
+
+export type GuestTagId = keyof typeof GUEST_TAGS;
+
+/** The preset ids, in display order. Custom tags are not in here. */
+export const GUEST_TAG_IDS = Object.keys(GUEST_TAGS) as GuestTagId[];
+
+/** Is this a preset, or a tag the couple typed themselves? */
+export const isPresetGuestTag = (id: string): id is GuestTagId =>
+  Object.prototype.hasOwnProperty.call(GUEST_TAGS, id);
+
+/** The stored CSV → a clean, de-duplicated list of tag ids. */
+export function parseGuestTags(csv: string | null | undefined): string[] {
+  if (!csv) return [];
+  const seen = new Set<string>();
+  for (const part of String(csv).split(",")) {
+    const id = part.trim();
+    if (id) seen.add(id);
+  }
+  return [...seen];
+}
+
+/** A list of tag ids → the CSV we store. Blanks and repeats never reach the database. */
+export function formatGuestTags(tags: string[]): string {
+  return parseGuestTags(tags.join(",")).join(",");
+}
+
+/** Preset tags read "Bride's Family"; a custom tag shows the words that were typed. */
+export function guestTagLabel(id: string): string {
+  return isPresetGuestTag(id) ? GUEST_TAGS[id].label : id;
+}
+export function guestTagIcon(id: string): string {
+  return isPresetGuestTag(id) ? GUEST_TAGS[id].icon : CUSTOM_TAG_ICON;
+}
+
+/**
+ * Text typed into "+ tag" → the tag id to store. Something that already exists as a preset is
+ * matched case-insensitively (so "neighbours" joins ⌂ Neighbours instead of cloning it); anything
+ * else keeps its own words, single-spaced.
+ */
+export function guestTagIdFor(text: string): string {
+  const wanted = text.trim().replace(/\s+/g, " ");
+  if (!wanted) return "";
+  const key = wanted.toLowerCase();
+  return GUEST_TAG_IDS.find((id) => id.toLowerCase() === key || GUEST_TAGS[id].label.toLowerCase() === key) ?? wanted;
+}
+
+/** Presets in dictionary order first, then custom tags alphabetically — chips and menus agree. */
+export function sortGuestTagIds(ids: string[]): string[] {
+  const rank = (id: string) => GUEST_TAG_IDS.indexOf(id as GuestTagId);
+  return [...ids].sort((a, b) => {
+    const ia = rank(a);
+    const ib = rank(b);
+    if (ia >= 0 && ib >= 0) return ia - ib;
+    if (ia >= 0) return -1;
+    if (ib >= 0) return 1;
+    return guestTagLabel(a).localeCompare(guestTagLabel(b));
+  });
+}
 export type VendorStatus = "quoted" | "contacted" | "booked" | "pending";
 export type Vendor = { id: string; type: string; name: string; quote: number; contact: string; status: VendorStatus; notes: string };
 export type Priority = "critical" | "high" | "medium";
@@ -132,7 +191,10 @@ export type MessageTemplate = {
   label: string;
   /** The message body with merge tags. */
   body: string;
-  /** Which categories this template is meant for (comma-separated IDs stored as string). */
+  /**
+   * Which recipient groups this template is meant for — guest tags, RSVP buckets, vendors —
+   * stored as a comma-separated list of group ids (see MESSAGE_CATEGORIES in lib/messaging.ts).
+   */
   categories: string;
   created_at?: string;
 };
