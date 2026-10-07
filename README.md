@@ -46,9 +46,9 @@ they use, so nobody has to know what an `.ics` is:
 Both carry the same times (ceremony → send-off, 4–10 PM Bahrain time), the venue with its map link,
 a note with the couple's hashtags and the guest's own invitation link, plus a **reminder the day
 before** they can change in their app. The row for the phone in hand is marked *Suggested*. The
-note also carries the one rule of the day — *be seated by 3:45 PM, the doors close as the procession
+note also carries the one rule of the day — *be seated before 4:00 PM, the doors close as the procession
 begins; everyone is welcome from 5:30 PM* — so a guest who only ever reads their calendar still
-arrives in time (the 3:45 is computed as fifteen minutes before the ceremony time in **Details**).
+arrives in time (the hour is the ceremony time from **Details**).
 
 * **Everything comes from the binder.** The date, time, names and venue are read from
   `wedding_info`, so moving the wedding in **Details** moves every calendar with no redeploy — and
@@ -69,9 +69,9 @@ the two times that matter — the FAQ and the calendar note.
 
 | | Where it shows |
 |---|---|
-| `WEDDING_PROGRAM_STOPS` | the timeline, and the *Order of the day* on the keepsake card. A stop's short `tag` ("Doors close 3:45 PM", "Everyone welcome") sits under its name on the timeline; its one-line `note` is printed under it on the card. |
-| `WEDDING_PROGRAM_HIGHLIGHTS` | the three cards: the span of hours on the ribbon and the couple's own warm description underneath. Wrap the parts a guest must not miss in `*asterisks*` — `*3:45 PM*`, `*everyone is welcome*` — and the card sets them in bold wine. |
-| `CEREMONY_DOORS_CLOSE` · `ALL_WELCOME_FROM` | the two facts guests must not miss, written once: the ceremony is intimate and **closed-door — be seated by 3:45 PM, the doors close the moment the procession begins**; from **5:30 PM everyone is welcome** for the Welcome Toast & Snacks, then the reception at 6:30. |
+| `WEDDING_PROGRAM_STOPS` | the timeline, and the *Order of the day* on the keepsake card. A stop's short `tag` ("Doors close at 4:00 PM", "Everyone welcome") sits under its name on the timeline; its one-line `note` is printed under it on the card. |
+| `WEDDING_PROGRAM_HIGHLIGHTS` | the three cards: the span of hours on the ribbon and the couple's own warm description underneath. Wrap the parts a guest must not miss in `*asterisks*` — `*4:00 PM*`, `*everyone is welcome*` — and the card sets them in bold wine. |
+| `CEREMONY_DOORS_CLOSE` · `ALL_WELCOME_FROM` | the two facts guests must not miss, written once: the ceremony is intimate and **closed-door — be seated before 4:00 PM, the doors close the moment the procession begins**; from **5:30 PM everyone is welcome** for the Welcome Toast & Snacks, then the reception at 6:30. |
 
 Edit the words there and the next deploy carries them to the site and to every card a guest saves
 afterwards. The FAQ's *Can I watch the ceremony?* answer repeats the same two facts; on a project

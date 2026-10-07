@@ -213,7 +213,7 @@ function draw(g: CanvasRenderingContext2D, d: KeepsakeData, photo: HTMLImageElem
   y += 110;
 
   // the order of the day — the hour in a column of its own, the stop beside it, and under the two
-  // stops that need it, the one line a guest must not miss (doors close 3:45 · everyone welcome 5:30)
+  // stops that need it, the one line a guest must not miss (seated before 4:00 · everyone welcome 5:30)
   caps(g, "The order of the day", y, 25, TAUPE, 0.3);
   y += 64;
   d.program.forEach((p) => {

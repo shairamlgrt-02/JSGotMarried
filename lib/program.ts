@@ -5,20 +5,20 @@
  * Two facts matter more than anything else here, so they are written once and shown on every
  * surface (timeline, highlight cards, keepsake, FAQ):
  *   · the ceremony is intimate and closed-door — a guest who wishes to witness it must be seated
- *     by 3:45 PM, because the doors close the moment the procession begins;
+ *     before 4:00 PM, because the doors close the moment the procession begins;
  *   · from 5:30 PM everyone is welcome — the Welcome Toast & Snacks run until the reception at 6:30 PM.
  */
 export type ProgramStop = {
   time: string;
   title: string;
-  /** Two–four words shown under the stop on the timeline — "Doors close 3:45 PM". */
+  /** Two–four words shown under the stop on the timeline — "Doors close at 4:00 PM". */
   tag?: string;
   /** One short sentence for the keepsake card, where there is room to say it properly. */
   note?: string;
 };
 
-/** When the ceremony doors close — the one time a guest must not miss. */
-export const CEREMONY_DOORS_CLOSE = "3:45 PM";
+/** When the ceremony doors close — as the procession begins. Guests are asked to be seated before this. */
+export const CEREMONY_DOORS_CLOSE = "4:00 PM";
 /** From this time on every guest is welcome — no doors, no reserved rows. */
 export const ALL_WELCOME_FROM = "5:30 PM";
 
@@ -27,8 +27,8 @@ export const WEDDING_PROGRAM_STOPS: ProgramStop[] = [
   {
     time: "4:00 PM",
     title: "Wedding Ceremony",
-    tag: `Doors close ${CEREMONY_DOORS_CLOSE}`,
-    note: `Doors close as the procession begins — be seated by ${CEREMONY_DOORS_CLOSE}.`,
+    tag: `Doors close at ${CEREMONY_DOORS_CLOSE}`,
+    note: `Be seated before ${CEREMONY_DOORS_CLOSE} — doors close as the procession begins.`,
   },
   { time: "5:00 PM", title: "Wedding Photos" },
   {
@@ -59,7 +59,7 @@ export const WEDDING_PROGRAM_HIGHLIGHTS: ProgramMoment[] = [
     time: "4:00 PM",
     span: "4:00 – 5:00 PM",
     title: "The Ceremony",
-    detail: `We chose to keep our ceremony *intimate* — our families, our entourage and a few honoured guests. If your heart wishes to be there as we say “I do”, you are *more than welcome to join us*. Just please be seated by *${CEREMONY_DOORS_CLOSE}*, as the *doors close the moment the procession begins*.`,
+    detail: `We chose to keep our ceremony *intimate* — our families, our entourage and a few honoured guests. If your heart wishes to be there as we say “I do”, you are *more than welcome to join us*. Just please be seated before *${CEREMONY_DOORS_CLOSE}*, as the *doors close the moment the procession begins*.`,
   },
   {
     time: "5:30 PM",

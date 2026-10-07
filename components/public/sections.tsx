@@ -342,7 +342,7 @@ export function Schedule() {
           )}
           {WEDDING_PROGRAM_STOPS.map((stop, i) => {
             const titleAbove = i % 2 === 0;
-            // the title, plus the one thing to remember about this stop ("Doors close 3:45 PM")
+            // the title, plus the one thing to remember about this stop ("Doors close at 4:00 PM")
             const label = (
               <div className="min-w-0">
                 <h3 className="break-words font-serif text-[10px] leading-[1.05] text-mocha text-balance sm:text-xs md:text-sm">{stop.title}</h3>
