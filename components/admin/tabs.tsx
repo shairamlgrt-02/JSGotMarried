@@ -5,8 +5,8 @@ import { getMode, pushSeedSafely, refreshFaqCopy, refreshStoryCopy, resetLocal, 
 import { entourageGroups } from "@/lib/entourage";
 import { STATUS, cleanInviteNote, genCodeFor, inviteHref, inviteLink, inviteMessage, inviteStatus, mergeHousehold, planHouseholdMerges, tallyInvites, cleanCode, whoIsItFor, type InviteText } from "@/lib/guests";
 import { useCountdown, useTable } from "@/lib/hooks";
-import type { Attending, Attire, BudgetItem, BudgetStatus, ChecklistItem, EntourageMember, Guest, Priority, ScheduleItem, StoryChapter, Vendor, VendorStatus } from "@/lib/types";
-import { ENTOURAGE_ROLES, TABLES } from "@/lib/types";
+import type { Attending, Attire, BudgetItem, BudgetStatus, ChecklistItem, EntourageMember, Guest, GuestCategoryId, Priority, ScheduleItem, StoryChapter, Vendor, VendorStatus } from "@/lib/types";
+import { ENTOURAGE_ROLES, GUEST_CATEGORIES, TABLES } from "@/lib/types";
 import { Btn, Card, Donut, EditText, PageHead, Progress, Select, Stat, Tag, download, fileToDataUrl, money, toCsv } from "./ui";
 
 const num = (v: string) => (isNaN(parseFloat(v)) ? 0 : parseFloat(v));
@@ -307,6 +307,7 @@ export function Guests({ go }: { go: (tab: string) => void }) {
   const { info } = useInfo();
   const [filter, setFilter] = useState<"all" | Attending | "needs_review">("all");
   const [detailFilter, setDetailFilter] = useState<"all" | "plus_one" | "dietary" | "song" | "message">("all");
+  const [catFilter, setCatFilter] = useState<GuestCategoryId | "all">("all");
   const [expandPlusOnes, setExpandPlusOnes] = useState(true);
   const [sortBy, setSortBy] = useState<
     "latest" | "oldest" | "name_asc" | "name_desc" | "plus_asc" | "plus_desc" | "pax_desc" | "pax_asc" | "code_asc" | "code_desc" | "status"
@@ -370,9 +371,14 @@ export function Guests({ go }: { go: (tab: string) => void }) {
         if (detailFilter === "message") return Boolean((g.message || "").trim());
         return true;
       })
+      .filter(({ g }) => {
+        if (catFilter === "all") return true;
+        return (g.category || "") === catFilter;
+      })
       .filter(({ g, displayName, companionName, invitedAs }) => {
         if (!query) return true;
-        const haystack = `${displayName} ${companionName} ${invitedAs} ${g.name ?? ""} ${g.plus_one ?? ""} ${g.greet ?? ""} ${g.phone ?? ""} ${g.code ?? ""} ${cleanInviteNote(g.note)} ${g.dietary ?? ""} ${g.song_request ?? ""} ${g.message ?? ""}`.toLowerCase();
+        const catLabel = GUEST_CATEGORIES.find((c) => c.id === (g.category || ""))?.label || "";
+        const haystack = `${displayName} ${companionName} ${invitedAs} ${g.name ?? ""} ${g.plus_one ?? ""} ${g.greet ?? ""} ${g.phone ?? ""} ${g.code ?? ""} ${cleanInviteNote(g.note)} ${g.dietary ?? ""} ${g.song_request ?? ""} ${g.message ?? ""} ${catLabel}`.toLowerCase();
         return haystack.includes(query);
       })
       .sort((a, b) => {
@@ -410,7 +416,7 @@ export function Guests({ go }: { go: (tab: string) => void }) {
             return (statusOrder[a.g.attending] ?? 9) - (statusOrder[b.g.attending] ?? 9) || timeB.localeCompare(timeA);
         }
       });
-  }, [entries, filter, detailFilter, q, sortBy]);
+  }, [entries, filter, detailFilter, catFilter, q, sortBy]);
 
   const pax = rows.filter((g) => g.attending === "yes").reduce((s, g) => s + (Number(g.pax) || 0), 0);
   const pendingPax = rows.filter((g) => g.attending === "pending").reduce((s, g) => s + (Number(g.pax) || 0), 0);
@@ -425,22 +431,26 @@ export function Guests({ go }: { go: (tab: string) => void }) {
 
   const exportCsv = () => {
     const sourceList = shown.length ? shown : entries;
-    const csvRows = sourceList.map(({ g, role, displayName, companionName, invitedAs }) => ({
-      guest_name: displayName || "(Unnamed guest)",
-      guest_type: role === "plus_one" ? "Plus-one (Official Guest)" : "Primary Guest",
-      plus_one_or_partner: companionName,
-      invited_as: invitedAs,
-      code: cleanCode(g.code || ""),
-      status: STATUS[inviteStatus(g)].label,
-      attending: g.attending,
-      party_seats: Number(g.pax) || 0,
-      whatsapp: g.phone || "",
-      dietary: g.dietary || "",
-      song_request: g.song_request || "",
-      message: g.message || "",
-      notes: cleanInviteNote(g.note),
-      updated_at: formatDay(g.created_at),
-    }));
+    const csvRows = sourceList.map(({ g, role, displayName, companionName, invitedAs }) => {
+      const catLabel = GUEST_CATEGORIES.find((c) => c.id === (g.category || ""))?.label || "Uncategorized";
+      return {
+        guest_name: displayName || "(Unnamed guest)",
+        guest_type: role === "plus_one" ? "Plus-one (Official Guest)" : "Primary Guest",
+        plus_one_or_partner: companionName,
+        invited_as: invitedAs,
+        category: catLabel,
+        code: cleanCode(g.code || ""),
+        status: STATUS[inviteStatus(g)].label,
+        attending: g.attending,
+        party_seats: Number(g.pax) || 0,
+        whatsapp: g.phone || "",
+        dietary: g.dietary || "",
+        song_request: g.song_request || "",
+        message: g.message || "",
+        notes: cleanInviteNote(g.note),
+        updated_at: formatDay(g.created_at),
+      };
+    });
     const content = csvRows.length
       ? toCsv(csvRows)
       : "guest_name,guest_type,plus_one_or_partner,invited_as,code,status,attending,party_seats,whatsapp,dietary,song_request,message,notes,updated_at\n";
@@ -460,6 +470,7 @@ export function Guests({ go }: { go: (tab: string) => void }) {
       song_request: "",
       plus_one: "",
       note: "",
+      category: "",
       source: "manual",
       created_at: new Date().toISOString(),
     });
@@ -484,6 +495,11 @@ export function Guests({ go }: { go: (tab: string) => void }) {
     <>
       <PageHead kicker="Master check-in · plus-ones · catering & songs" title="The guest list.">
         <Btn variant="ghost" onClick={() => { localStorage.setItem("jsos:compose_category", "pending_rsvp"); go("messaging-compose"); }}>📨 Send RSVP Reminder ({rows.filter((g) => g.attending === "pending").length})</Btn>
+        {catFilter !== "all" && (
+          <Btn variant="ghost" onClick={() => { localStorage.setItem("jsos:compose_category", catFilter ? `guest_${catFilter}` : "guest_uncategorized"); go("messaging-compose"); }}>
+            📨 Message {GUEST_CATEGORIES.find((c) => c.id === catFilter)?.label || "Uncategorized"} ({rows.filter((g) => (g.category || "") === catFilter).length})
+          </Btn>
+        )}
         <Btn variant="ghost" onClick={() => go("invites")}>Invite codes →</Btn>
         <Btn onClick={add}>+ Add guest</Btn>
         <Btn variant="ghost" onClick={exportCsv}>Export CSV ({shown.length || entries.length})</Btn>
@@ -530,13 +546,22 @@ export function Guests({ go }: { go: (tab: string) => void }) {
             className="flex-1 min-w-[220px] bg-white/60 rounded-full px-5 py-2.5 outline-none border border-ink/10 focus:border-wine"
           />
           <label className="flex items-center gap-1.5 bg-white/60 rounded-full px-3.5 py-2 border border-ink/10 text-xs">
-            <span className="label !text-[9px] text-ink/50">Filter</span>
+            <span className="label !text-[9px] text-ink/50">Details</span>
             <select value={detailFilter} onChange={(e) => setDetailFilter(e.target.value as typeof detailFilter)} className="bg-transparent outline-none font-medium text-ink cursor-pointer">
               <option value="all">All details</option>
               <option value="plus_one">Has plus-one ({plusOneCount})</option>
               <option value="dietary">Has dietary note ({dietaryCount})</option>
               <option value="song">Has song request ({songCount})</option>
               <option value="message">Has RSVP note ({messageCount})</option>
+            </select>
+          </label>
+          <label className="flex items-center gap-1.5 bg-white/60 rounded-full px-3.5 py-2 border border-ink/10 text-xs">
+            <span className="label !text-[9px] text-ink/50">Category</span>
+            <select value={catFilter} onChange={(e) => setCatFilter(e.target.value as typeof catFilter)} className="bg-transparent outline-none font-medium text-ink cursor-pointer">
+              <option value="all">All categories</option>
+              {GUEST_CATEGORIES.map((c) => (
+                <option key={c.id || "none"} value={c.id}>{c.icon} {c.label} ({rows.filter((g) => (g.category || "") === c.id).length})</option>
+              ))}
             </select>
           </label>
           <label className="flex items-center gap-1.5 bg-white/60 rounded-full px-3.5 py-2 border border-ink/10 text-xs">
@@ -579,7 +604,7 @@ export function Guests({ go }: { go: (tab: string) => void }) {
           </button>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left min-w-[1220px] text-sm">
+          <table className="w-full text-left min-w-[1400px] text-sm">
             <thead><tr className="label text-ink/50 border-b border-ink/10 select-none">
               <th className="py-3 px-2 cursor-pointer hover:text-wine" onClick={() => toggleSort("name_asc", "name_desc")}>
                 Guest {sortBy === "name_asc" ? "↑" : sortBy === "name_desc" ? "↓" : "↕"}
@@ -594,6 +619,7 @@ export function Guests({ go }: { go: (tab: string) => void }) {
               <th className="px-2 cursor-pointer hover:text-wine" onClick={() => setSortBy((s) => (s === "status" ? "latest" : "status"))}>
                 Attending {sortBy === "status" ? "↓" : "↕"}
               </th>
+              <th className="px-2">Category</th>
               <th className="px-2">Dietary</th>
               <th className="px-2">Song</th>
               <th className="px-2">Message</th>
@@ -656,6 +682,21 @@ export function Guests({ go }: { go: (tab: string) => void }) {
                     </td>
                     <td className="px-1">
                       <Select value={g.attending} options={ATT} onChange={(v) => save({ ...g, attending: v })} />
+                    </td>
+                    <td className="px-1">
+                      {isPlusOneRow ? (
+                        <div className="px-2 py-1.5 text-xs text-ink/50 italic">—</div>
+                      ) : (
+                        <select
+                          value={g.category || ""}
+                          onChange={(e) => save({ ...g, category: e.target.value })}
+                          className="w-full bg-transparent rounded-md px-2 py-1.5 border border-ink/10 focus:border-wine outline-none text-xs"
+                        >
+                          {GUEST_CATEGORIES.map((c) => (
+                            <option key={c.id || "none"} value={c.id}>{c.icon} {c.label}</option>
+                          ))}
+                        </select>
+                      )}
                     </td>
                     <td className="px-1 min-w-[130px]"><EditText value={g.dietary} placeholder="None" onSave={(v) => save({ ...g, dietary: v })} /></td>
                     <td className="px-1 min-w-[130px]"><EditText value={g.song_request} placeholder="—" onSave={(v) => save({ ...g, song_request: v })} /></td>

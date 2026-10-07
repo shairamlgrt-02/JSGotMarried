@@ -1,24 +1,28 @@
 import type { Guest, WeddingInfo, EntourageMember, Vendor, MessageTemplate, MessageLog } from "./types";
+import { GUEST_CATEGORIES, type GuestCategoryId } from "./types";
 
 /* ─── Recipient categories ─── */
 /**
  * Every category the couple can tag a message with. Each category resolves
  * to people from one or more data sources — entourage (by role), vendors
- * (by type) or guests (by category tag).
+ * (by type) or guests (by the guest's own `category` tag, or by RSVP status).
  */
-export type RecipientSource = "entourage" | "vendor" | "guest" | "all_guests" | "pending_rsvp" | "opened_no_rsvp" | "confirmed_yes" | "confirmed_no";
+export type RecipientSource =
+  | "entourage" | "vendor"
+  | "all_guests" | "pending_rsvp" | "opened_no_rsvp" | "confirmed_yes" | "confirmed_no"
+  | "guest_category";
 
 export interface MessageCategory {
   id: string;
   label: string;
   icon: string;
   source: RecipientSource;
-  /** For entourage: the role value. For vendor: the type string. For guest: the category tag. */
+  /** For entourage: the role value. For vendor: the type string. For guest_category: the Guest.category value. */
   filter: string;
 }
 
 export const MESSAGE_CATEGORIES: MessageCategory[] = [
-  // Entourage
+  // ── Entourage (from the entourage table) ──
   { id: "sponsor",          label: "Primary Sponsors",    icon: "✦", source: "entourage", filter: "sponsor" },
   { id: "bridesmaid",       label: "Bridesmaids",         icon: "✿", source: "entourage", filter: "bridesmaid" },
   { id: "groomsman",        label: "Groomsmen",           icon: "◆", source: "entourage", filter: "groomsman" },
@@ -29,24 +33,40 @@ export const MESSAGE_CATEGORIES: MessageCategory[] = [
   { id: "family_bride",     label: "Family of the Bride", icon: "♡", source: "entourage", filter: "bride_family" },
   { id: "family_groom",     label: "Family of the Groom", icon: "♡", source: "entourage", filter: "groom_family" },
   { id: "honored_guest",    label: "Honored Guests",      icon: "★", source: "entourage", filter: "honored_guest" },
-  // RSVP status (auto-resolved from guests table)
+  // ── Guest-list categories (from guests.category) ──
+  ...GUEST_CATEGORIES
+    .filter((c) => c.id !== "") // "Uncategorized" is handled separately below
+    .map((c) => ({
+      id: `guest_${c.id}`,
+      label: c.label,
+      icon: c.icon,
+      source: "guest_category" as RecipientSource,
+      filter: c.id,
+    })),
+  { id: "guest_uncategorized", label: "Uncategorized Guests", icon: "·", source: "guest_category", filter: "" },
+  // ── RSVP status (auto-resolved from guests table) ──
   { id: "pending_rsvp",     label: "Pending RSVP",        icon: "⏳", source: "pending_rsvp", filter: "" },
   { id: "opened_no_rsvp",   label: "Opened Link · No Reply", icon: "👀", source: "opened_no_rsvp", filter: "" },
   { id: "confirmed_yes",    label: "Confirmed (Yes)",     icon: "✓", source: "confirmed_yes", filter: "" },
   { id: "confirmed_no",     label: "Declined (No)",       icon: "✗", source: "confirmed_no", filter: "" },
-  // Vendors
+  // ── Vendors ──
   { id: "band_dj",          label: "Band / DJ",           icon: "♫", source: "vendor", filter: "band_dj" },
   { id: "caterers",         label: "Caterers",            icon: "◈", source: "vendor", filter: "catering" },
   { id: "venue",            label: "Venue",               icon: "⌂", source: "vendor", filter: "venue" },
-  { id: "vendors",         label: "Vendors",             icon: "◇", source: "vendor", filter: "vendor" },
+  { id: "vendors",          label: "All Vendors",         icon: "◇", source: "vendor", filter: "" },
   { id: "p_v",              label: "Photo / Video",       icon: "◎", source: "vendor", filter: "p/v" },
   { id: "coordinator",      label: "Coordinator",         icon: "◉", source: "vendor", filter: "coordinator" },
   { id: "hmua",             label: "HMUA",                icon: "✧", source: "vendor", filter: "hmua" },
   { id: "dress_tailor",     label: "Dress / Tailor",      icon: "✂", source: "vendor", filter: "dress_tailor" },
-  // Guests
-  { id: "online_guest",     label: "Online Guests",       icon: "☁", source: "guest", filter: "online" },
-  { id: "wedding_guest",    label: "Wedding Guests",      icon: "✉", source: "all_guests", filter: "" },
+  // ── All guests (kept last, explicit "everyone on the guest list") ──
+  { id: "wedding_guest",    label: "All Wedding Guests",  icon: "✉", source: "all_guests", filter: "" },
 ];
+
+/** Quick lookup from a Guest.category value to the matching message-category entry (if any). */
+export function categoryForGuest(catId: GuestCategoryId | string | undefined | null): MessageCategory | undefined {
+  if (!catId) return MESSAGE_CATEGORIES.find((c) => c.id === "guest_uncategorized");
+  return MESSAGE_CATEGORIES.find((c) => c.source === "guest_category" && c.filter === catId);
+}
 
 /* ─── Recipients ─── */
 /** A resolved recipient for the messaging module — one row in the tracker. */
@@ -100,7 +120,7 @@ export function resolveRecipients(
     }
     if (cat.source === "vendor") {
       vendors
-        .filter((v) => v.type === cat.filter)
+        .filter((v) => !cat.filter || v.type === cat.filter) // empty filter = all vendors
         .forEach((v) => {
           const id = `ven_${v.id}_${cat.id}`;
           if (map.has(id)) return;
@@ -114,9 +134,16 @@ export function resolveRecipients(
           });
         });
     }
-    if (cat.source === "guest" || cat.source === "all_guests" || cat.source === "pending_rsvp" || cat.source === "opened_no_rsvp" || cat.source === "confirmed_yes" || cat.source === "confirmed_no") {
+    if (
+      cat.source === "all_guests" ||
+      cat.source === "pending_rsvp" ||
+      cat.source === "opened_no_rsvp" ||
+      cat.source === "confirmed_yes" ||
+      cat.source === "confirmed_no" ||
+      cat.source === "guest_category"
+    ) {
       let filtered: Guest[];
-      
+
       if (cat.source === "all_guests") {
         filtered = guests;
       } else if (cat.source === "pending_rsvp") {
@@ -128,9 +155,14 @@ export function resolveRecipients(
       } else if (cat.source === "confirmed_no") {
         filtered = guests.filter((g) => g.attending === "no");
       } else {
-        filtered = guests.filter((g) => g.note?.toLowerCase().includes(cat.filter) || cat.filter === "");
+        // guest_category — matches the guest's own `category` tag.
+        // Empty filter = uncategorized guests (category is falsy / blank).
+        filtered = guests.filter((g) => {
+          const gc = (g.category || "").trim();
+          return cat.filter ? gc === cat.filter : !gc;
+        });
       }
-      
+
       filtered.forEach((g) => {
         const id = `gst_${g.id}_${cat.id}`;
         if (map.has(id)) return;
