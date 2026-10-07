@@ -336,11 +336,18 @@ export function Schedule() {
           )}
           {WEDDING_PROGRAM_STOPS.map((stop, i) => {
             const titleAbove = i % 2 === 0;
+            // the title, plus the one thing to remember about this stop ("Doors close 3:45 PM")
+            const label = (
+              <div className="min-w-0">
+                <h3 className="break-words font-serif text-[10px] leading-[1.05] text-mocha text-balance sm:text-xs md:text-sm">{stop.title}</h3>
+                {stop.tag && <p className="mt-0.5 break-words font-serif text-[8px] font-semibold italic leading-[1.1] text-wine sm:text-[10px] md:text-[11px]">{stop.tag}</p>}
+              </div>
+            );
             return (
               <motion.div
                 role="listitem"
                 key={stop.time}
-                aria-label={`${stop.time} — ${stop.title}`}
+                aria-label={`${stop.time} — ${stop.title}${stop.tag ? ` (${stop.tag})` : ""}`}
                 initial={reduceMotion ? false : { opacity: 0, y: 8 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.35 }}
@@ -348,7 +355,7 @@ export function Schedule() {
                 className="relative z-[1] grid min-w-0 grid-rows-[60px_34px_20px_60px] text-center sm:grid-rows-[60px_40px_20px_60px]"
               >
                 <div className="flex min-w-0 items-end justify-center px-0.5 pb-1">
-                  {titleAbove && <h3 className="break-words font-serif text-[10px] leading-[1.05] text-mocha text-balance sm:text-xs md:text-sm">{stop.title}</h3>}
+                  {titleAbove && label}
                 </div>
                 <div className="flex items-center justify-center">
                   <span aria-hidden="true" className="grid h-8 w-8 place-items-center rounded-full border border-wine/20 bg-[#F8F2E7] text-wine shadow-[0_2px_6px_rgba(61,47,38,.12)] [&>svg]:!h-5 [&>svg]:!w-5 sm:h-10 sm:w-10 sm:[&>svg]:!h-6 sm:[&>svg]:!w-6">
@@ -357,7 +364,7 @@ export function Schedule() {
                 </div>
                 <time className="whitespace-nowrap font-serif text-[9px] font-semibold tabular-nums text-wine sm:text-xs">{stop.time}</time>
                 <div className="min-w-0 px-0.5 pt-1">
-                  {!titleAbove && <h3 className="break-words font-serif text-[10px] leading-[1.05] text-mocha text-balance sm:text-xs md:text-sm">{stop.title}</h3>}
+                  {!titleAbove && label}
                 </div>
               </motion.div>
             );
@@ -368,7 +375,7 @@ export function Schedule() {
           <div className="mb-3 flex items-center justify-center gap-2.5 sm:mb-4">
             <span aria-hidden="true" className="h-px w-7 bg-gradient-to-r from-transparent to-wine/45 sm:w-10" />
             <motion.span aria-hidden="true" className="text-sm text-wine/65" animate={reduceMotion ? undefined : { rotate: [0, 90, 180, 270, 360] }} transition={{ duration: 18, repeat: Infinity, ease: "linear" }}>✦</motion.span>
-            <p className="text-center font-serif text-sm italic text-wine/80 sm:text-base">A little more about the day</p>
+            <p className="text-center font-serif text-sm italic text-wine/80 sm:text-base">How the day unfolds</p>
             <motion.span aria-hidden="true" className="text-sm text-wine/65" animate={reduceMotion ? undefined : { rotate: [360, 270, 180, 90, 0] }} transition={{ duration: 18, repeat: Infinity, ease: "linear" }}>✦</motion.span>
             <span aria-hidden="true" className="h-px w-7 bg-gradient-to-l from-transparent to-wine/45 sm:w-10" />
           </div>
@@ -384,7 +391,8 @@ export function Schedule() {
                 className={`paper-card relative overflow-hidden rounded-xl border border-taupe/20 p-3 shadow-[0_2px_3px_rgba(61,47,38,.1),0_14px_24px_-18px_rgba(61,47,38,.4)] sm:p-4 ${i === 2 ? "col-span-2 md:col-span-1" : ""}`}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span style={{ clipPath: "polygon(0 0, calc(100% - 8px) 0, 100% 50%, calc(100% - 8px) 100%, 0 100%)" }} className="inline-flex bg-wine py-1 pl-2.5 pr-4 font-serif text-[10px] font-semibold tabular-nums text-lace sm:text-xs">{moment.time}</span>
+                  {/* the ribbon carries the whole span, so the hour and the order of the day read at a glance */}
+                  <time style={{ clipPath: "polygon(0 0, calc(100% - 8px) 0, 100% 50%, calc(100% - 8px) 100%, 0 100%)" }} className="inline-flex whitespace-nowrap bg-wine py-1 pl-2.5 pr-4 font-serif text-[10px] font-semibold tabular-nums text-lace sm:text-xs">{moment.span}</time>
                   <motion.span
                     aria-hidden="true"
                     animate={reduceMotion ? undefined : { rotate: [0, 3, 0, -3, 0] }}
@@ -396,6 +404,8 @@ export function Schedule() {
                   </motion.span>
                 </div>
                 <h3 className="relative mt-2 pr-1 font-serif text-sm leading-tight text-mocha sm:text-base">{moment.title}</h3>
+                {/* the one thing to remember — doors, welcome, dancing — set apart from the description */}
+                <p className="mt-1.5 border-l-2 border-wine/50 pl-2 font-serif text-[9.5px] font-semibold uppercase leading-snug tracking-[0.12em] text-wine sm:text-[10.5px]">{moment.badge}</p>
                 <p className="mt-2 font-serif text-xs leading-[1.35] text-mocha/85 sm:text-sm">{moment.detail}</p>
               </motion.article>
             ))}
@@ -813,7 +823,7 @@ function KeepsakeOffer({ onBuild }: { onBuild: () => Promise<unknown> }) {
         className="micro bg-wine text-lace rounded-full px-8 md:px-10 py-4 shadow-[0_8px_20px_-6px_rgba(110,31,46,.6)] hover:bg-mocha transition-colors disabled:opacity-60">
         {busy === "working" ? "Drawing your card…" : busy === "done" ? "Saved to your device ✓" : "Save your invitation card"}
       </motion.button>
-      <p className="micro text-taupe/80 mt-3 tracking-[0.14em] text-balance">your seats, the time, the venue & the dress code — in one picture for your phone</p>
+      <p className="micro text-taupe/80 mt-3 tracking-[0.14em] text-balance">your seats, the order of the day, the venue & the dress code — in one picture for your phone</p>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { ALL_WELCOME_FROM } from "./program";
 import type { WeddingInfo } from "./types";
 
 /**
@@ -54,10 +55,13 @@ export function weddingEvent(info: WeddingInfo, inviteUrl = ""): WeddingEvent {
   const end = new Date(start.getTime() + CELEBRATION_HOURS * 3600_000);
   const where = [info.venue_name, info.venue_address].filter((v) => v && v.trim()).join(", ");
   const couple = `${info.groom} & ${info.bride}`;
+  // the closed doors: the ceremony's one rule, told where a guest plans their arrival
+  const seatedBy = eventTimeWords(new Date(start.getTime() - 15 * 60_000).toISOString());
   const lines = [
     `${couple} are getting married — ${eventDateLong(info.date)}.`,
     "",
     `The ceremony begins at ${eventTimeWords(info.date)}${where ? ` at ${where}` : ""}, and we celebrate into the evening.`,
+    `Wish to witness the vows? Please be seated by ${seatedBy} — the doors close as the procession begins. Everyone is welcome from ${ALL_WELCOME_FROM} for the Welcome Toast & Snacks, then the reception.`,
   ];
   if (info.venue_map_link) lines.push(`Directions: ${info.venue_map_link}`);
   if (inviteUrl) lines.push(`Your invitation: ${inviteUrl}`);
