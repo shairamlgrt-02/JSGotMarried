@@ -1,7 +1,7 @@
-import type { TableName } from "./types";
+import { formatGuestTags, guestTagIdFor, parseGuestTags, type TableName } from "./types";
 
 /**
- * One-off wording repairs, applied on the way in.
+ * One-off repairs to stored text, applied on the way in.
  *
  * The second hashtag was renamed **#JSWeDo → #JSSayIDo** in the code, but a project that was
  * seeded before the rename keeps the old words in its own rows forever: the site reads the
@@ -12,7 +12,8 @@ import type { TableName } from "./types";
  * the caller can save them once — every surface (site, share preview, keepsake card, FAQ)
  * agrees from the next request on, without anyone touching SQL.
  *
- * Add a line here whenever a phrase the couple may already have saved is renamed in the code.
+ * Add a line to `RENAMES` whenever a phrase the couple may already have saved is renamed in the
+ * code, and a case to `MIGRATIONS` whenever a field they filled in is replaced by a better one.
  */
 const RENAMES: [RegExp, string][] = [
   // #JSWeDo (and the bare JSWeDo) is now #JSSayIDo
@@ -41,6 +42,45 @@ const renew = (value: string) => {
   return next;
 };
 
+/** The single-category values an old guest row could hold, in the tag id each one became. */
+const LEGACY_TAG_ID: Record<string, string> = {
+  bride_family: "bride_family",
+  groom_family: "groom_family",
+  sponsor: "sponsors",
+  entourage: "entourage",
+  bride_friends: "bride_friends",
+  groom_friends: "groom_friends",
+  couple_friends: "couple_friends",
+  work: "work",
+  college_school: "college",
+  childhood: "childhood",
+  neighbor: "neighbours",
+  neighbours: "neighbours",
+  online: "online",
+  vip: "vip",
+};
+
+/**
+ * Field migrations — same shape as a rename, one field wider.
+ *
+ * `guests.category` held exactly one group per household; `guests.tags` holds several. A project
+ * saved before the change still has its groups in the old column and nothing in the new one, so
+ * the first read copies the value across and the caller writes it back once: every group already
+ * assigned survives, and the couple can stack more beside it. A row that has tags is left alone
+ * and `category` is never cleared, so this is a copy rather than a move — safe to read a hundred
+ * times, and nothing is lost if the binder is mid-edit when it runs.
+ */
+const MIGRATIONS: Partial<Record<TableName, (row: Record<string, unknown>) => Record<string, unknown> | null>> = {
+  guests: (row) => {
+    const old = typeof row.category === "string" ? row.category.trim() : "";
+    if (!old || parseGuestTags(row.tags as string | null | undefined).length) return null;
+    // A value this file has never seen (a hand-edited row, a label typed into the old column)
+    // still lands on the tag it reads like, or is skipped rather than guessed at.
+    const tagId = LEGACY_TAG_ID[old] ?? guestTagIdFor(old);
+    return tagId ? { tags: formatGuestTags([tagId]) } : null;
+  },
+};
+
 const renewValue = (value: unknown): unknown => {
   if (typeof value === "string") return renew(value);
   if (Array.isArray(value)) return value.map(renewValue);
@@ -53,7 +93,8 @@ export type FixedRows<T> = { rows: T[]; patches: RowPatch[] };
 
 export function fixRows<T extends { id?: string }>(table: TableName, rows: T[]): FixedRows<T> {
   const fields = TEXT_FIELDS[table];
-  if (!fields) return { rows, patches: [] };
+  const migrate = MIGRATIONS[table];
+  if (!fields && !migrate) return { rows, patches: [] };
   const out: T[] = [];
   const patches: RowPatch[] = [];
   for (const row of rows) {
@@ -61,7 +102,7 @@ export function fixRows<T extends { id?: string }>(table: TableName, rows: T[]):
     const source = row as Record<string, unknown>;
     const next = { ...source };
     let changed: Record<string, unknown> | null = null;
-    for (const field of fields) {
+    for (const field of fields ?? []) {
       const before = source[field];
       if (before === undefined) continue;
       const after = renewValue(before);
@@ -69,6 +110,13 @@ export function fixRows<T extends { id?: string }>(table: TableName, rows: T[]):
       if (JSON.stringify(after) !== JSON.stringify(before)) {
         next[field] = after;
         (changed ||= {})[field] = after;
+      }
+    }
+    if (migrate) {
+      const moved = migrate(source);
+      if (moved) {
+        Object.assign(next, moved);
+        Object.assign((changed ||= {}), moved);
       }
     }
     out.push(next as T);

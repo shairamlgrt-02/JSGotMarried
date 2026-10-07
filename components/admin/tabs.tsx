@@ -5,8 +5,9 @@ import { getMode, pushSeedSafely, refreshFaqCopy, refreshStoryCopy, resetLocal, 
 import { entourageGroups } from "@/lib/entourage";
 import { STATUS, cleanInviteNote, genCodeFor, inviteHref, inviteLink, inviteMessage, inviteStatus, mergeHousehold, planHouseholdMerges, tallyInvites, cleanCode, whoIsItFor, type InviteText } from "@/lib/guests";
 import { useCountdown, useTable } from "@/lib/hooks";
-import type { Attending, Attire, BudgetItem, BudgetStatus, ChecklistItem, EntourageMember, Guest, GuestCategoryId, Priority, ScheduleItem, StoryChapter, Vendor, VendorStatus } from "@/lib/types";
-import { ENTOURAGE_ROLES, GUEST_CATEGORIES, TABLES } from "@/lib/types";
+import type { Attending, Attire, BudgetItem, BudgetStatus, ChecklistItem, EntourageMember, Guest, Priority, ScheduleItem, StoryChapter, Vendor, VendorStatus } from "@/lib/types";
+import { ENTOURAGE_ROLES, GUEST_TAG_IDS, TABLES, formatGuestTags, guestTagIcon, guestTagIdFor, guestTagLabel, isPresetGuestTag, parseGuestTags, sortGuestTagIds } from "@/lib/types";
+import { guestTagCategoryId } from "@/lib/messaging";
 import { Btn, Card, Donut, EditText, PageHead, Progress, Select, Stat, Tag, download, fileToDataUrl, money, toCsv } from "./ui";
 
 const num = (v: string) => (isNaN(parseFloat(v)) ? 0 : parseFloat(v));
@@ -289,6 +290,94 @@ export function Budget() {
   );
 }
 
+/**
+ * One household's tags, and the whole editor for them: each pill is a tag you can click off, and
+ * "+ tag" opens the dictionary — tap a preset to add it, tap it again to take it away, or type
+ * your own ("Church choir") and it becomes a tag like any other, filterable and messageable.
+ * Saving writes the list straight back as a CSV, so every tag is one click from the binder's
+ * filter and one click from the messaging module.
+ */
+function GuestTagsCell({ tags, onChange }: { tags: string[]; onChange: (next: string[]) => void }) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState("");
+
+  const toggle = (id: string) => onChange(tags.includes(id) ? tags.filter((t) => t !== id) : [...tags, id]);
+  const addCustom = () => {
+    const id = guestTagIdFor(draft);
+    setDraft("");
+    if (!id) return;
+    if (!tags.includes(id)) toggle(id);
+    setOpen(false);
+  };
+  /** The household's own tags stay in the popover next to the presets, so a misclick is reversible. */
+  const options = [...GUEST_TAG_IDS, ...tags.filter((id) => !isPresetGuestTag(id))];
+
+  return (
+    <div className="relative">
+      <div className="flex flex-wrap gap-1 items-center py-0.5">
+        {sortGuestTagIds(tags).map((id) => (
+          <button
+            key={id}
+            type="button"
+            title={`Remove ${guestTagLabel(id)}`}
+            onClick={() => toggle(id)}
+            className="label !text-[9px] rounded-full px-2 py-1 border border-wine/25 bg-wine/[0.07] text-ink transition-colors hover:border-burgundy hover:text-burgundy"
+          >
+            {guestTagIcon(id)}&nbsp;{guestTagLabel(id)}<span className="ml-1 opacity-50">×</span>
+          </button>
+        ))}
+        {!tags.length && <span className="px-1 text-[10px] italic text-ink/40">untagged</span>}
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className={`label !text-[9px] rounded-full px-2 py-1 border border-dashed transition-colors ${open ? "border-wine text-wine" : "border-ink/25 text-ink/55 hover:border-wine hover:text-wine"}`}
+        >
+          + tag
+        </button>
+      </div>
+      {open && (
+        <>
+          {/* a click anywhere off the popover closes it — the table scrolls, so no hover menus */}
+          <button type="button" aria-label="Close" className="fixed inset-0 z-10 cursor-default" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 top-full z-20 mt-1 w-[300px] max-h-[320px] overflow-y-auto rounded-xl border border-ink/15 bg-paper p-3 shadow-xl">
+            <div className="label !text-[9px] text-ink/50 mb-2">Tap a tag to add or remove it</div>
+            <div className="flex flex-wrap gap-1">
+              {options.map((id) => {
+                const on = tags.includes(id);
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    title={on ? `Remove ${guestTagLabel(id)}` : `Add ${guestTagLabel(id)}`}
+                    onClick={() => toggle(id)}
+                    className={`label !text-[9px] rounded-full px-2 py-1 border transition-colors ${on ? "bg-wine text-lace border-wine" : "bg-white text-ink/70 border-ink/15 hover:border-wine hover:text-wine"}`}
+                  >
+                    {guestTagIcon(id)}&nbsp;{guestTagLabel(id)}{on ? " ✓" : ""}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-3 pt-3 border-t border-ink/10">
+              <div className="label !text-[9px] text-ink/50 mb-1.5">Or make your own</div>
+              <div className="flex gap-1.5 items-center">
+                <input
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustom(); } if (e.key === "Escape") setOpen(false); }}
+                  placeholder="Church choir, Team, Gym…"
+                  className="flex-1 min-w-0 bg-white rounded-full px-3 py-1.5 text-xs outline-none border border-ink/15 focus:border-wine"
+                />
+                <button type="button" onClick={addCustom} disabled={!draft.trim()} className="label !text-[9px] rounded-full px-2.5 py-1.5 bg-wine text-lace disabled:opacity-40">add</button>
+              </div>
+              <div className="mt-1.5 text-[10px] text-ink/45">A tag that already exists is reused, not duplicated.</div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 /* ═════════════ 6. GUESTS & RSVP ═════════════
    The master guest list, catering & day-of check-in sheet: every invited guest, their official
    plus-one, dietary requirements, song requests and RSVP wishes. */
@@ -307,7 +396,8 @@ export function Guests({ go }: { go: (tab: string) => void }) {
   const { info } = useInfo();
   const [filter, setFilter] = useState<"all" | Attending | "needs_review">("all");
   const [detailFilter, setDetailFilter] = useState<"all" | "plus_one" | "dietary" | "song" | "message">("all");
-  const [catFilter, setCatFilter] = useState<GuestCategoryId | "all">("all");
+  /** "all" · "untagged" · `tag:<id>` — prefixed so a couple's own tag can never read as a sentinel. */
+  const [tagFilter, setTagFilter] = useState<string>("all");
   const [expandPlusOnes, setExpandPlusOnes] = useState(true);
   const [sortBy, setSortBy] = useState<
     "latest" | "oldest" | "name_asc" | "name_desc" | "plus_asc" | "plus_desc" | "pax_desc" | "pax_asc" | "code_asc" | "code_desc" | "status"
@@ -356,7 +446,12 @@ export function Guests({ go }: { go: (tab: string) => void }) {
     return list;
   }, [rows, expandPlusOnes]);
 
-  const shown = useMemo(() => {
+  /**
+   * Everything except the tag filter. The toolbar's live counts are read off this list, so they
+   * move with the attending status, the details picker and the search box rather than quoting the
+   * whole guest table at you.
+   */
+  const matching = useMemo(() => {
     const query = q.trim().toLowerCase();
     return entries
       .filter(({ g }) => {
@@ -371,16 +466,43 @@ export function Guests({ go }: { go: (tab: string) => void }) {
         if (detailFilter === "message") return Boolean((g.message || "").trim());
         return true;
       })
-      .filter(({ g }) => {
-        if (catFilter === "all") return true;
-        return (g.category || "") === catFilter;
-      })
       .filter(({ g, displayName, companionName, invitedAs }) => {
         if (!query) return true;
-        const catLabel = GUEST_CATEGORIES.find((c) => c.id === (g.category || ""))?.label || "";
-        const haystack = `${displayName} ${companionName} ${invitedAs} ${g.name ?? ""} ${g.plus_one ?? ""} ${g.greet ?? ""} ${g.phone ?? ""} ${g.code ?? ""} ${cleanInviteNote(g.note)} ${g.dietary ?? ""} ${g.song_request ?? ""} ${g.message ?? ""} ${catLabel}`.toLowerCase();
+        // tag labels are searchable too, so "work" finds everyone tagged ▤ Work/Colleagues
+        const tags = sortGuestTagIds(parseGuestTags(g.tags)).map(guestTagLabel).join(" ");
+        const haystack = `${displayName} ${companionName} ${invitedAs} ${g.name ?? ""} ${g.plus_one ?? ""} ${g.greet ?? ""} ${g.phone ?? ""} ${g.code ?? ""} ${cleanInviteNote(g.note)} ${g.dietary ?? ""} ${g.song_request ?? ""} ${g.message ?? ""} ${tags}`.toLowerCase();
         return haystack.includes(query);
-      })
+      });
+  }, [entries, filter, detailFilter, q]);
+
+  /** Households per tag — one household counts once even when its plus-one is on its own row. */
+  const tagCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    let untagged = 0;
+    const seen = new Set<string>();
+    for (const { g } of matching) {
+      if (seen.has(g.id)) continue;
+      seen.add(g.id);
+      const tags = parseGuestTags(g.tags);
+      if (!tags.length) { untagged++; continue; }
+      for (const id of tags) counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+    return { counts, untagged, total: seen.size };
+  }, [matching]);
+
+  /** Tags the couple typed themselves, so they are filterable exactly like the presets. */
+  const customTagIds = useMemo(() => {
+    const found = new Set<string>();
+    for (const g of rows) for (const id of parseGuestTags(g.tags)) if (!isPresetGuestTag(id)) found.add(id);
+    return sortGuestTagIds([...found]);
+  }, [rows]);
+
+  const shown = useMemo(() => {
+    const list = tagFilter === "all" ? matching : matching.filter(({ g }) => {
+      const tags = parseGuestTags(g.tags);
+      return tagFilter === "untagged" ? !tags.length : tags.includes(tagFilter.slice(4));
+    });
+    return list
       .sort((a, b) => {
         const timeA = a.g.created_at ?? "";
         const timeB = b.g.created_at ?? "";
@@ -416,7 +538,7 @@ export function Guests({ go }: { go: (tab: string) => void }) {
             return (statusOrder[a.g.attending] ?? 9) - (statusOrder[b.g.attending] ?? 9) || timeB.localeCompare(timeA);
         }
       });
-  }, [entries, filter, detailFilter, catFilter, q, sortBy]);
+  }, [matching, tagFilter]);
 
   const pax = rows.filter((g) => g.attending === "yes").reduce((s, g) => s + (Number(g.pax) || 0), 0);
   const pendingPax = rows.filter((g) => g.attending === "pending").reduce((s, g) => s + (Number(g.pax) || 0), 0);
@@ -426,19 +548,31 @@ export function Guests({ go }: { go: (tab: string) => void }) {
   const songCount = rows.filter((g) => Boolean((g.song_request || "").trim())).length;
   const messageCount = rows.filter((g) => Boolean((g.message || "").trim())).length;
 
+  /** What the toolbar is narrowed to: a tag id, "" for the untagged bucket, or nothing at all. */
+  const activeTag = tagFilter === "all" ? "" : tagFilter === "untagged" ? "" : tagFilter.slice(4);
+  const activeTagCount = tagFilter === "all"
+    ? 0
+    : tagFilter === "untagged"
+      ? tagCounts.untagged
+      : tagCounts.counts.get(activeTag) ?? 0;
+  /** The compose picker's group for whatever is filtered — preset tag, custom tag, or untagged. */
+  const activeTagGroup = tagFilter === "untagged" ? "guest_untagged" : guestTagCategoryId(activeTag);
+  const activeTagLabel = tagFilter === "untagged" ? "Untagged" : guestTagLabel(activeTag);
+
   const formatDay = (iso?: string | null) =>
     iso ? new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
 
   const exportCsv = () => {
     const sourceList = shown.length ? shown : entries;
     const csvRows = sourceList.map(({ g, role, displayName, companionName, invitedAs }) => {
-      const catLabel = GUEST_CATEGORIES.find((c) => c.id === (g.category || ""))?.label || "Uncategorized";
+      // every tag the household carries, in the binder's order, so the sheet reads like the table
+      const tags = sortGuestTagIds(parseGuestTags(g.tags)).map(guestTagLabel).join("; ");
       return {
         guest_name: displayName || "(Unnamed guest)",
         guest_type: role === "plus_one" ? "Plus-one (Official Guest)" : "Primary Guest",
         plus_one_or_partner: companionName,
         invited_as: invitedAs,
-        category: catLabel,
+        tags: tags || "Untagged",
         code: cleanCode(g.code || ""),
         status: STATUS[inviteStatus(g)].label,
         attending: g.attending,
@@ -453,7 +587,7 @@ export function Guests({ go }: { go: (tab: string) => void }) {
     });
     const content = csvRows.length
       ? toCsv(csvRows)
-      : "guest_name,guest_type,plus_one_or_partner,invited_as,code,status,attending,party_seats,whatsapp,dietary,song_request,message,notes,updated_at\n";
+      : "guest_name,guest_type,plus_one_or_partner,invited_as,tags,code,status,attending,party_seats,whatsapp,dietary,song_request,message,notes,updated_at\n";
     download("guests-rsvp.csv", content);
   };
 
@@ -470,7 +604,7 @@ export function Guests({ go }: { go: (tab: string) => void }) {
       song_request: "",
       plus_one: "",
       note: "",
-      category: "",
+      tags: "",
       source: "manual",
       created_at: new Date().toISOString(),
     });
@@ -495,9 +629,9 @@ export function Guests({ go }: { go: (tab: string) => void }) {
     <>
       <PageHead kicker="Master check-in · plus-ones · catering & songs" title="The guest list.">
         <Btn variant="ghost" onClick={() => { localStorage.setItem("jsos:compose_category", "pending_rsvp"); go("messaging-compose"); }}>📨 Send RSVP Reminder ({rows.filter((g) => g.attending === "pending").length})</Btn>
-        {catFilter !== "all" && (
-          <Btn variant="ghost" onClick={() => { localStorage.setItem("jsos:compose_category", catFilter ? `guest_${catFilter}` : "guest_uncategorized"); go("messaging-compose"); }}>
-            📨 Message {GUEST_CATEGORIES.find((c) => c.id === catFilter)?.label || "Uncategorized"} ({rows.filter((g) => (g.category || "") === catFilter).length})
+        {tagFilter !== "all" && (
+          <Btn variant="ghost" onClick={() => { localStorage.setItem("jsos:compose_category", activeTagGroup); go("messaging-compose"); }}>
+            📨 Message {activeTagLabel} ({activeTagCount})
           </Btn>
         )}
         <Btn variant="ghost" onClick={() => go("invites")}>Invite codes →</Btn>
@@ -556,12 +690,13 @@ export function Guests({ go }: { go: (tab: string) => void }) {
             </select>
           </label>
           <label className="flex items-center gap-1.5 bg-white/60 rounded-full px-3.5 py-2 border border-ink/10 text-xs">
-            <span className="label !text-[9px] text-ink/50">Category</span>
-            <select value={catFilter} onChange={(e) => setCatFilter(e.target.value as typeof catFilter)} className="bg-transparent outline-none font-medium text-ink cursor-pointer">
-              <option value="all">All categories</option>
-              {GUEST_CATEGORIES.map((c) => (
-                <option key={c.id || "none"} value={c.id}>{c.icon} {c.label} ({rows.filter((g) => (g.category || "") === c.id).length})</option>
+            <span className="label !text-[9px] text-ink/50">Tags</span>
+            <select value={tagFilter} onChange={(e) => setTagFilter(e.target.value)} className="bg-transparent outline-none font-medium text-ink cursor-pointer">
+              <option value="all">All tags ({tagCounts.total})</option>
+              {[...GUEST_TAG_IDS, ...customTagIds].map((id) => (
+                <option key={id} value={`tag:${id}`}>{guestTagIcon(id)} {guestTagLabel(id)} ({tagCounts.counts.get(id) ?? 0})</option>
               ))}
+              <option value="untagged">· Untagged ({tagCounts.untagged})</option>
             </select>
           </label>
           <label className="flex items-center gap-1.5 bg-white/60 rounded-full px-3.5 py-2 border border-ink/10 text-xs">
@@ -619,7 +754,7 @@ export function Guests({ go }: { go: (tab: string) => void }) {
               <th className="px-2 cursor-pointer hover:text-wine" onClick={() => setSortBy((s) => (s === "status" ? "latest" : "status"))}>
                 Attending {sortBy === "status" ? "↓" : "↕"}
               </th>
-              <th className="px-2">Category</th>
+              <th className="px-2">Tags</th>
               <th className="px-2">Dietary</th>
               <th className="px-2">Song</th>
               <th className="px-2">Message</th>
@@ -683,19 +818,11 @@ export function Guests({ go }: { go: (tab: string) => void }) {
                     <td className="px-1">
                       <Select value={g.attending} options={ATT} onChange={(v) => save({ ...g, attending: v })} />
                     </td>
-                    <td className="px-1">
+                    <td className="px-1 min-w-[200px] max-w-[280px]">
                       {isPlusOneRow ? (
                         <div className="px-2 py-1.5 text-xs text-ink/50 italic">—</div>
                       ) : (
-                        <select
-                          value={g.category || ""}
-                          onChange={(e) => save({ ...g, category: e.target.value })}
-                          className="w-full bg-transparent rounded-md px-2 py-1.5 border border-ink/10 focus:border-wine outline-none text-xs"
-                        >
-                          {GUEST_CATEGORIES.map((c) => (
-                            <option key={c.id || "none"} value={c.id}>{c.icon} {c.label}</option>
-                          ))}
-                        </select>
+                        <GuestTagsCell tags={parseGuestTags(g.tags)} onChange={(next) => save({ ...g, tags: formatGuestTags(next) })} />
                       )}
                     </td>
                     <td className="px-1 min-w-[130px]"><EditText value={g.dietary} placeholder="None" onSave={(v) => save({ ...g, dietary: v })} /></td>

@@ -1,10 +1,56 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useTable } from "@/lib/hooks";
-import { MESSAGE_CATEGORIES, MERGE_TAGS, applyMergeTags, resolveRecipients, type Recipient } from "@/lib/messaging";
+import { MESSAGE_CATEGORIES, MERGE_TAGS, applyMergeTags, messageCategoryFor, resolveRecipients, type MessageCategory, type Recipient } from "@/lib/messaging";
 import type { MessageTemplate, MessageLog } from "@/lib/types";
 import { Btn, Card, Tag } from "./ui";
 import { uid } from "@/lib/db";
+
+/**
+ * The recipient picker, used by both the template editor and Compose.
+ *
+ * It is one list on purpose: the guest tags come from the same dictionary the binder's Tags column
+ * edits (`GUEST_TAGS`), so a group never exists in one place and not the other. Tag groups come
+ * first, then the RSVP-status buckets, the ring bearer and flower girl, the vendors, and — last,
+ * because it is everyone — All Wedding Guests.
+ *
+ * Two leftovers are honoured while they are still in saved data: a template written against the old
+ * single-category ids is shown ticked on its new chip (`bridesmaid` → ✿ Bridesmaids as a tag), and
+ * a custom tag the couple typed in the binder gets its own chip, because it is a group like any other.
+ */
+function GroupPicker({ value, onChange }: { value: string[]; onChange: (next: string[]) => void }) {
+  /** chip id → the id actually stored for it, so a legacy tick can be cleared again */
+  const stored = new Map<string, string>();
+  const extras: MessageCategory[] = [];
+  for (const raw of value) {
+    const cat = messageCategoryFor(raw);
+    if (!cat) continue;
+    if (!stored.has(cat.id)) stored.set(cat.id, raw);
+    if (!MESSAGE_CATEGORIES.some((c) => c.id === cat.id) && !extras.some((c) => c.id === cat.id)) extras.push(cat);
+  }
+  const toggle = (id: string) => {
+    const held = stored.get(id);
+    onChange(held === undefined ? [...value, id] : value.filter((v) => v !== held));
+  };
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+      {[...MESSAGE_CATEGORIES, ...extras].map((cat) => {
+        const on = stored.has(cat.id);
+        return (
+          <button
+            key={cat.id}
+            type="button"
+            onClick={() => toggle(cat.id)}
+            className={`px-3 py-2 text-sm rounded-lg border transition-all ${on ? "bg-wine text-lace border-wine" : "bg-white border-taupe/30 hover:border-wine/50"}`}
+          >
+            <span className="mr-1">{cat.icon}</span>
+            {cat.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 /* ═══════════ TEMPLATES TAB ═══════════ */
 export function TemplatesTab() {
@@ -59,7 +105,7 @@ export function TemplatesTab() {
                   {t.label && <Tag>{t.label}</Tag>}
                 </div>
                 <div className="text-xs text-ink/50">
-                  Categories: {t.categories.split(",").filter(Boolean).map((id) => MESSAGE_CATEGORIES.find((c) => c.id === id)?.label).join(", ") || "None"}
+                  Sends to: {t.categories.split(",").map((id) => messageCategoryFor(id)?.label).filter(Boolean).join(", ") || "Whoever you pick when you send it"}
                 </div>
               </div>
               <div className="flex gap-2">
@@ -94,10 +140,7 @@ function TemplateForm({
 }) {
   const [selectedCats, setSelectedCats] = useState<string[]>(template.categories.split(",").filter(Boolean));
 
-  const toggleCategory = (id: string) => {
-    const next = selectedCats.includes(id)
-      ? selectedCats.filter((c) => c !== id)
-      : [...selectedCats, id];
+  const setCats = (next: string[]) => {
     setSelectedCats(next);
     onChange({ ...template, categories: next.join(",") });
   };
@@ -131,24 +174,8 @@ function TemplateForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-3">Categories</label>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-          {MESSAGE_CATEGORIES.map((cat) => (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() => toggleCategory(cat.id)}
-              className={`px-3 py-2 text-sm rounded-lg border transition-all ${
-                selectedCats.includes(cat.id)
-                  ? "bg-wine text-lace border-wine"
-                  : "bg-white border-taupe/30 hover:border-wine/50"
-              }`}
-            >
-              <span className="mr-1">{cat.icon}</span>
-              {cat.label}
-            </button>
-          ))}
-        </div>
+        <label className="block text-sm font-medium mb-3">Who it goes to</label>
+        <GroupPicker value={selectedCats} onChange={setCats} />
       </div>
 
       <div>
@@ -203,7 +230,8 @@ export function ComposeTab() {
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [showRecipients, setShowRecipients] = useState(false);
 
-  // Check if we're coming from Guests tab with a pre-selected category
+  // Coming from the guest list? The tag you were filtering by is already ticked — "all tags",
+  // "untagged" and a custom tag all land here the same way, through the resolved group id.
   useEffect(() => {
     const preselected = localStorage.getItem("jsos:compose_category");
     if (preselected) {
@@ -261,11 +289,7 @@ export function ComposeTab() {
     }
   };
 
-  const toggleCategory = (id: string) => {
-    setSelectedCats((prev) =>
-      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
-    );
-  };
+  const setCats = (next: string[]) => setSelectedCats(next);
 
   const insertTag = (tag: string) => {
     setCustomBody((prev) => prev + tag);
@@ -306,24 +330,12 @@ export function ComposeTab() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-3">Categories</label>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {MESSAGE_CATEGORIES.map((cat) => (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => toggleCategory(cat.id)}
-                className={`px-3 py-2 text-sm rounded-lg border transition-all ${
-                  selectedCats.includes(cat.id)
-                    ? "bg-wine text-lace border-wine"
-                    : "bg-white border-taupe/30 hover:border-wine/50"
-                }`}
-              >
-                <span className="mr-1">{cat.icon}</span>
-                {cat.label}
-              </button>
-            ))}
-          </div>
+          <label className="block text-sm font-medium mb-3">Who it goes to</label>
+          <GroupPicker value={selectedCats} onChange={setCats} />
+          <p className="text-xs text-ink/50 mt-2">
+            Tags are the groups you set on each household in Guests &amp; RSVP — a guest in two tags is ticked in both,
+            and is still sent one message.
+          </p>
         </div>
 
         <div>
@@ -355,7 +367,7 @@ export function ComposeTab() {
         </div>
 
         <Btn onClick={handleGenerateRecipients} disabled={selectedCats.length === 0 || !customBody}>
-          Generate Recipients ({selectedCats.length} categories selected)
+          Generate Recipients ({selectedCats.length} groups selected)
         </Btn>
       </Card>
 

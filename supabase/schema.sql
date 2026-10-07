@@ -47,6 +47,12 @@ alter table guests add column if not exists viewed_at timestamptz;
 -- Who the link is for ("Ana & Ivan"): the WhatsApp invitation greets this and the guest's reply
 -- card shows it above the form, while `name` stays blank until the guest types their own.
 alter table guests add column if not exists greet text default '';
+-- Guest tags: who a household belongs to, as a comma-separated list of tag ids ("bride_family,
+-- bridesmaids"). Several at once is the point — a maid of honor who is also the bride's cousin is
+-- both, and each tag on its own is a group you can filter by and message. Rows saved while the
+-- binder still had a single-category picker are copied across on the first read (lib/content-fix.ts),
+-- so this one line is all the SQL a live project needs.
+alter table guests add column if not exists tags text default '';
 -- one personal code per household: lookups by code (opening a link, the /rsvp gate) stay cheap
 create index if not exists guests_code_idx on guests (upper(code));
 

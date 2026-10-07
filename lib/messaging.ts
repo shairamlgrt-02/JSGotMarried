@@ -1,54 +1,59 @@
 import type { Guest, WeddingInfo, EntourageMember, Vendor, MessageTemplate, MessageLog } from "./types";
-import { GUEST_CATEGORIES, type GuestCategoryId } from "./types";
+import { GUEST_TAGS, GUEST_TAG_IDS, guestTagIcon, guestTagLabel, parseGuestTags } from "./types";
 
-/* ─── Recipient categories ─── */
+/* ─── Recipient groups ─── */
 /**
- * Every category the couple can tag a message with. Each category resolves
- * to people from one or more data sources — entourage (by role), vendors
- * (by type) or guests (by the guest's own `category` tag, or by RSVP status).
+ * Every group the couple can address a message to. Each one resolves to people from one or more
+ * data sources — guest tags (from `guests.tags`), RSVP status (also the guests table), entourage
+ * roles, or vendors.
  */
 export type RecipientSource =
   | "entourage" | "vendor"
   | "all_guests" | "pending_rsvp" | "opened_no_rsvp" | "confirmed_yes" | "confirmed_no"
-  | "guest_category";
+  | "guest_tag";
 
 export interface MessageCategory {
   id: string;
   label: string;
   icon: string;
   source: RecipientSource;
-  /** For entourage: the role value. For vendor: the type string. For guest_category: the Guest.category value. */
+  /** For entourage: the role value. For vendor: the type string. For guest_tag: the tag id. */
   filter: string;
 }
 
+/**
+ * A guest tag's group id, in the compose picker and in saved templates. The `guest_` prefix is
+ * kept from before multi-tag so templates written against a single category still point at
+ * something real.
+ */
+export const guestTagCategoryId = (tagId: string) => `guest_${tagId}`;
+
+/** Households with no tag at all — its own bucket, so a chase list is one click away. */
+export const UNGTAGGED_CATEGORY: MessageCategory = {
+  id: "guest_untagged", label: "Untagged", icon: "·", source: "guest_tag", filter: "",
+};
+
+/** The guest tags, straight from the shared dictionary — the binder's chips and these are the same list. */
+export const GUEST_TAG_CATEGORIES: MessageCategory[] = GUEST_TAG_IDS.map((tagId) => ({
+  id: guestTagCategoryId(tagId),
+  label: GUEST_TAGS[tagId].label,
+  icon: GUEST_TAGS[tagId].icon,
+  source: "guest_tag" as RecipientSource,
+  filter: tagId,
+}));
+
 export const MESSAGE_CATEGORIES: MessageCategory[] = [
-  // ── Entourage (from the entourage table) ──
-  { id: "sponsor",          label: "Primary Sponsors",    icon: "✦", source: "entourage", filter: "sponsor" },
-  { id: "bridesmaid",       label: "Bridesmaids",         icon: "✿", source: "entourage", filter: "bridesmaid" },
-  { id: "groomsman",        label: "Groomsmen",           icon: "◆", source: "entourage", filter: "groomsman" },
-  { id: "maid_of_honor",    label: "Maid of Honor",       icon: "♛", source: "entourage", filter: "maid_of_honor" },
-  { id: "best_man",         label: "Best Man",            icon: "♚", source: "entourage", filter: "best_man" },
-  { id: "ring_bearer",      label: "Ring Bearer",         icon: "◯", source: "entourage", filter: "ring_bearer" },
-  { id: "flower_girl",      label: "Flower Girl",         icon: "❀", source: "entourage", filter: "flower_girl" },
-  { id: "family_bride",     label: "Family of the Bride", icon: "♡", source: "entourage", filter: "bride_family" },
-  { id: "family_groom",     label: "Family of the Groom", icon: "♡", source: "entourage", filter: "groom_family" },
-  { id: "honored_guest",    label: "Honored Guests",      icon: "★", source: "entourage", filter: "honored_guest" },
-  // ── Guest-list categories (from guests.category) ──
-  ...GUEST_CATEGORIES
-    .filter((c) => c.id !== "") // "Uncategorized" is handled separately below
-    .map((c) => ({
-      id: `guest_${c.id}`,
-      label: c.label,
-      icon: c.icon,
-      source: "guest_category" as RecipientSource,
-      filter: c.id,
-    })),
-  { id: "guest_uncategorized", label: "Uncategorized Guests", icon: "·", source: "guest_category", filter: "" },
-  // ── RSVP status (auto-resolved from guests table) ──
+  // ── Guest tags (guests.tags) — a household can carry several, and appears in each one ──
+  ...GUEST_TAG_CATEGORIES,
+  UNGTAGGED_CATEGORY,
+  // ── RSVP status (auto-resolved from the guests table) ──
   { id: "pending_rsvp",     label: "Pending RSVP",        icon: "⏳", source: "pending_rsvp", filter: "" },
   { id: "opened_no_rsvp",   label: "Opened Link · No Reply", icon: "👀", source: "opened_no_rsvp", filter: "" },
   { id: "confirmed_yes",    label: "Confirmed (Yes)",     icon: "✓", source: "confirmed_yes", filter: "" },
   { id: "confirmed_no",     label: "Declined (No)",       icon: "✗", source: "confirmed_no", filter: "" },
+  // ── Entourage roles that are not guest tags (the children in the procession) ──
+  { id: "ring_bearer",      label: "Ring Bearer",         icon: "◯", source: "entourage", filter: "ring_bearer" },
+  { id: "flower_girl",      label: "Flower Girl",         icon: "❀", source: "entourage", filter: "flower_girl" },
   // ── Vendors ──
   { id: "band_dj",          label: "Band / DJ",           icon: "♫", source: "vendor", filter: "band_dj" },
   { id: "caterers",         label: "Caterers",            icon: "◈", source: "vendor", filter: "catering" },
@@ -62,10 +67,43 @@ export const MESSAGE_CATEGORIES: MessageCategory[] = [
   { id: "wedding_guest",    label: "All Wedding Guests",  icon: "✉", source: "all_guests", filter: "" },
 ];
 
-/** Quick lookup from a Guest.category value to the matching message-category entry (if any). */
-export function categoryForGuest(catId: GuestCategoryId | string | undefined | null): MessageCategory | undefined {
-  if (!catId) return MESSAGE_CATEGORIES.find((c) => c.id === "guest_uncategorized");
-  return MESSAGE_CATEGORIES.find((c) => c.source === "guest_category" && c.filter === catId);
+/**
+ * Group ids that existed before tags replaced the single category, mapped to where they live now:
+ * family, sponsors, honored guests and the wedding party stopped being entourage-only chips the
+ * moment they became tags on the household, so a template saved against the old list still finds
+ * its people instead of quietly resolving to nobody.
+ */
+export const LEGACY_CATEGORY_ALIASES: Record<string, string> = {
+  // entourage-role chips → the tag they are now
+  family_bride:    guestTagCategoryId("bride_family"),
+  family_groom:    guestTagCategoryId("groom_family"),
+  sponsor:         guestTagCategoryId("sponsors"),
+  honored_guest:   guestTagCategoryId("honored"),
+  bridesmaid:      guestTagCategoryId("bridesmaids"),
+  groomsmen:       guestTagCategoryId("groomsmen"),
+  maid_of_honor:   guestTagCategoryId("maid_of_honor"),
+  best_man:        guestTagCategoryId("best_man"),
+  // the old single-category ids, where the tag id itself changed
+  guest_uncategorized: UNGTAGGED_CATEGORY.id,
+  guest_sponsor:       guestTagCategoryId("sponsors"),
+  guest_college_school: guestTagCategoryId("college"),
+  guest_neighbor:      guestTagCategoryId("neighbours"),
+  guest_neighbours:    guestTagCategoryId("neighbours"),
+};
+
+/**
+ * One group by id — including a custom tag the couple typed in the binder, which is not in
+ * `MESSAGE_CATEGORIES` and so gets its entry built here. That is what lets the Guests tab's
+ * "📨 Message [tag]" jump address any tag, preset or not.
+ */
+export function messageCategoryFor(raw: string): MessageCategory | undefined {
+  const id = LEGACY_CATEGORY_ALIASES[raw] ?? raw;
+  const known = MESSAGE_CATEGORIES.find((c) => c.id === id);
+  if (known) return known;
+  if (!id.startsWith("guest_")) return undefined;
+  const tagId = id.slice("guest_".length).trim();
+  if (!tagId) return undefined;
+  return { id, label: guestTagLabel(tagId), icon: guestTagIcon(tagId), source: "guest_tag", filter: tagId };
 }
 
 /* ─── Recipients ─── */
@@ -88,7 +126,7 @@ export interface Recipient {
   rsvpStatus?: string;
 }
 
-/** Resolve the recipients for a set of categories from all data sources. */
+/** Resolve the recipients for a set of groups from all data sources. */
 export function resolveRecipients(
   categories: string[],
   entourage: EntourageMember[],
@@ -96,7 +134,16 @@ export function resolveRecipients(
   guests: Guest[],
   info: WeddingInfo,
 ): Recipient[] {
-  const selected = MESSAGE_CATEGORIES.filter((c) => categories.includes(c.id));
+  // Old template ids are followed to where the group lives now, and one group is only worked
+  // once however many names pointed at it.
+  const selected: MessageCategory[] = [];
+  const chosen = new Set<string>();
+  for (const raw of categories) {
+    const cat = messageCategoryFor(raw);
+    if (!cat || chosen.has(cat.id)) continue;
+    chosen.add(cat.id);
+    selected.push(cat);
+  }
   const map = new Map<string, Recipient>();
 
   const base = typeof window !== "undefined" ? window.location.origin : "";
@@ -140,7 +187,7 @@ export function resolveRecipients(
       cat.source === "opened_no_rsvp" ||
       cat.source === "confirmed_yes" ||
       cat.source === "confirmed_no" ||
-      cat.source === "guest_category"
+      cat.source === "guest_tag"
     ) {
       let filtered: Guest[];
 
@@ -155,19 +202,24 @@ export function resolveRecipients(
       } else if (cat.source === "confirmed_no") {
         filtered = guests.filter((g) => g.attending === "no");
       } else {
-        // guest_category — matches the guest's own `category` tag.
-        // Empty filter = uncategorized guests (category is falsy / blank).
+        // guest_tag — anyone whose tags contain the one asked for. An empty filter is the
+        // untagged bucket: households with no tag at all.
         filtered = guests.filter((g) => {
-          const gc = (g.category || "").trim();
-          return cat.filter ? gc === cat.filter : !gc;
+          const tags = parseGuestTags(g.tags);
+          return cat.filter ? tags.includes(cat.filter) : tags.length === 0;
         });
       }
 
+      // One household is one recipient, however many groups led here — tick ♡ Bride's Family and
+      // ✿ Bridesmaids and Aling Tess still gets a single message, carrying both labels.
       filtered.forEach((g) => {
-        const id = `gst_${g.id}_${cat.id}`;
-        if (map.has(id)) return;
-        const link = g.code ? `${base}/${g.code}` : "";
-        const rsvpLabel = g.attending === "yes" ? "Confirmed ✓" : g.attending === "no" ? "Declined ✗" : "Pending ⏳";
+        const id = `gst_${g.id}`;
+        const seen = map.get(id);
+        if (seen) {
+          const roles = seen.role.split(" · ");
+          if (!roles.includes(cat.label)) seen.role = [...roles, cat.label].join(" · ");
+          return;
+        }
         map.set(id, {
           id,
           name: g.greet || g.name || "Guest",
@@ -176,10 +228,10 @@ export function resolveRecipients(
           role: cat.label,
           category: cat.label,
           code: g.code,
-          inviteLink: link,
+          inviteLink: g.code ? `${base}/${g.code}` : "",
           pax: g.pax,
           plusOne: g.plus_one,
-          rsvpStatus: rsvpLabel,
+          rsvpStatus: g.attending === "yes" ? "Confirmed ✓" : g.attending === "no" ? "Declined ✗" : "Pending ⏳",
         });
       });
     }
