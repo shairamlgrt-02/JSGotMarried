@@ -4,13 +4,14 @@ import { useEffect, useState } from "react";
 import { AttireEditor, Budget, Checklist, Content, Details, Guests, Overview, PrintBinder, ScheduleBuilder, Settings, Vendors, getMode } from "@/components/admin/tabs";
 import { InviteCodes } from "@/components/admin/invites";
 import { AudioGuestbook } from "@/components/admin/guestbook";
+import { BridesmaidCards } from "@/components/admin/bridesmaids";
 import { TemplatesTab, ComposeTab, TrackerTab } from "@/components/admin/messaging";
 
 const TABS = [
   ["overview", "Overview", "◐"], ["details", "Details", "✎"], ["schedule", "Schedule", "◷"], ["checklist", "Checklist", "☑"],
   ["budget", "Budget", "◎"], ["invites", "Invite Codes", "✦"], ["guests", "Guests & RSVP", "♡"], ["audio", "Audio Guestbook", "☎"],
   ["messaging-compose", "📨 Compose", "✉"], ["messaging-templates", "📋 Templates", "▤"], ["messaging-tracker", "📊 Tracker", "◈"],
-  ["vendors", "Vendors", "◇"], ["attire", "Attire & Colors", "◉"],
+  ["vendors", "Vendors", "◇"], ["attire", "Attire & Colors", "◉"], ["bridesmaids", "Bridesmaid Cards", "✿"],
   ["content", "Content", "▣"], ["settings", "Settings", "⚙"],
 ] as const;
 type Tab = (typeof TABS)[number][0];
@@ -70,6 +71,7 @@ export default function Admin() {
               {tab === "messaging-tracker" && <TrackerTab />}
               {tab === "vendors" && <Vendors />}
               {tab === "attire" && <AttireEditor />}
+              {tab === "bridesmaids" && <BridesmaidCards />}
               {tab === "content" && <Content />}
               {tab === "settings" && <Settings mode={mode} onPrint={() => window.print()} go={go} />}
             </motion.div>

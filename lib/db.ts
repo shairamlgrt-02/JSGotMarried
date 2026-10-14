@@ -21,7 +21,7 @@ const KEY = (t: TableName) => `jsos:${t}`;
 const EVT = "jsos:change";
 
 /** Bump when the default program/entourage/FAQ/story change so browsers pick up the new defaults once. */
-const SEED_VERSION = "17"; // round 23: Our Story rewritten — five chapters on the real timeline, landing on 1 Cor 11:11
+const SEED_VERSION = "18"; // round 24: the bridesmaids' palette — Garnet for the Maid and Matron of Honor and the sister-in-law
 const REFRESH: TableName[] = ["schedule", "entourage", "faq", "attire", "story"];
 function localRead<T extends TableName>(t: T): TableMap[T][] {
   if (localStorage.getItem("jsos:seedv") !== SEED_VERSION) {
@@ -285,6 +285,9 @@ export async function pushSeedSafely(): Promise<SeedPushReport> {
   const report: SeedPushReport = { added: 0, refreshed: [] };
   for (const t of TABLES) {
     if (t === "guests") continue;
+    // nothing to push for a table the code seeds empty (bridesmaid cards, messages) — and skipping
+    // it means a project that hasn't re-run schema.sql for a newer table still gets everything else
+    if (!(SEED[t] as unknown[]).length) continue;
     const stored = (await listStored(t)) as { id: string }[];
     if (t === "attire") {
       const seedRows = SEED.attire as { id: string }[];

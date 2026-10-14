@@ -576,7 +576,7 @@ export function Entourage({ people }: { people: EntourageMember[] }) {
   // Two columns everywhere — his side left, her side right — so neither family reads as "first".
   const bride = by("bride_family"), groom = by("groom_family");
   const sponsors = by("sponsor");
-  const bestMan = by("best_man"), maidOfHonor = by("maid_of_honor");
+  const bestMan = by("best_man"), maidOfHonor = by("maid_of_honor"), matronOfHonor = by("matron_of_honor");
   const groomsmen = by("groomsman"), bridesmaids = by("bridesmaid");
   const ringBearer = by("ring_bearer"), flowerGirl = by("flower_girl");
   const honoured = by("honored_guest");
@@ -687,7 +687,7 @@ export function Entourage({ people }: { people: EntourageMember[] }) {
             )}
           </Reveal>
         )}
-        {(bestMan.length > 0 || maidOfHonor.length > 0 || groomsmen.length > 0 || bridesmaids.length > 0) && (
+        {(bestMan.length > 0 || maidOfHonor.length > 0 || matronOfHonor.length > 0 || groomsmen.length > 0 || bridesmaids.length > 0) && (
           <Reveal>
             <div className="relative grid grid-cols-2 gap-x-4 gap-y-4 md:gap-0">
               <Divider />
@@ -710,6 +710,12 @@ export function Entourage({ people }: { people: EntourageMember[] }) {
                   <div>
                     <GroupLabel>{entourageHeading("maid_of_honor")}</GroupLabel>
                     <List list={maidOfHonor} />
+                  </div>
+                )}
+                {matronOfHonor.length > 0 && (
+                  <div>
+                    <GroupLabel>{entourageHeading("matron_of_honor")}</GroupLabel>
+                    <List list={matronOfHonor} />
                   </div>
                 )}
                 {bridesmaids.length > 0 && (

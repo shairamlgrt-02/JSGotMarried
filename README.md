@@ -8,7 +8,7 @@ A digital art piece plus a wedding binder, in one Next.js app.
 | **The invitation preview** | `/preview` | The one-page editorial site in the Midnight Botanical style as the world may see it: loader, hero + countdown, story chapters, 11.11, dress code, entourage, gallery, moments, hashtags. **No venue, no programme, no reply card, no FAQ.** Safe to post anywhere. |
 | **An invitation** | `/JS-7KQF` | The same site, unsealed for one household: the invitation wording, the pinned programme, the venue + map, the postcard, the RSVP card and the FAQ. This is the link you send. |
 | **RSVP** | `/rsvp` | The code door for guests who lost the link: type the **last 4 characters** of your code (or the whole thing) and you're taken to your own reply card. |
-| **The Binder** | `/admin` | Private admin (password: `ADMIN_PASSWORD`, default `JS2026`). Tabs: Overview · Details · Schedule (drag to reorder) · Checklist · Budget · **Invite Codes** · **Guests & RSVP** · **Audio Guestbook** · Vendors · Attire & Colors · Content · Settings |
+| **The Binder** | `/admin` | Private admin (password: `ADMIN_PASSWORD`, default `JS2026`). Tabs: Overview · Details · Schedule (drag to reorder) · Checklist · Budget · **Invite Codes** · **Guests & RSVP** · **Audio Guestbook** · Vendors · Attire & Colors · **Bridesmaid Cards** · Content · Settings |
 
 Anything you edit in the Binder shows up on the public site.
 
@@ -70,10 +70,10 @@ calendar note.
 
 | | Where it shows |
 |---|---|
-| `WEDDING_PROGRAM_STOPS` | the timeline, and the *Order of the day* on both cards. A stop's short `tag` ("Entourage & wedding team", "Doors close at 4:00 PM", "Everyone welcome") sits under its name on the timeline; its one-line `note` is printed under it on the cards. |
+| `WEDDING_PROGRAM_STOPS` | the timeline, and the *Order of the day* on both cards. A stop's short `tag` ("Entourage & wedding team", "Doors close at 4:00 PM", "Everyone welcome") sits under its name on the timeline and beside it on the programme card; its one-line `note` is printed under it on the keepsake; its `programmeNote` — the warm line, where the facts are already said higher up — under it on the programme card. |
 | `WEDDING_PROGRAM_HIGHLIGHTS` | the three cards: the span of hours on the ribbon and the couple's own warm description underneath. Wrap the parts a guest must not miss in `*asterisks*` — `*4:00 PM*`, `*everyone is welcome*` — and the card sets them in bold wine. |
 | `CEREMONY_DOORS_CLOSE` · `ALL_WELCOME_FROM` · `ENTOURAGE_CALL_TIME` · `RECEPTION_AT` | the hours guests must not miss, written once: the ceremony is intimate and **closed-door — be seated before 4:00 PM, the doors close the moment the procession begins**; the entourage's call time is **3:30 PM**; from **5:30 PM everyone is welcome** for the Welcome Toast & Snacks, then the reception at **6:30**. |
-| `PROGRAM_HEADLINE` · `ARRIVAL_NOTES` · `GUEST_ARRIVAL_GUIDE` | the programme card's wording (and the two one-line "who arrives when" tiles under the timeline): *You don't need to be there at 4:00 PM*, the note for the entourage & wedding team (3:30 — reserved seats, wait for the coordinators' cue), the note for every other guest (5:30 at the majlis, reception at 6:30), and where a guest should go by the hour they arrive. |
+| `PROGRAM_HEADLINE` · `ARRIVAL_NOTES` · `GUEST_ARRIVAL_GUIDE` | the programme card's wording (and the two one-line "who arrives when" tiles under the timeline): *You don't need to be there at 4:00 PM*, the note for the entourage & wedding team (3:30 — reserved seats, wait for the coordinators' cue), the note for every other guest (5:30 at the majlis, reception at 6:30), and where a guest should go if they arrive at another hour (early for the ceremony, or while it is under way). A stop's `programmeNote` is the warm line under it on that card. |
 
 Edit the words there and the next deploy carries them to the site and to every card a guest saves
 afterwards. The FAQ's *Can I watch the ceremony?* answer repeats the same two facts; on a project
@@ -85,22 +85,80 @@ section (**Download the programme card**) and again beside the keepsake after a 
 *yes*. It is drawn in the guest's own browser (`lib/program-card.ts`, no server, no upload) and is
 about the *day* rather than the guest, so it leads with the thing guests keep getting wrong:
 
-1. **You don't need to be there at 4:00 PM** — the headline, the warm reason why, and the two hours
-   that matter in large type: **5:30 PM** at the majlis, **6:30 PM** the reception;
-2. two notes side by side — **Entourage & wedding team: 3:30 PM**, head to the hall, find your
-   reserved seat and wait for the coordinators' cue for the procession · **All other guests: 5:30 PM**,
-   head to the majlis for the welcome toast, snacks & photos, then the reception at 6:30;
-3. for guests, **where to go by the hour they arrive** (before 4:00 → the hall; 4:00–5:30 → the
-   majlis, the ceremony is behind closed doors; 5:30 → the majlis; 6:30 → the hall), and a **small
-   plan of the venue** (`lib/venue-map.ts`: the hall with its reserved rows and doors, the majlis
-   just outside, parking, the entrance and the path in — numbered to match the legend);
-4. the order of the day, the dress code in one line and the couple's sign-off.
+1. **one panel to read first** — *You don't need to be there at 4:00 PM*, the ceremony in two warm
+   sentences, and under a hairline the two notes side by side in large type: **Entourage & wedding
+   team: 3:30 PM**, head to the hall, find your reserved seat and wait for the coordinators' cue ·
+   **All other guests: 5:30 PM**, head to the majlis for the welcome toast, snacks & photos, then the
+   reception at 6:30;
+2. the **small plan of the venue** (`lib/venue-map.ts`: the hall with its reserved rows and doors,
+   the majlis just outside, the courtyard, the entrance and the path in — numbered to match the
+   one-line legend under it) and, **beside it, the wayfinding notes**: where to go if you arrive at
+   another hour (before 4:00 → the hall, if you wish to witness the ceremony; 4:00–5:30 → the
+   majlis, the ceremony is behind closed doors — we will come and find you) and where the cars go
+   (parking → a separate area, not the courtyard; The Heaven's team tell you where at the gate);
+3. the order of the day — each fact as a short tag beside its stop (*entourage & wedding team*,
+   *doors close at 4:00 PM*, *everyone welcome*) and the couple's own line under the two hours that
+   hold the evening (`programmeNote`: *the hour we get to hug you*; *dinner, our film on the big
+   screen, games and giveaways — then we dance*) — the dress code in one line and the sign-off.
+
+The card is a **9:16 portrait — 1500 × 2667, a phone screen, a story** — so it is seen whole and
+never scrolled. Every fact is said once and the card uses its width wherever two things belong side
+by side, so everything fits that frame in type that reads without zooming (the first version
+stacked six sections, repeated the hours in each, and ran to 1200 × 4000+). Whatever room is left
+over inside the frame is shared out between the sections as air, so the frame is always full and
+never crowded; should the wording ever outgrow it (a two-line dress code, say), the card grows
+taller rather than cut a line — the type is never set smaller.
 
 The plan in `lib/venue-map.ts` is a schematic drawn in a logical 640 × 440 space, with the two
 arrival notes written onto it (*Entourage & wedding team · 3:30 PM arrival* on the hall, *Guests
-welcome · 5:30 – 6:30 PM arrival* on the majlis) and The Heaven's parking guides noted at the
-entrance; redraw the shapes there from the couple's own sketch of The Heaven and every card follows.
+welcome · 5:30 – 6:30 PM arrival* on the majlis) and the parking note at the entrance. **Parking is
+deliberately not on the plan**: the open yard beside the path is just the courtyard, and the cars go
+to a separate area that The Heaven's team point each guest to when they arrive at the gate — so the
+map, the parking note beside it and the FAQ's *Is there parking?* all say exactly that
+(`PARKING_NOTE`). Redraw the shapes there from the couple's own sketch of The Heaven and every card
+follows.
 Like the venue itself, the card is only offered on an unsealed invitation — never on `/preview`.
+
+## Bridesmaid cards (`Bridesmaid Cards`)
+One A4 thank-you card for each of the girls — *thank you for saying yes* — in the keepsake's paper
+and inks, with **her stone cut in her colour** at the top. The binder tab holds a card per
+bridesmaid; the page for each is a form on the left and the real card, drawn live, on the right,
+with **Download A4 PNG** (2480 × 3508, 300 dpi — exactly A4, ready for a print shop or a phone)
+and **Download all** on the tab's header.
+
+**Stones** are the bridesmaids' palette from the Dress Code, and who wears what is settled there:
+**Garnet** for the Maid of Honor, the Matron of Honor and the bride's sister-in-law; **Turquoise,
+Citrine, Amethyst, Sapphire and Ruby** for the bridesmaids (the greens, browns and greys are the
+groom's side's and the guests', so they are not offered here — a stone of your own is just a word
+and a swatch). Picking a stone sets her colour and cut, the script greeting (*Thank you, my Garnet*
+— the stone's name picked out in its colour) and the line on what the stone embodies.
+
+**Roles** are picked separately, because three women share Garnet and each needs her own job:
+*Keeper of the Vows & Calm in the Storm*, *Peacekeeper & Family Anchor*, *Glow-Up & Scent
+Specialist*, *Hydration, Fuel & Bathroom Captain*, *Fashion Surgeon & Wardrobe Medic*, *Content
+Creator Girl*, *Hype Girl & Energy Officer*, and six more (timekeeper, documents, messenger,
+bodyguard, keeper of hearts, morning light). Each role prints a title in capitals, a motto, *Your
+mission*, *The duties* as bullets and a *Pro tip*. Every stone has the role written in its spirit
+(Sapphire's is the keeper of the vows, Garnet's the wardrobe medic…), which is what a new card
+starts with — but any role fits any stone: the mission always opens with the stone's own sentence
+(*Garnet is the stone of commitment and of holding things together…*) and goes on with the role's.
+
+**Every line is editable** — the capitals at the top (*For my maid of honor*, *For my bridesmaid*…),
+the greeting, the subline, the embodies line, the whole note (new line = new paragraph), the role's
+heading, title, motto, mission, duties and tip, the sign-off and the footer — and the gem's colour and
+cut are pickers. *Rewrite from Garnet & the role* puts the presets' lines back if you want to start
+over; the note and sign-off are never touched by it.
+
+`Add the N from the entourage` creates a card for every Maid of Honor, Matron of Honor and bridesmaid
+named under Content → Entourage who doesn't have one yet: the honour roles in Garnet (with the matching
+capitals at the top), a bridesmaid whose title says *sister-in-law* in Garnet too, everyone else down the
+bridesmaid stones in order — and no two new cards start with the same role. Long words don't fall off
+the page: the card is measured first and its type steps down a little (never below 78 %) when a note
+runs long, and the preview says so; whatever room is left is shared out between the sections.
+
+The cards live in their own private table (`bridesmaid_cards` — the public site never reads it). A
+project already on Supabase runs `supabase/schema.sql` once more to add it; locally nothing is needed.
+Stones & roles: `lib/jewels.ts` · drawing: `lib/bridesmaid-card.ts` · tab: `components/admin/bridesmaids.tsx`.
 
 ## Invite codes: generate, send, track (`Invite Codes`)
 One row per household, one code per row, one reply per code — and a ledger that tells you where
@@ -275,6 +333,8 @@ lib/keepsake.ts              the guest's downloadable invitation card (canvas �
 lib/program-card.ts          the downloadable programme card — who arrives when, where to go, the map
 lib/venue-map.ts             the small plan of the venue printed on the programme card
 lib/card-draw.ts             shared canvas lettering (paper, caps, wrap, pins) for the cards
+lib/bridesmaid-card.ts       the bridesmaids' A4 thank-you card — her stone, her note, her role (binder → Bridesmaid Cards)
+lib/jewels.ts                the bridesmaids' stones (colour, meaning) and the roles any of them can be given
 lib/calendar.ts              the wedding event: .ics + Google Calendar + how the dates read
 lib/seed.ts                  all starter data (budget, vendors, checklist, attire…)
 lib/db.ts                    Supabase-via-API or localStorage data layer

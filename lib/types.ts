@@ -160,7 +160,7 @@ export type EntourageRole =
   | "bride_family" | "groom_family"
   | "sponsor"
   | "best_man" | "groomsman"
-  | "maid_of_honor" | "bridesmaid"
+  | "maid_of_honor" | "matron_of_honor" | "bridesmaid"
   | "flower_girl" | "ring_bearer"
   | "honored_guest"
   | "other";
@@ -173,12 +173,64 @@ export const ENTOURAGE_ROLES: { value: EntourageRole; label: string }[] = [
   { value: "best_man", label: "Best Man" },
   { value: "groomsman", label: "Groomsman" },
   { value: "maid_of_honor", label: "Maid of Honor" },
+  { value: "matron_of_honor", label: "Matron of Honor" },
   { value: "bridesmaid", label: "Bridesmaid" },
   { value: "flower_girl", label: "Flower Girl" },
   { value: "ring_bearer", label: "Ring Bearer" },
   { value: "honored_guest", label: "Honored Guest" },
   { value: "other", label: "Other" },
 ];
+/** How a bridesmaid's stone is drawn on her card. */
+export type GemCut = "brilliant" | "oval" | "pear" | "emerald" | "cushion";
+export const GEM_CUTS: { value: GemCut; label: string }[] = [
+  { value: "brilliant", label: "Round brilliant" },
+  { value: "oval", label: "Oval" },
+  { value: "pear", label: "Pear" },
+  { value: "emerald", label: "Emerald (step cut)" },
+  { value: "cushion", label: "Cushion" },
+];
+/**
+ * One bridesmaid's A4 thank-you card. Every line the card prints is a field here, so the binder
+ * can edit all of it; the jewel presets in lib/jewels.ts only fill the fields in to start with.
+ */
+export type BridesmaidCard = {
+  id: string;
+  /** Her name as the card addresses her. */
+  name: string;
+  /** Her stone — "Garnet", "Sapphire"… A preset's name brings its colour and meaning; any word is allowed. */
+  jewel: string;
+  /** The stone's colour (hex) — the gem, her stone's name and the accents are drawn in it. */
+  color: string;
+  cut: GemCut;
+  /** The small line of capitals at the very top — "For my bridesmaid". */
+  kicker: string;
+  /** The script headline — "Thank you, my Sapphire". The stone's name is picked out in her colour. */
+  greeting: string;
+  /** The capitals under the headline — "for saying yes, Ana". */
+  subline: string;
+  /** One line on what her stone embodies, printed under the gem. */
+  embodies: string;
+  /** The bride's own note to her. Blank lines start new paragraphs. */
+  note: string;
+  /** The small heading over the role block — "Her role on the day". */
+  role_kicker: string;
+  /** Her role, printed in capitals. */
+  role_title: string;
+  /** The motto under the title, in quotes. */
+  tagline: string;
+  /** "Your mission" — a short paragraph. */
+  mission: string;
+  /** "The duties" — one per line. */
+  duties: string;
+  /** "Pro tip" — one line; leave empty to print none. */
+  pro_tip: string;
+  /** The script sign-off — "With all my love, Shaira". */
+  closing: string;
+  /** The capitals under the sign-off — "J & S · 11.11.2026". */
+  footer: string;
+  order: number;
+};
+
 export type Faq = { id: string; question: string; answer: string; order: number };
 /** One chapter of the couple's story — title + a little paragraph + one photo, swipeable on the site. */
 export type StoryChapter = { id: string; title: string; text: string; photo: string; order: number };
@@ -235,8 +287,9 @@ export type TableMap = {
   story: StoryChapter;
   message_templates: MessageTemplate;
   messages: MessageLog;
+  bridesmaid_cards: BridesmaidCard;
 };
 export type TableName = keyof TableMap;
-export const TABLES: TableName[] = ["wedding_info", "schedule", "budget", "guests", "vendors", "checklist", "attire", "entourage", "faq", "story", "message_templates", "messages"];
+export const TABLES: TableName[] = ["wedding_info", "schedule", "budget", "guests", "vendors", "checklist", "attire", "entourage", "faq", "story", "message_templates", "messages", "bridesmaid_cards"];
 /** Tables the public site may read without logging in. */
 export const PUBLIC_TABLES: TableName[] = ["wedding_info", "schedule", "attire", "entourage", "faq", "story"];

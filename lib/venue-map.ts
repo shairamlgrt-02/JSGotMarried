@@ -1,15 +1,19 @@
-import { ALL_WELCOME_FROM, CEREMONY_DOORS_CLOSE, ENTOURAGE_CALL_TIME, RECEPTION_AT } from "./program";
+import { ALL_WELCOME_FROM, ENTOURAGE_CALL_TIME, RECEPTION_AT, type ArrivalWindow } from "./program";
 import { EDGE, LACE, MOCHA, PAPER, TAUPE, WINE, caps, capsWidth, pin, roundRect, serif, text } from "./card-draw";
 
 /**
  * A small wayfinding plan of the venue for the programme card: where the hall is, where the
- * majlis is (just outside it), where to park and where the entrance is — the three places the
+ * majlis is (just outside it), the courtyard beside it and where the entrance is — the places the
  * arrival notes send a guest to, numbered to match the legend printed under the map.
  *
+ * Parking is deliberately NOT drawn: it is not in the grounds (the open yard beside the path is
+ * just the courtyard) but in a separate area, and The Heaven's team tell each car where to go when
+ * it arrives at the gate — so the plan says exactly that at the entrance and nothing more.
+ *
  * ┌─ PROVISIONAL ──────────────────────────────────────────────────────────────────────────────┐
- * │ This is a schematic, not a survey: parking at the front, the entrance path, the majlis   │
- * │ beside the hall doors. Redraw the shapes below from the couple's own sketch of The Heaven │
- * │ — everything is in the logical MAP_W × MAP_H space and scales to whatever box it is given.│
+ * │ This is a schematic, not a survey: the entrance path, the courtyard to one side of it, the │
+ * │ majlis beside the hall doors. Redraw the shapes below from the couple's own sketch of The  │
+ * │ Heaven — everything is in the logical MAP_W × MAP_H space and scales to the box it is given.│
  * └────────────────────────────────────────────────────────────────────────────────────────────┘
  */
 export const MAP_W = 640;
@@ -18,14 +22,23 @@ export const MAP_H = 440;
 /** The two arrival notes written onto the plan itself — one on the hall, one on the majlis. */
 export const MAP_NOTE_ENTOURAGE = [`Entourage & wedding team · ${ENTOURAGE_CALL_TIME} arrival`];
 export const MAP_NOTE_GUESTS = ["Guests welcome", `${ALL_WELCOME_FROM.replace(/\s*PM$/, "")} – ${RECEPTION_AT} arrival`];
-/** The Heaven posts people at the entrance to show cars where to park. */
-export const PARKING_GUIDES = "The Heaven's team will meet you at the entrance and guide you where to park";
+/**
+ * Where the cars go: not the courtyard, but a separate area that The Heaven's team point each car
+ * to on arrival at the gate. Two short lines at the gate on the plan itself — and, beside the plan
+ * on the programme card, the third wayfinding note, in the same shape as the arrival windows.
+ */
+export const MAP_NOTE_PARKING = ["parking is in a separate area —", "The Heaven's team will tell you where at the gate"];
+export const PARKING_NOTE: ArrivalWindow = {
+  when: "Parking",
+  where: "A separate area",
+  detail: "Not in the courtyard — The Heaven's team will tell you where to park when you arrive at the gate.",
+};
 
-/** The legend under the map — the same numbers as the pins. */
-export const VENUE_MAP_LEGEND: { n: number; place: string; detail: string }[] = [
-  { n: 1, place: "Parking", detail: "their team meets you at the entrance and shows you where to park" },
-  { n: 2, place: "The majlis", detail: `just outside the hall — welcome toast, snacks & photos from ${ALL_WELCOME_FROM}` },
-  { n: 3, place: "The hall", detail: `ceremony at ${CEREMONY_DOORS_CLOSE} (doors close as the procession begins) · reception at ${RECEPTION_AT}` },
+/** The legend under the map — the same numbers as the pins, in the order a guest meets them. */
+export const VENUE_MAP_LEGEND: { n: number; place: string }[] = [
+  { n: 1, place: "The entrance" },
+  { n: 2, place: "The majlis" },
+  { n: 3, place: "The hall" },
 ];
 
 type Ctx = CanvasRenderingContext2D;
@@ -91,22 +104,28 @@ function seatRows(g: Ctx, x: number, y: number, w: number, rows: number, reserve
   }
 }
 
-/** Parking bays either side of a drive lane. */
-function parkingBays(g: Ctx, x: number, y: number, w: number, h: number) {
+/** Flagstone paving for the courtyard — a soft grid of slabs, every other row set half a slab over. */
+function paving(g: Ctx, x: number, y: number, w: number, h: number, slab = 22) {
+  g.save();
+  roundRect(g, x, y, w, h, 6); g.clip();
   g.strokeStyle = PATH;
-  g.lineWidth = 1.6;
-  const lane = h * 0.3;
-  const bayH = (h - lane) / 2;
-  const n = Math.floor(w / 26);
-  const step = w / n;
-  for (let i = 0; i <= n; i++) {
-    const xx = x + i * step;
-    g.beginPath();
-    g.moveTo(xx, y); g.lineTo(xx, y + bayH);
-    g.moveTo(xx, y + h - bayH); g.lineTo(xx, y + h);
-    g.stroke();
+  g.lineWidth = 1.2;
+  const rows = Math.ceil(h / slab);
+  for (let r = 0; r <= rows; r++) {
+    const yy = y + r * slab;
+    g.beginPath(); g.moveTo(x, yy); g.lineTo(x + w, yy); g.stroke();
+    for (let xx = x + (r % 2 ? slab / 2 : 0); xx < x + w; xx += slab) {
+      g.beginPath(); g.moveTo(xx, yy); g.lineTo(xx, yy + slab); g.stroke();
+    }
   }
-  g.beginPath(); g.moveTo(x, y + bayH); g.lineTo(x + w, y + bayH); g.moveTo(x, y + h - bayH); g.lineTo(x + w, y + h - bayH); g.stroke();
+  g.restore();
+}
+
+/** A line of italic serif that shrinks a little rather than run past `maxW`. */
+function note(g: Ctx, s: string, x: number, y: number, maxW: number, size = 13, color = MOCHA) {
+  g.font = serif(size, "i400");
+  while (g.measureText(s).width > maxW && size > 10) { size -= 0.5; g.font = serif(size, "i400"); }
+  text(g, s, x, y, serif(size, "i400"), color, "left");
 }
 
 /**
@@ -148,7 +167,7 @@ export function drawVenueMap(g: Ctx, x: number, y: number, w: number, h: number)
   text(g, "doors", door.x - 30, door.y + 18, serif(13, "i400"), WINE, "right");
 
   // ── the majlis, just outside the hall ──
-  const majlis = { x: 364, y: 268, w: 250, h: 112 };
+  const majlis = { x: 364, y: 262, w: 250, h: 112 };
   roundRect(g, majlis.x, majlis.y, majlis.w, majlis.h, 14);
   g.fillStyle = "#F9F1E4"; g.fill();
   g.save(); g.setLineDash([7, 5]); g.strokeStyle = WINE; g.lineWidth = 2; g.stroke(); g.restore();
@@ -163,34 +182,36 @@ export function drawVenueMap(g: Ctx, x: number, y: number, w: number, h: number)
   caps(g, "the majlis", majlis.x + majlis.w / 2, majlis.y + majlis.h - 24, 16, WINE, 0.26);
   text(g, "welcome toast, snacks & photos", majlis.x + majlis.w / 2, majlis.y + majlis.h - 8, serif(12, "i400"), MOCHA);
 
-  // ── parking ──
-  const park = { x: 30, y: 268, w: 206, h: 112 };
-  roundRect(g, park.x, park.y, park.w, park.h, 10);
+  // ── the courtyard — an open paved yard across the path from the majlis (not the parking) ──
+  const yard = { x: 30, y: 262, w: 206, h: 112 };
+  roundRect(g, yard.x, yard.y, yard.w, yard.h, 10);
   g.fillStyle = "#EBE3D5"; g.fill();
   g.strokeStyle = EDGE; g.lineWidth = 1.4; g.stroke();
-  parkingBays(g, park.x + 14, park.y + 12, park.w - 28, park.h - 24);
+  paving(g, yard.x + 14, yard.y + 12, yard.w - 28, yard.h - 24);
+  const yardLabelW = capsWidth(g, "the courtyard", 13, 0.26);
   g.fillStyle = "rgba(252,250,245,.88)";
-  roundRect(g, park.x + park.w / 2 - 54, park.y + park.h / 2 - 12, 108, 24, 12); g.fill();
-  caps(g, "parking", park.x + park.w / 2, park.y + park.h / 2 + 5, 14, TAUPE, 0.3);
+  roundRect(g, yard.x + yard.w / 2 - yardLabelW / 2 - 14, yard.y + yard.h / 2 - 12, yardLabelW + 28, 24, 12); g.fill();
+  caps(g, "the courtyard", yard.x + yard.w / 2, yard.y + yard.h / 2 + 5, 13, TAUPE, 0.26);
 
-  // ── the entrance and the walk in ──
+  // ── the entrance and the walk in — where The Heaven's team say where to park ──
   const gate = { x: 300, y: MAP_H - 4 };
   g.strokeStyle = GROUND; g.lineWidth = 6; g.beginPath(); g.moveTo(gate.x - 26, gate.y); g.lineTo(gate.x + 26, gate.y); g.stroke();
   g.strokeStyle = WINE; g.lineWidth = 2.2;
   g.beginPath(); g.moveTo(gate.x - 26, gate.y - 14); g.lineTo(gate.x - 26, gate.y + 2); g.moveTo(gate.x + 26, gate.y - 14); g.lineTo(gate.x + 26, gate.y + 2); g.stroke();
   arrowHead(g, gate.x, gate.y - 34, "up");
-  caps(g, "entrance", gate.x + 42, gate.y - 30, 13, WINE, 0.26, "left");
-  text(g, "The Heaven's team will guide you to parking", gate.x + 42, gate.y - 10, serif(13, "i400"), MOCHA, "left");
+  const noteL = gate.x + 58;
+  const noteW = MAP_W - 18 - noteL;
+  caps(g, "entrance", noteL, gate.y - 35, 13, WINE, 0.26, "left");
+  MAP_NOTE_PARKING.forEach((line, i) => note(g, line, noteL, gate.y - 20 + i * 13.5, noteW));
   // the path: in from the gate, straight up to the doors — with a step right for the majlis
   dashedLine(g, [[gate.x, gate.y - 10], [gate.x, door.y + 44]]);
   arrowHead(g, gate.x, door.y + 40, "up", 8);
-  dashedLine(g, [[gate.x, 326], [majlis.x - 14, 326]]);
-  arrowHead(g, majlis.x - 10, 326, "right", 8);
-  // …and from the car park
-  dashedLine(g, [[park.x + park.w, 326], [gate.x - 12, 326]], PATH, 2, [6, 7]);
+  const step = majlis.y + 64;
+  dashedLine(g, [[gate.x, step], [majlis.x - 14, step]]);
+  arrowHead(g, majlis.x - 10, step, "right", 8);
 
-  // the pins, numbered as in the legend
-  pin(g, 1, park.x + 16, park.y - 2, 15);
+  // the pins, numbered as in the legend — 1 sits by the entrance, where parking is explained
+  pin(g, 1, gate.x + 36, gate.y - 40, 15);
   pin(g, 2, majlis.x + 16, majlis.y - 2, 15);
   pin(g, 3, hall.x + 16, hall.y - 2, 15);
 

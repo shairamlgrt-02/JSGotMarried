@@ -3,8 +3,8 @@ import type { EntourageMember, EntourageRole } from "./types";
 /**
  * The order the entourage stands in on the site, with the heading each group is printed
  * under. Groomsmen stand after the Best Man and before the Ring Bearer; Bridesmaids after
- * the Maid of Honor and before the Flower Girl; the honoured guests come last, in two
- * columns. The binder groups people exactly the same way, so both always agree.
+ * the Maid and Matron of Honor and before the Flower Girl; the honoured guests come last, in
+ * two columns. The binder groups people exactly the same way, so both always agree.
  */
 export const ENTOURAGE_ORDER: { role: EntourageRole; heading: string }[] = [
   { role: "groom_family", heading: "Parents of the Groom" },
@@ -13,6 +13,7 @@ export const ENTOURAGE_ORDER: { role: EntourageRole; heading: string }[] = [
   { role: "best_man", heading: "Best Man" },
   { role: "groomsman", heading: "Groomsmen" },
   { role: "maid_of_honor", heading: "Maid of Honor" },
+  { role: "matron_of_honor", heading: "Matron of Honor" },
   { role: "bridesmaid", heading: "Bridesmaids" },
   { role: "ring_bearer", heading: "Ring Bearer" },
   { role: "flower_girl", heading: "Flower Girl" },
