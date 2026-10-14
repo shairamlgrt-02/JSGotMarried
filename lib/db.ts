@@ -285,6 +285,9 @@ export async function pushSeedSafely(): Promise<SeedPushReport> {
   const report: SeedPushReport = { added: 0, refreshed: [] };
   for (const t of TABLES) {
     if (t === "guests") continue;
+    // nothing to push for a table the code seeds empty (bridesmaid cards, messages) — and skipping
+    // it means a project that hasn't re-run schema.sql for a newer table still gets everything else
+    if (!(SEED[t] as unknown[]).length) continue;
     const stored = (await listStored(t)) as { id: string }[];
     if (t === "attire") {
       const seedRows = SEED.attire as { id: string }[];

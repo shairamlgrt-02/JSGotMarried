@@ -63,6 +63,18 @@ create table if not exists entourage (id text primary key default gen_random_uui
 create table if not exists faq (id text primary key default gen_random_uuid()::text, question text, answer text, "order" int default 0);
 -- Our Story, chapter by chapter (the swipeable carousel on the public site).
 create table if not exists story (id text primary key default gen_random_uuid()::text, title text, text text, photo text default '', "order" int default 0);
+-- Bridesmaid cards (binder → Bridesmaid Cards): one A4 thank-you card per bridesmaid, every line
+-- of it editable. Private — the public site never reads this table.
+create table if not exists bridesmaid_cards (
+  id text primary key default gen_random_uuid()::text,
+  name text default '', jewel text default '', color text default '', cut text default 'brilliant',
+  kicker text default '', greeting text default '', subline text default '', embodies text default '',
+  note text default '',
+  role_kicker text default '', role_title text default '', tagline text default '', mission text default '',
+  duties text default '', pro_tip text default '',
+  closing text default '', footer text default '',
+  "order" int default 0
+);
 
 -- ── anonymous audio guestbook ─────────────────────────────────────────────────────────────────────
 -- Audio itself lives in a private Storage bucket. This table contains no guest name, invite code,
@@ -112,6 +124,7 @@ alter table attire enable row level security;
 alter table entourage enable row level security;
 alter table faq enable row level security;
 alter table story enable row level security;
+alter table bridesmaid_cards enable row level security;
 
 -- ── one-off rename: the second wedding hashtag is now #JSSayIDo (was #JSWeDo) ──────────────────
 -- A project seeded before the rename still carries the old tag in its rows, and the site reads the

@@ -8,7 +8,7 @@ A digital art piece plus a wedding binder, in one Next.js app.
 | **The invitation preview** | `/preview` | The one-page editorial site in the Midnight Botanical style as the world may see it: loader, hero + countdown, story chapters, 11.11, dress code, entourage, gallery, moments, hashtags. **No venue, no programme, no reply card, no FAQ.** Safe to post anywhere. |
 | **An invitation** | `/JS-7KQF` | The same site, unsealed for one household: the invitation wording, the pinned programme, the venue + map, the postcard, the RSVP card and the FAQ. This is the link you send. |
 | **RSVP** | `/rsvp` | The code door for guests who lost the link: type the **last 4 characters** of your code (or the whole thing) and you're taken to your own reply card. |
-| **The Binder** | `/admin` | Private admin (password: `ADMIN_PASSWORD`, default `JS2026`). Tabs: Overview · Details · Schedule (drag to reorder) · Checklist · Budget · **Invite Codes** · **Guests & RSVP** · **Audio Guestbook** · Vendors · Attire & Colors · Content · Settings |
+| **The Binder** | `/admin` | Private admin (password: `ADMIN_PASSWORD`, default `JS2026`). Tabs: Overview · Details · Schedule (drag to reorder) · Checklist · Budget · **Invite Codes** · **Guests & RSVP** · **Audio Guestbook** · Vendors · Attire & Colors · **Bridesmaid Cards** · Content · Settings |
 
 Anything you edit in the Binder shows up on the public site.
 
@@ -118,6 +118,36 @@ map, the parking note beside it and the FAQ's *Is there parking?* all say exactl
 (`PARKING_NOTE`). Redraw the shapes there from the couple's own sketch of The Heaven and every card
 follows.
 Like the venue itself, the card is only offered on an unsealed invitation — never on `/preview`.
+
+## Bridesmaid cards (`Bridesmaid Cards`)
+One A4 thank-you card for each of the girls — *thank you for saying yes* — in the keepsake's paper
+and inks, with **her stone cut in her colour** at the top. The binder tab holds a card per
+bridesmaid; the page for each is a form on the left and the real card, drawn live, on the right,
+with **Download A4 PNG** (2480 × 3508, 300 dpi — exactly A4, ready for a print shop or a phone)
+and **Download all** on the tab's header.
+
+Each bridesmaid has a stone. Pick one and the card is written from it: her colour and cut, the
+script greeting (*Thank you, my Sapphire* — the stone's name picked out in its colour), what the
+stone embodies, and her **role on the day** in the stone's spirit — a title in capitals, a motto, *Your
+mission*, *The duties* as bullets and a *Pro tip*. Sapphire is wisdom and calm, so she keeps the vows
+and talks the bride down; Garnet holds things together, so she is the wardrobe medic; Citrine is bottled
+sunshine, so she is the hype girl… The first six stones are the bridesmaids' palette from the Dress
+Code (Turquoise, Amethyst, Garnet, Sapphire, Ruby, and the Maid of Honor's Citrine), with ten more
+behind them; a stone of your own is just a word and a swatch. **Every line is editable** — the capitals
+at the top, the greeting, the subline, the embodies line, the whole note (new line = new paragraph),
+the role's heading, title, motto, mission, duties and tip, the sign-off and the footer — and the gem's
+colour and cut are pickers. *Rewrite from Sapphire* puts the preset's role back if you want to start
+over; the note and sign-off are never touched by it.
+
+`Add the N from the entourage` creates a card for every bridesmaid and the maid of honor named under
+Content → Entourage who doesn't have one yet, each in a stone nobody else has (the maid of honor in
+Citrine). Long words don't fall off the page: the card is measured first and its type steps down a
+little (never below 78 %) when a note runs long, and the preview says so; whatever room is left is
+shared out between the sections so the page sits evenly.
+
+The cards live in their own private table (`bridesmaid_cards` — the public site never reads it). A
+project already on Supabase runs `supabase/schema.sql` once more to add it; locally nothing is needed.
+Presets: `lib/jewels.ts` · drawing: `lib/bridesmaid-card.ts` · tab: `components/admin/bridesmaids.tsx`.
 
 ## Invite codes: generate, send, track (`Invite Codes`)
 One row per household, one code per row, one reply per code — and a ledger that tells you where
@@ -292,6 +322,8 @@ lib/keepsake.ts              the guest's downloadable invitation card (canvas �
 lib/program-card.ts          the downloadable programme card — who arrives when, where to go, the map
 lib/venue-map.ts             the small plan of the venue printed on the programme card
 lib/card-draw.ts             shared canvas lettering (paper, caps, wrap, pins) for the cards
+lib/bridesmaid-card.ts       the bridesmaids' A4 thank-you card — her stone, her note, her role (binder → Bridesmaid Cards)
+lib/jewels.ts                the stones: colour, what each embodies, and the role it writes for a bridesmaid
 lib/calendar.ts              the wedding event: .ics + Google Calendar + how the dates read
 lib/seed.ts                  all starter data (budget, vendors, checklist, attire…)
 lib/db.ts                    Supabase-via-API or localStorage data layer

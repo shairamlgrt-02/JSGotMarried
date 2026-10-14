@@ -141,4 +141,5 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
   ],
   message_templates: [],
   messages: [],
+  bridesmaid_cards: [],
 };
