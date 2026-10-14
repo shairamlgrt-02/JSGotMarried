@@ -61,21 +61,46 @@ arrives in time (the hour is the ceremony time from **Details**).
   downloads into Files, so the `.ics` is a server response instead (`app/api/calendar/route.ts`,
   `Content-Disposition: inline`). Edit the wording, the title or the reminder in `lib/calendar.ts`.
 
-## The programme (and the keepsake card)
-The order of the day lives in **one file, `lib/program.ts`**, and three surfaces read it so they can
+## The programme (and the two cards)
+The order of the day lives in **one file, `lib/program.ts`**, and every surface reads it so they can
 never disagree: the six-stop timeline and the three "How the day unfolds" cards in the **Program**
-section, the guest's downloadable **invitation card** (the PNG offered after they reply), and — for
-the two times that matter — the FAQ and the calendar note.
+section, the guest's downloadable **invitation card** (the PNG offered after they reply), the
+downloadable **programme card** (below), and — for the two times that matter — the FAQ and the
+calendar note.
 
 | | Where it shows |
 |---|---|
-| `WEDDING_PROGRAM_STOPS` | the timeline, and the *Order of the day* on the keepsake card. A stop's short `tag` ("Doors close at 4:00 PM", "Everyone welcome") sits under its name on the timeline; its one-line `note` is printed under it on the card. |
+| `WEDDING_PROGRAM_STOPS` | the timeline, and the *Order of the day* on both cards. A stop's short `tag` ("Entourage & wedding team", "Doors close at 4:00 PM", "Everyone welcome") sits under its name on the timeline; its one-line `note` is printed under it on the cards. |
 | `WEDDING_PROGRAM_HIGHLIGHTS` | the three cards: the span of hours on the ribbon and the couple's own warm description underneath. Wrap the parts a guest must not miss in `*asterisks*` — `*4:00 PM*`, `*everyone is welcome*` — and the card sets them in bold wine. |
-| `CEREMONY_DOORS_CLOSE` · `ALL_WELCOME_FROM` | the two facts guests must not miss, written once: the ceremony is intimate and **closed-door — be seated before 4:00 PM, the doors close the moment the procession begins**; from **5:30 PM everyone is welcome** for the Welcome Toast & Snacks, then the reception at 6:30. |
+| `CEREMONY_DOORS_CLOSE` · `ALL_WELCOME_FROM` · `ENTOURAGE_CALL_TIME` · `RECEPTION_AT` | the hours guests must not miss, written once: the ceremony is intimate and **closed-door — be seated before 4:00 PM, the doors close the moment the procession begins**; the entourage's call time is **3:30 PM**; from **5:30 PM everyone is welcome** for the Welcome Toast & Snacks, then the reception at **6:30**. |
+| `PROGRAM_HEADLINE` · `ARRIVAL_NOTES` · `GUEST_ARRIVAL_GUIDE` | the programme card's wording (and the two one-line "who arrives when" tiles under the timeline): *You don't need to be there at 4:00 PM*, the note for the entourage & wedding team (3:30 — reserved seats, wait for the coordinators' cue), the note for every other guest (5:30 at the majlis, reception at 6:30), and where a guest should go by the hour they arrive. |
 
 Edit the words there and the next deploy carries them to the site and to every card a guest saves
 afterwards. The FAQ's *Can I watch the ceremony?* answer repeats the same two facts; on a project
 seeded before this wording, press **Content → FAQ → Refresh wording** once to update it.
+
+### The programme card
+A second downloadable PNG, a sister to the invitation keepsake, offered under the **Program**
+section (**Download the programme card**) and again beside the keepsake after a guest replies
+*yes*. It is drawn in the guest's own browser (`lib/program-card.ts`, no server, no upload) and is
+about the *day* rather than the guest, so it leads with the thing guests keep getting wrong:
+
+1. **You don't need to be there at 4:00 PM** — the headline, the warm reason why, and the two hours
+   that matter in large type: **5:30 PM** at the majlis, **6:30 PM** the reception;
+2. two notes side by side — **Entourage & wedding team: 3:30 PM**, head to the hall, find your
+   reserved seat and wait for the coordinators' cue for the procession · **All other guests: 5:30 PM**,
+   head to the majlis for the welcome toast, snacks & photos, then the reception at 6:30;
+3. for guests, **where to go by the hour they arrive** (before 4:00 → the hall; 4:00–5:30 → the
+   majlis, the ceremony is behind closed doors; 5:30 → the majlis; 6:30 → the hall), and a **small
+   plan of the venue** (`lib/venue-map.ts`: the hall with its reserved rows and doors, the majlis
+   just outside, parking, the entrance and the path in — numbered to match the legend);
+4. the order of the day, the dress code in one line and the couple's sign-off.
+
+The plan in `lib/venue-map.ts` is a schematic drawn in a logical 640 × 440 space, with the two
+arrival notes written onto it (*Entourage & wedding team · 3:30 PM arrival* on the hall, *Guests
+welcome · 5:30 – 6:30 PM arrival* on the majlis) and The Heaven's parking guides noted at the
+entrance; redraw the shapes there from the couple's own sketch of The Heaven and every card follows.
+Like the venue itself, the card is only offered on an unsealed invitation — never on `/preview`.
 
 ## Invite codes: generate, send, track (`Invite Codes`)
 One row per household, one code per row, one reply per code — and a ledger that tells you where
@@ -245,8 +270,11 @@ lib/guests.ts                codes: matching, statuses, bulk paste, links
 lib/invite-gate.ts           what a sealed visitor may read (server side)
 components/public/…          sections + effects (Lenis, cursor, vines, magnetic, split text)
 components/admin/…           binder tabs + UI kit
-lib/program.ts               the order of the day — timeline, highlight cards, keepsake, in one place
+lib/program.ts               the order of the day — timeline, highlight cards, both cards' wording, in one place
 lib/keepsake.ts              the guest's downloadable invitation card (canvas → PNG, in the browser)
+lib/program-card.ts          the downloadable programme card — who arrives when, where to go, the map
+lib/venue-map.ts             the small plan of the venue printed on the programme card
+lib/card-draw.ts             shared canvas lettering (paper, caps, wrap, pins) for the cards
 lib/calendar.ts              the wedding event: .ics + Google Calendar + how the dates read
 lib/seed.ts                  all starter data (budget, vendors, checklist, attire…)
 lib/db.ts                    Supabase-via-API or localStorage data layer

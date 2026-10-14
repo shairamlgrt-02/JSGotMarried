@@ -1,6 +1,6 @@
 /**
- * The order of the day — one source for the website's Program section and the guest's
- * downloadable keepsake card, so the two can never drift apart.
+ * The order of the day — one source for the website's Program section, the guest's downloadable
+ * keepsake card and the programme card (lib/program-card.ts), so none of them can drift apart.
  *
  * Two facts matter more than anything else here, so they are written once and shown on every
  * surface (timeline, highlight cards, keepsake, FAQ):
@@ -21,9 +21,20 @@ export type ProgramStop = {
 export const CEREMONY_DOORS_CLOSE = "4:00 PM";
 /** From this time on every guest is welcome — no doors, no reserved rows. */
 export const ALL_WELCOME_FROM = "5:30 PM";
+/** The entourage and the wedding team's call time — the first stop of the day, half an hour before the doors close. */
+export const ENTOURAGE_CALL_TIME = "3:30 PM";
+/** When the hall opens for the reception. */
+export const RECEPTION_AT = "6:30 PM";
+/** The last stop of the night. */
+export const SEND_OFF_AT = "10:00 PM";
 
 export const WEDDING_PROGRAM_STOPS: ProgramStop[] = [
-  { time: "3:30 PM", title: "Entourage Arrival" },
+  {
+    time: ENTOURAGE_CALL_TIME,
+    title: "Entourage Arrival",
+    tag: "Entourage & wedding team",
+    note: "Our entourage & wedding team only — find your reserved seat and wait for the coordinators' cue.",
+  },
   {
     time: "4:00 PM",
     title: "Wedding Ceremony",
@@ -37,8 +48,88 @@ export const WEDDING_PROGRAM_STOPS: ProgramStop[] = [
     tag: "Everyone welcome",
     note: "Everyone is welcome from here — join us before the reception.",
   },
-  { time: "6:30 PM", title: "Wedding Reception" },
-  { time: "10:00 PM", title: "Send off" },
+  { time: RECEPTION_AT, title: "Wedding Reception" },
+  { time: SEND_OFF_AT, title: "Send off" },
+];
+
+/* ─────────── Who arrives when — the programme card's two notes ───────────
+   The card a guest saves says, before anything else, that nobody needs to be there at 4:00 PM:
+   the entourage and the wedding team have a call time and a job (reserved seats, wait for the
+   coordinators' cue); everyone else is expected at 5:30 PM at the majlis — and if they arrive at
+   some other hour, GUEST_ARRIVAL_GUIDE tells them where to go. Written once, here. */
+
+/** The sentence at the top of the programme card — the one thing every guest must read. */
+export const PROGRAM_HEADLINE = `You don't need to be there at ${CEREMONY_DOORS_CLOSE}.`;
+/** …and the warm explanation under it: the ceremony is welcome-but-small, the real arrival time is 5:30. */
+export const PROGRAM_HEADLINE_DETAIL =
+  `Our ${CEREMONY_DOORS_CLOSE} ceremony is small and intimate — our families, our entourage and a few honoured guests. ` +
+  `If your heart wishes to witness it, you are more than welcome; just be seated before ${CEREMONY_DOORS_CLOSE}, as the doors close the moment the procession begins. ` +
+  `Everyone else, we expect you by ${ALL_WELCOME_FROM} — join us at the majlis for the welcome toast, snacks and photos, then celebrate with us at the reception at ${RECEPTION_AT}.`;
+
+export type ArrivalNote = {
+  /** Who the note is for — its heading. */
+  who: string;
+  /** The hour they are asked to arrive by. */
+  time: string;
+  /** Where to head once they arrive. */
+  where: string;
+  /** The same in one short line — the website's Program section prints this beside the hour. */
+  brief: string;
+  /** What to do once there — the couple's own words, for the card. */
+  detail: string;
+};
+
+/** The two notes, side by side on the card: the entourage & wedding team, and every other guest. */
+export const ARRIVAL_NOTES: { entourage: ArrivalNote; guests: ArrivalNote } = {
+  entourage: {
+    who: "Entourage & wedding team",
+    time: ENTOURAGE_CALL_TIME,
+    where: "The hall",
+    brief: "Find your reserved seat in the hall, then wait for the coordinators' cue.",
+    detail:
+      "Please come straight into the hall and find your reserved seat. Settle in and stay close by — our coordinators will give you the cue for the procession, so kindly wait for it.",
+  },
+  guests: {
+    who: "All other guests",
+    time: ALL_WELCOME_FROM,
+    where: "The majlis",
+    brief: `The majlis — welcome toast, snacks & photos; the reception at ${RECEPTION_AT}.`,
+    detail:
+      `Please join us at the majlis, just outside the hall, for the welcome toast, snacks and photos. At ${RECEPTION_AT} the hall opens for the reception — dinner, our film, games and dancing until the send-off.`,
+  },
+};
+
+export type ArrivalWindow = {
+  /** The hour (or span) a guest might turn up. */
+  when: string;
+  /** Where to go at that hour. */
+  where: string;
+  /** Why, and what they will find there. */
+  detail: string;
+};
+
+/** For guests who are not in the entourage: where to go, by the hour they arrive. */
+export const GUEST_ARRIVAL_GUIDE: ArrivalWindow[] = [
+  {
+    when: `Before ${CEREMONY_DOORS_CLOSE}`,
+    where: "The hall",
+    detail: `Wish to witness the ceremony? Take an open seat around the reserved rows and be seated before ${CEREMONY_DOORS_CLOSE} — the doors close the moment the procession begins.`,
+  },
+  {
+    when: `${CEREMONY_DOORS_CLOSE} – ${ALL_WELCOME_FROM}`,
+    where: "The majlis",
+    detail: "The ceremony is under way behind closed doors. Make yourself at home at the majlis, just outside the hall — we will come and find you.",
+  },
+  {
+    when: ALL_WELCOME_FROM,
+    where: "The majlis",
+    detail: "Welcome toast, snacks and photos — this is the hour we expect you, and the hour we get to hug you.",
+  },
+  {
+    when: RECEPTION_AT,
+    where: "The hall",
+    detail: `The reception — dinner, our film on the big screen, games, giveaways and dancing until the send-off at ${SEND_OFF_AT}.`,
+  },
 ];
 
 export type ProgramMoment = {

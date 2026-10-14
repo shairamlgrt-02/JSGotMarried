@@ -5,7 +5,8 @@ import { submitRsvp, type InviteState } from "@/lib/db";
 import { entourageHeading } from "@/lib/entourage";
 import { useCountdown } from "@/lib/hooks";
 import { downloadKeepsake } from "@/lib/keepsake";
-import { WEDDING_PROGRAM_HIGHLIGHTS, WEDDING_PROGRAM_STOPS } from "@/lib/program";
+import { downloadProgramCard, type ProgramCardData } from "@/lib/program-card";
+import { ALL_WELCOME_FROM, ARRIVAL_NOTES, CEREMONY_DOORS_CLOSE, WEDDING_PROGRAM_HIGHLIGHTS, WEDDING_PROGRAM_STOPS } from "@/lib/program";
 import type { Attire, EntourageMember, Faq, StoryChapter, WeddingInfo } from "@/lib/types";
 import AddToCalendar from "./AddToCalendar";
 import { BAKED_COVER, fullDate } from "./Envelope";
@@ -321,8 +322,45 @@ function Highlight({ text }: { text: string }) {
   return <>{parts.map((part, i) => (i % 2 ? <b key={i} className="font-semibold text-wine">{part}</b> : part))}</>;
 }
 
+/** Everything the programme card prints — from the same rows the Program section and the keepsake read. */
+export function programCardData(info: WeddingInfo, dressNote: string): ProgramCardData {
+  return {
+    groom: info.groom, bride: info.bride,
+    dateISO: info.date, venue: info.venue_name, address: info.venue_address,
+    program: WEDDING_PROGRAM_STOPS,
+    dressNote: dressNote || "Black tie — details live in the attire guide",
+    hashtags: info.hashtags,
+  };
+}
+
+/**
+ * The "Download the programme card" offer — one tap draws the day-in-short PNG in the guest's own
+ * browser: you don't need to be there at 4:00, who arrives when, where to go, the map, the order of the day.
+ */
+function ProgramCardOffer({ data }: { data: ProgramCardData }) {
+  const [status, setStatus] = useState<"idle" | "working" | "done" | "error">("idle");
+  const save = async () => {
+    if (status === "working") return;
+    setStatus("working");
+    const ok = await downloadProgramCard(data).catch(() => false);
+    setStatus(ok ? "done" : "error");
+  };
+  return (
+    <div className="mt-7 flex flex-col items-center text-center sm:mt-9" aria-live="polite">
+      <motion.button type="button" whileTap={{ scale: 0.97 }} disabled={status === "working"} onClick={save}
+        aria-label="Download the programme card as a PNG image"
+        className="micro tracking-[0.12em] bg-wine text-lace rounded-full px-7 py-3.5 shadow-[0_8px_20px_-6px_rgba(110,31,46,.48)] hover:bg-mocha transition-colors disabled:opacity-60">
+        {status === "working" ? "Drawing your card…" : status === "done" ? "Programme card saved ✓" : status === "error" ? "Could not save · try again" : "Download the programme card"}
+      </motion.button>
+      <p className="micro text-taupe/80 mt-2.5 max-w-md tracking-[0.08em] text-balance">
+        Who arrives when, where to go when you get there, a small map of the venue and the order of the day — in one picture for your phone.
+      </p>
+    </div>
+  );
+}
+
 /** One fixed, six-stop timeline; the mobile view fits without a horizontal swipe. */
-export function Schedule() {
+export function Schedule({ info, dressNote }: { info: WeddingInfo; dressNote: string }) {
   const reduceMotion = useReducedMotion();
   return (
     <section id="program" className="sec">
@@ -415,6 +453,26 @@ export function Schedule() {
             ))}
           </div>
         </div>
+
+        {/* who arrives when — the two notes the programme card leads with, in one line each */}
+        <Reveal className="mt-6 sm:mt-8">
+          <div className="mx-auto grid max-w-3xl gap-2.5 sm:grid-cols-2 sm:gap-3">
+            {[ARRIVAL_NOTES.entourage, ARRIVAL_NOTES.guests].map((note) => (
+              <div key={note.who} className="paper-card flex items-center gap-3 rounded-xl border border-taupe/20 px-3.5 py-3 text-left shadow-[0_2px_3px_rgba(61,47,38,.08)] sm:gap-4 sm:px-4">
+                <time className="shrink-0 font-serif text-lg font-semibold tabular-nums leading-none text-wine sm:text-xl">{note.time}</time>
+                <div className="min-w-0 border-l border-taupe/25 pl-3 sm:pl-4">
+                  <p className="micro text-mocha">{note.who}</p>
+                  <p className="mt-0.5 font-serif text-xs italic leading-snug text-taupe sm:text-sm">{note.brief}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-center font-serif text-xs italic text-wine/85 sm:text-sm text-balance">
+            Not in the entourage? You don&apos;t need to be there at {CEREMONY_DOORS_CLOSE} — we expect you at {ALL_WELCOME_FROM}. The card below has the full detail.
+          </p>
+        </Reveal>
+
+        <ProgramCardOffer data={programCardData(info, dressNote)} />
       </div>
     </section>
   );
@@ -818,8 +876,9 @@ export function FollowAndTag({ info }: { info: WeddingInfo }) {
  * The "Save your invitation card" offer — one tap draws a personal keepsake PNG in the guest's own
  * browser (their name, seats, time, venue, programme, dress code) and saves it to their phone.
  */
-function KeepsakeOffer({ onBuild }: { onBuild: () => Promise<unknown> }) {
+function KeepsakeOffer({ onBuild, onBuildProgram }: { onBuild: () => Promise<unknown>; onBuildProgram?: () => Promise<unknown> }) {
   const [busy, setBusy] = useState<"idle" | "working" | "done">("idle");
+  const [program, setProgram] = useState<"idle" | "working" | "done">("idle");
   return (
     <div className="mt-8 text-center">
       <motion.button type="button" whileTap={{ scale: 0.97 }} disabled={busy === "working"}
@@ -828,6 +887,17 @@ function KeepsakeOffer({ onBuild }: { onBuild: () => Promise<unknown> }) {
         {busy === "working" ? "Drawing your card…" : busy === "done" ? "Saved to your device ✓" : "Save your invitation card"}
       </motion.button>
       <p className="micro text-taupe/80 mt-3 tracking-[0.14em] text-balance">your seats, the order of the day, the venue & the dress code — in one picture for your phone</p>
+      {onBuildProgram && (
+        <div className="mt-5">
+          {/* the sister card: the day's logistics — you don't need to be there at 4:00, who arrives when, the map */}
+          <motion.button type="button" whileTap={{ scale: 0.97 }} disabled={program === "working"}
+            onClick={async () => { setProgram("working"); await onBuildProgram().catch(() => {}); setProgram("done"); }}
+            className="micro rounded-full border border-wine/40 px-7 py-3.5 text-wine transition-colors hover:border-wine hover:bg-wine hover:text-lace disabled:opacity-60">
+            {program === "working" ? "Drawing the programme…" : program === "done" ? "Programme card saved ✓" : "Save the programme card too"}
+          </motion.button>
+          <p className="micro text-taupe/80 mt-2.5 tracking-[0.14em] text-balance">who arrives when, where to go & a small map of the venue</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -873,6 +943,8 @@ export function Rsvp({ info, invite, code, onReplied, dressNote }: { info: Weddi
       hashtags: info.hashtags,
       photo: info.cover_photo || info.gallery[0] || BAKED_COVER,
     });
+  /** …and the programme card beside it — the day's logistics, not personal, so one build for everyone. */
+  const makeProgramCard = () => downloadProgramCard(programCardData(info, dressNote));
   // the wax seal pops half above the card — leave it its own room so it never sits on the text (mobile)
   const cardGap = "col mt-16 md:mt-20";
 
@@ -928,7 +1000,7 @@ export function Rsvp({ info, invite, code, onReplied, dressNote }: { info: Weddi
                     </button>
                   )}
                 </div>
-                {yes && <KeepsakeOffer onBuild={() => makeKeepsake(reply.name, reply.plus_one || undefined)} />}
+                {yes && <KeepsakeOffer onBuild={() => makeKeepsake(reply.name, reply.plus_one || undefined)} onBuildProgram={makeProgramCard} />}
               </div>
             </div>
           </motion.div>
@@ -978,7 +1050,7 @@ export function Rsvp({ info, invite, code, onReplied, dressNote }: { info: Weddi
                   <p className="font-serif italic text-body text-mocha mt-5 text-balance">{f.attending === "yes" ? `We can't wait to celebrate with you, ${f.name.split(" ")[0]}.` : `You'll be missed, ${f.name.split(" ")[0]}. Thank you for letting us know.`}</p>
                   <p className="micro text-taupe mt-4 tracking-[0.16em]">{approved === true ? "Confirmed with your invitation — see you on the 11th!" : approved === false ? (f.pax === 2 ? "Reply received — the couple will confirm your plus-one personally." : "Reply received — it's waiting in the couple's review queue.") : ""}</p>
                   <p className="micro text-taupe mt-2 tracking-[0.16em]">Reopen this link any time — your reply will be waiting here</p>
-                  {f.attending === "yes" && <KeepsakeOffer onBuild={() => makeKeepsake(f.name, f.plus_one || undefined)} />}
+                  {f.attending === "yes" && <KeepsakeOffer onBuild={() => makeKeepsake(f.name, f.plus_one || undefined)} onBuildProgram={makeProgramCard} />}
                 </motion.div>
               ) : (
                 <motion.form key="form" onSubmit={submit} exit={{ opacity: 0 }} className="relative space-y-4 text-center sm:space-y-5">
