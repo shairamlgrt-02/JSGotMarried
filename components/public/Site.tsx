@@ -127,7 +127,7 @@ export default function Home({ code = "", variant = "guest" }: { code?: string; 
             <PolaroidPair info={info} from={8} caps={["us", "11.11"]} />
             <ScrollContinue />
             {unlocked && <>
-              <D className="pt-6 md:pt-8" deco={<Deco at="tr" rotate={5} className="!top-1 md:!top-4 scale-[.75] origin-top-right"><Sticker kind="wedo" /></Deco>}><Schedule /></D>
+              <D className="pt-6 md:pt-8" deco={<Deco at="tr" rotate={5} className="!top-1 md:!top-4 scale-[.75] origin-top-right"><Sticker kind="wedo" /></Deco>}><Schedule info={info} dressNote={dressNote} /></D>
               <ScrollContinue />
               <D deco={<Deco at="tl" rotate={-4}><Postmark className="w-28 md:w-48" /></Deco>}><Venue info={info} /></D>
             </>}
