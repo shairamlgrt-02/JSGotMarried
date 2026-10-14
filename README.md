@@ -93,13 +93,16 @@ about the *day* rather than the guest, so it leads with the thing guests keep ge
 3. for guests, **where to go by the hour they arrive** (before 4:00 → the hall; 4:00–5:30 → the
    majlis, the ceremony is behind closed doors; 5:30 → the majlis; 6:30 → the hall), and a **small
    plan of the venue** (`lib/venue-map.ts`: the hall with its reserved rows and doors, the majlis
-   just outside, parking, the entrance and the path in — numbered to match the legend);
+   just outside, the courtyard, the entrance and the path in — numbered to match the legend);
 4. the order of the day, the dress code in one line and the couple's sign-off.
 
 The plan in `lib/venue-map.ts` is a schematic drawn in a logical 640 × 440 space, with the two
 arrival notes written onto it (*Entourage & wedding team · 3:30 PM arrival* on the hall, *Guests
-welcome · 5:30 – 6:30 PM arrival* on the majlis) and The Heaven's parking guides noted at the
-entrance; redraw the shapes there from the couple's own sketch of The Heaven and every card follows.
+welcome · 5:30 – 6:30 PM arrival* on the majlis) and the parking note at the entrance. **Parking is
+deliberately not on the plan**: the open yard beside the path is just the courtyard, and the cars go
+to a separate area that The Heaven's team point each guest to when they arrive at the gate — so the
+map, its legend and the FAQ's *Is there parking?* all say exactly that (`PARKING_NOTE`). Redraw the
+shapes there from the couple's own sketch of The Heaven and every card follows.
 Like the venue itself, the card is only offered on an unsealed invitation — never on `/preview`.
 
 ## Invite codes: generate, send, track (`Invite Codes`)
