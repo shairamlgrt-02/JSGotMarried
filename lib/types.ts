@@ -180,7 +180,7 @@ export const ENTOURAGE_ROLES: { value: EntourageRole; label: string }[] = [
   { value: "honored_guest", label: "Honored Guest" },
   { value: "other", label: "Other" },
 ];
-/** How a bridesmaid's stone is drawn on her card. */
+/** How a bridesmaid's jewel is drawn on her card. */
 export type GemCut = "brilliant" | "oval" | "pear" | "emerald" | "cushion";
 export const GEM_CUTS: { value: GemCut; label: string }[] = [
   { value: "brilliant", label: "Round brilliant" },
@@ -197,19 +197,21 @@ export type BridesmaidCard = {
   id: string;
   /** Her name as the card addresses her. */
   name: string;
-  /** Her stone — "Garnet", "Sapphire"… A preset's name brings its colour and meaning; any word is allowed. */
+  /** Her jewel — "Garnet", "Sapphire"… A preset's name brings its colour and its line; any word is allowed. */
   jewel: string;
-  /** The stone's colour (hex) — the gem, her stone's name and the accents are drawn in it. */
+  /** The jewel's colour (hex) — the gem, the jewel's name and the accents are drawn in it. */
   color: string;
   cut: GemCut;
   /** The small line of capitals at the very top — "For my bridesmaid". */
   kicker: string;
-  /** The script headline — "Thank you, my Sapphire". The stone's name is picked out in her colour. */
+  /** The script headline — "Thank you, my Sapphire". The jewel's name is picked out in her colour. */
   greeting: string;
   /** The capitals under the headline — "for saying yes, Ana". */
   subline: string;
-  /** One line on what her stone embodies, printed under the gem. */
+  /** One line on what her jewel's colour says of her, printed under the gem. */
   embodies: string;
+  /** A line of Scripture under that — "“She is far more precious than jewels.” — Proverbs 31:10". Optional on older rows. */
+  verse?: string;
   /** The bride's own note to her. Blank lines start new paragraphs. */
   note: string;
   /** The small heading over the role block — "Her role on the day". */
