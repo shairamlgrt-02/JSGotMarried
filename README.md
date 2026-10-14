@@ -96,9 +96,11 @@ about the *day* rather than the guest, so it leads with the thing guests keep ge
    just outside, parking, the entrance and the path in — numbered to match the legend);
 4. the order of the day, the dress code in one line and the couple's sign-off.
 
-The plan in `lib/venue-map.ts` is a schematic drawn in a logical 640 × 420 space; redraw the shapes
-there from the couple's own sketch of The Heaven and every card follows. Like the venue itself, the
-card is only offered on an unsealed invitation — never on `/preview`.
+The plan in `lib/venue-map.ts` is a schematic drawn in a logical 640 × 440 space, with the two
+arrival notes written onto it (*Entourage & wedding team · 3:30 PM arrival* on the hall, *Guests
+welcome · 5:30 – 6:30 PM arrival* on the majlis) and The Heaven's parking guides noted at the
+entrance; redraw the shapes there from the couple's own sketch of The Heaven and every card follows.
+Like the venue itself, the card is only offered on an unsealed invitation — never on `/preview`.
 
 ## Invite codes: generate, send, track (`Invite Codes`)
 One row per household, one code per row, one reply per code — and a ledger that tells you where
