@@ -102,16 +102,17 @@ on conflict (id) do update set
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
 
--- ── attire palette (round 20): the beetle becomes a greenish Scarab; weaves softened to liquid shine ──
+-- ── attire palette (round 21): Garnet goes to the Maid of Honor, the Matron of Honor and the bride's
+-- sister-in-law; the bridesmaids keep Turquoise, Citrine, Amethyst, Sapphire and Ruby ──
 insert into attire (id, "group", label, colors, reserved, notes, swatch_url, "order") values
   ('a3', 'shai_family', 'Shai''s Family', '[{"name":"Copper","hex":"#8C3617"}]'::jsonb, true, '', '', 3),
   ('a4', 'jeg_family', 'Jeg''s Family', '[{"name":"Burgundy","hex":"#5C1223"}]'::jsonb, true, '', '', 4),
-  ('a5', 'bridesmaids', 'Bridesmaids', '[{"name":"Turquoise","hex":"#0F7E7A"},{"name":"Amethyst","hex":"#5E2487"},{"name":"Garnet","hex":"#8E1226"},{"name":"Sapphire","hex":"#0A2A6E"},{"name":"Ruby","hex":"#B01A63"},{"name":"Citrine","hex":"#BE8B0F"}]'::jsonb, true, 'Five bridesmaids in jewel stones; the Maid of Honor shines in Citrine gold', '', 5),
+  ('a5', 'bridesmaids', 'Bridesmaids', '[{"name":"Garnet","hex":"#8E1226"},{"name":"Turquoise","hex":"#0F7E7A"},{"name":"Citrine","hex":"#BE8B0F"},{"name":"Amethyst","hex":"#5E2487"},{"name":"Sapphire","hex":"#0A2A6E"},{"name":"Ruby","hex":"#B01A63"}]'::jsonb, true, 'Garnet for the Maid of Honor, the Matron of Honor and the bride''s sister-in-law; the bridesmaids in Turquoise, Citrine, Amethyst, Sapphire and Ruby', '', 5),
   ('a7', 'groomsmen', 'Groomsmen', '[{"name":"Grey","hex":"#6E6E6E"},{"name":"Black","hex":"#101010"}]'::jsonb, true, 'Satin-lapel tux or suit', '', 6),
   ('a6', 'guests', 'Our Guests', '[{"name":"Emerald","hex":"#0A5C33","fabric":"Velvet"},{"name":"Laurel","hex":"#35562B","fabric":"Fine suit wool"},{"name":"Jade","hex":"#23825A","fabric":"Silk charmeuse"},{"name":"Scarab","hex":"#2C8C3C","fabric":"Shiny polyester · dry-fit"},{"name":"Olive","hex":"#5F6B24","fabric":"Duchesse satin"},{"name":"Peridot","hex":"#9AA62C","fabric":"Silk charmeuse"},{"name":"Coffee","hex":"#452A18","fabric":"Velvet"},{"name":"Smoky Topaz","hex":"#5E4630","fabric":"Fine suit wool"},{"name":"Bronze","hex":"#6F4F1D","fabric":"Duchesse satin"},{"name":"Toffee","hex":"#7C5230","fabric":"Silk charmeuse"},{"name":"Dark Honey","hex":"#8A5A0C","fabric":"Liquid satin · poly"},{"name":"Caramel","hex":"#9C6A28","fabric":"Velvet"}]'::jsonb, false, 'Black tie in glossy greens and warm shining browns — kindly avoid black, white, burgundy and copper. Shine welcome: satin, velvet, silk, fine suit or liquid poly — please skip tulle, chiffon and anything fully matte.', '', 7)
 on conflict (id) do update set "group" = excluded."group", label = excluded.label, colors = excluded.colors,
   reserved = excluded.reserved, notes = excluded.notes, swatch_url = excluded.swatch_url, "order" = excluded."order";
--- the Maid of Honor no longer has her own card — she sits with the bridesmaids, in Citrine
+-- the Maid of Honor no longer has her own card — she sits with the bridesmaids, in Garnet
 delete from attire where id = 'a8' or "group" = 'moh';
 
 alter table wedding_info enable row level security;

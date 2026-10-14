@@ -160,7 +160,7 @@ export type EntourageRole =
   | "bride_family" | "groom_family"
   | "sponsor"
   | "best_man" | "groomsman"
-  | "maid_of_honor" | "bridesmaid"
+  | "maid_of_honor" | "matron_of_honor" | "bridesmaid"
   | "flower_girl" | "ring_bearer"
   | "honored_guest"
   | "other";
@@ -173,6 +173,7 @@ export const ENTOURAGE_ROLES: { value: EntourageRole; label: string }[] = [
   { value: "best_man", label: "Best Man" },
   { value: "groomsman", label: "Groomsman" },
   { value: "maid_of_honor", label: "Maid of Honor" },
+  { value: "matron_of_honor", label: "Matron of Honor" },
   { value: "bridesmaid", label: "Bridesmaid" },
   { value: "flower_girl", label: "Flower Girl" },
   { value: "ring_bearer", label: "Ring Bearer" },
@@ -196,7 +197,7 @@ export type BridesmaidCard = {
   id: string;
   /** Her name as the card addresses her. */
   name: string;
-  /** Her stone — "Sapphire", "Citrine"… A preset name fills the role in; any word is allowed. */
+  /** Her stone — "Garnet", "Sapphire"… A preset's name brings its colour and meaning; any word is allowed. */
   jewel: string;
   /** The stone's colour (hex) — the gem, her stone's name and the accents are drawn in it. */
   color: string;

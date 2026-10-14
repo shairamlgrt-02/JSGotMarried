@@ -244,6 +244,7 @@ const ROLE_LABELS: Record<string, string> = {
   bridesmaid: "Bridesmaid",
   groomsman: "Groomsman",
   maid_of_honor: "Maid of Honor",
+  matron_of_honor: "Matron of Honor",
   best_man: "Best Man",
   ring_bearer: "Ring Bearer",
   flower_girl: "Flower Girl",

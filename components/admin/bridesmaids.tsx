@@ -4,14 +4,16 @@ import { cardFilename, downloadBridesmaidCard, previewDataUrl } from "@/lib/brid
 import { loadCardFonts } from "@/lib/card-draw";
 import { uid } from "@/lib/db";
 import { useTable } from "@/lib/hooks";
-import { JEWELS, findJewel, inkOf, jewelLines, newBridesmaidCard, parseHex, renamed, type CardContext } from "@/lib/jewels";
+import { BRIDESMAID_STONES, HONOR_STONE, ROLES, STONES, findRole, findStone, inkOf, missionFor, newBridesmaidCard, parseHex, renamed, roleById, roleLines, stoneById, stoneLines, stoneOfRole, type CardContext, type Role, type Stone } from "@/lib/jewels";
 import { shortDate } from "@/lib/guests";
-import { GEM_CUTS, type BridesmaidCard, type GemCut, type WeddingInfo } from "@/lib/types";
+import { GEM_CUTS, type BridesmaidCard, type EntourageMember, type GemCut, type WeddingInfo } from "@/lib/types";
 import { Btn, Card, EditText, PageHead, Select } from "./ui";
 
 /* ═════════════ BRIDESMAID CARDS ═════════════ */
 
 const NOBODY = /to be announced|tba/i;
+/** A bridesmaid whose title says she is the bride's sister-in-law wears Garnet with the Maid and Matron of Honor. */
+const SISTER_IN_LAW = /sister[- ]in[- ]law|sister of the groom|groom'?s sister/i;
 
 function contextOf(info?: WeddingInfo): CardContext {
   const g = (info?.groom ?? "").trim(), b = (info?.bride ?? "").trim();
@@ -22,11 +24,19 @@ function contextOf(info?: WeddingInfo): CardContext {
   };
 }
 
-/** The stone picker's options: every preset, plus "her own stone" when the card's word isn't one of them. */
-function jewelOptions(current: string) {
-  const own = findJewel(current) ? [] : [{ value: "__own__", label: current.trim() ? `${current.trim()} (her own stone)` : "Choose a stone…" }];
-  return [...own, ...JEWELS.map((j) => ({ value: j.id, label: j.name }))];
+/** The stone picker's options: the bridesmaids' stones, plus "her own stone" when the card's word isn't one of them. */
+function stoneOptions(current: string) {
+  const own = findStone(current) ? [] : [{ value: "__own__", label: current.trim() ? `${current.trim()} (her own stone)` : "Choose a stone…" }];
+  return [...own, ...STONES.map((s) => ({ value: s.id, label: s.name }))];
 }
+
+/** The role picker's options: every role, naming the stone it was written for. */
+function roleOptions(currentTitle: string) {
+  const own = findRole(currentTitle) ? [] : [{ value: "__own__", label: currentTitle.trim() ? `${currentTitle.trim()} (her own role)` : "Choose a role…" }];
+  return [...own, ...ROLES.map((r) => { const s = stoneOfRole(r.id); return { value: r.id, label: s ? `${r.title} — ${s.name}'s own` : r.title }; })];
+}
+
+type Person = { name: string; role: EntourageMember["role"]; title?: string };
 
 export function BridesmaidCards() {
   const info = useTable("wedding_info").rows[0];
@@ -37,29 +47,40 @@ export function BridesmaidCards() {
   const selected = sorted.find((c) => c.id === selectedId) ?? sorted[0];
   const ctx = contextOf(info);
 
-  /** The bridesmaids and maid of honor named in the entourage who have no card yet. */
+  /** The maid and matron of honor and the bridesmaids named in the entourage who have no card yet. */
   const waiting = useMemo(() => {
     const named = new Set(sorted.map((c) => c.name.trim().toLowerCase()));
+    const rank = (r: EntourageMember["role"]) => (r === "maid_of_honor" ? 0 : r === "matron_of_honor" ? 1 : 2);
     return ent.rows
-      .filter((p) => (p.role === "bridesmaid" || p.role === "maid_of_honor") && p.name.trim() && !NOBODY.test(p.name) && !named.has(p.name.trim().toLowerCase()))
-      .sort((a, b) => (a.role === b.role ? a.order - b.order : a.role === "maid_of_honor" ? -1 : 1));
+      .filter((p) => (p.role === "bridesmaid" || p.role === "maid_of_honor" || p.role === "matron_of_honor") && p.name.trim() && !NOBODY.test(p.name) && !named.has(p.name.trim().toLowerCase()))
+      .sort((a, b) => rank(a.role) - rank(b.role) || a.order - b.order);
   }, [ent.rows, sorted]);
 
-  /** New cards, each in a stone nobody has yet — the maid of honor in Citrine, the bridesmaids down the palette. */
-  const makeCards = (people: { name: string; maid?: boolean }[]) => {
-    const used = new Set(sorted.map((c) => c.jewel.trim().toLowerCase()));
+  /**
+   * New cards. The maid of honor, the matron of honor and the sister-in-law wear Garnet; everyone
+   * else takes the next bridesmaid stone nobody has. Each gets her stone's own role unless another
+   * card already has it, then the first role still free — so no two cards start with the same job.
+   */
+  const makeCards = (people: Person[]) => {
+    const usedStones = new Set(sorted.map((c) => findStone(c.jewel)?.id).filter(Boolean));
+    const usedRoles = new Set(sorted.map((c) => findRole(c.role_title)?.id).filter(Boolean));
     const rows: BridesmaidCard[] = [];
     people.forEach((p, i) => {
-      const preferred = p.maid ? findJewel("citrine") : undefined;
-      const j = (preferred && !used.has(preferred.name.toLowerCase()) ? preferred : JEWELS.find((x) => !used.has(x.name.toLowerCase()))) ?? JEWELS[i % JEWELS.length];
-      used.add(j.name.toLowerCase());
-      rows.push(newBridesmaidCard(uid(), p.name, j, ctx, sorted.length + i + 1));
+      const honor = p.role === "maid_of_honor" || p.role === "matron_of_honor" || SISTER_IN_LAW.test(p.title ?? "");
+      const stoneId = honor ? HONOR_STONE : BRIDESMAID_STONES.find((id) => !usedStones.has(id)) ?? BRIDESMAID_STONES[i % BRIDESMAID_STONES.length];
+      const stone = stoneById(stoneId) ?? STONES[0];
+      usedStones.add(stone.id);
+      const own = roleById(stone.ownRole);
+      const role = (own && !usedRoles.has(own.id) ? own : ROLES.find((r) => !usedRoles.has(r.id))) ?? own ?? ROLES[0];
+      usedRoles.add(role.id);
+      const kicker = p.role === "maid_of_honor" ? "For my maid of honor" : p.role === "matron_of_honor" ? "For my matron of honor" : "For my bridesmaid";
+      rows.push(newBridesmaidCard(uid(), p.name, stone, role, ctx, sorted.length + i + 1, kicker));
     });
     return rows;
   };
-  const add = () => { const [row] = makeCards([{ name: "" }]); cards.save(row); setSelectedId(row.id); };
+  const add = () => { const [row] = makeCards([{ name: "", role: "bridesmaid" }]); cards.save(row); setSelectedId(row.id); };
   const addWaiting = () => {
-    const rows = makeCards(waiting.map((p) => ({ name: p.name.trim(), maid: p.role === "maid_of_honor" })));
+    const rows = makeCards(waiting.map((p) => ({ name: p.name.trim(), role: p.role, title: p.title })));
     if (rows.length) { cards.save(rows); setSelectedId(rows[0].id); }
   };
 
@@ -77,16 +98,17 @@ export function BridesmaidCards() {
 
   return (
     <>
-      <PageHead kicker="Thank you, my Sapphire…" title="Bridesmaid cards.">
+      <PageHead kicker="Thank you, my Garnet…" title="Bridesmaid cards.">
         {waiting.length > 0 && <Btn variant="ghost" onClick={addWaiting}>Add {waiting.length === 1 ? waiting[0].name.split(/\s+/)[0] : `the ${waiting.length} from the entourage`}</Btn>}
         {sorted.length > 1 && <Btn variant="dark" onClick={downloadAll} disabled={bulk === "working"}>{bulk === "working" ? "Drawing the cards…" : bulk === "done" ? "All saved ✓" : `Download all ${sorted.length} (A4)`}</Btn>}
         <Btn onClick={add}>+ Add a bridesmaid</Btn>
       </PageHead>
 
       <p className="text-sm text-ink/70 max-w-3xl mb-6">
-        One A4 card for each of the girls: <em>thank you for saying yes</em>, in her own stone and its colour, with a note from you and the role her
-        stone gives her on the day — a title, a motto, her mission, the duties and a pro tip. Picking a stone writes all of that in for you;
-        <b> every line is yours to change</b>, from the capitals at the top to the sign-off. Download prints at 300 dpi, exactly A4.
+        One A4 card for each of the girls: <em>thank you for saying yes</em>, in her own stone and its colour, with a note from you and her role
+        on the day — a title, a motto, her mission, the duties and a pro tip. <b>Garnet</b> is for the maid of honor, the matron of honor and your
+        sister-in-law; the bridesmaids wear Turquoise, Citrine, Amethyst, Sapphire or Ruby. Stones and roles are picked separately, so three
+        Garnets can each have a different job; <b>every line is yours to change</b> afterwards. Downloads print at 300 dpi, exactly A4.
       </p>
 
       {cards.error && (
@@ -136,24 +158,28 @@ function Field({ label, hint, children, className = "" }: { label: string; hint?
 
 function Editor({ card, ctx, onSave, onDelete }: { card: BridesmaidCard; ctx: CardContext; onSave: (c: BridesmaidCard) => void; onDelete: () => void }) {
   const set = (patch: Partial<BridesmaidCard>) => onSave({ ...card, ...patch });
-  const preset = findJewel(card.jewel);
+  const stone: Stone | undefined = findStone(card.jewel);
+  const role: Role | undefined = findRole(card.role_title);
 
-  /** Pick a stone: her colour, cut, greeting and the whole role come from the preset; her name, note and sign-off stay. */
-  const pickJewel = (id: string) => {
-    if (id === "__own__") return;
-    const j = findJewel(id);
-    if (!j) return;
-    const lines = jewelLines(j);
+  /** Pick a stone: her colour, cut, greeting and the embodies line change; the role's mission re-opens with the new stone if it was untouched. */
+  const pickStone = (id: string) => {
+    const next = stoneById(id);
+    if (!next) return;
+    const patch: Partial<BridesmaidCard> = { ...stoneLines(next) };
     // keep a greeting she rewrote, swapping only the stone's name in it
-    const greeting = preset && card.greeting.toLowerCase().includes(preset.name.toLowerCase())
-      ? card.greeting.replace(new RegExp(preset.name, "i"), j.name)
-      : lines.greeting;
-    set({ ...lines, greeting });
+    if (stone && card.greeting.toLowerCase().includes(stone.name.toLowerCase())) patch.greeting = card.greeting.replace(new RegExp(stone.name, "i"), next.name);
+    if (role && card.mission.trim() === missionFor(stone, role)) patch.mission = missionFor(next, role);
+    set(patch);
+  };
+  /** Pick a role: the title, motto, mission (opened by her stone), duties and tip come from it. */
+  const pickRole = (id: string) => {
+    const next = roleById(id);
+    if (next) set({ ...roleLines(next, stone) });
   };
   const refill = () => {
-    if (!preset) return;
-    if (!confirm(`Rewrite her role from the ${preset.name} preset? Your note and sign-off are kept.`)) return;
-    set({ ...jewelLines(preset) });
+    if (!stone && !role) return;
+    if (!confirm(`Rewrite the card's lines from ${[stone?.name, role?.title].filter(Boolean).join(" and ")}? Your name lines, note and sign-off are kept.`)) return;
+    set({ ...(stone ? stoneLines(stone) : {}), ...(role ? roleLines(role, stone) : {}) });
   };
 
   // the live preview: the real A4 drawing, scaled down — redrawn when any line of the card changes
@@ -190,42 +216,45 @@ function Editor({ card, ctx, onSave, onDelete }: { card: BridesmaidCard; ctx: Ca
             <Field label="Her name">
               <EditText value={card.name} placeholder="Ana" onSave={(v) => set(renamed(card, v))} className="font-serif text-2xl" />
             </Field>
-            <Field label="Her stone" hint="Picking a stone writes her colour, cut, greeting and role in from the preset. Your note and sign-off stay.">
-              <Select value={preset?.id ?? "__own__"} options={jewelOptions(card.jewel)} onChange={pickJewel} className="w-full font-serif text-lg !capitalize" />
+            <Field label="Capitals at the very top" hint="“For my maid of honor”, “For my matron of honor”, “For my bridesmaid”…">
+              <EditText value={card.kicker} placeholder="For my bridesmaid" onSave={(v) => set({ kicker: v })} className="font-serif text-lg" />
+            </Field>
+            <Field label="Her stone" hint="Brings its colour, cut, greeting and meaning. Garnet is the honour stone; the bridesmaids wear the other five.">
+              <Select value={stone?.id ?? "__own__"} options={stoneOptions(card.jewel)} onChange={pickStone} className="w-full font-serif text-lg !capitalize" />
+            </Field>
+            <Field label="Her role" hint="Any role fits any stone — the mission opens with her stone's own sentence.">
+              <Select value={role?.id ?? "__own__"} options={roleOptions(card.role_title)} onChange={pickRole} className="w-full font-serif text-lg !normal-case" />
             </Field>
             <Field label="The stone's name on the card" hint="Any word works — a stone of your own gets its colour from the swatch beside it.">
-              <EditText value={card.jewel} placeholder="Sapphire" onSave={(v) => set({ jewel: v })} className="font-serif text-lg" />
+              <EditText value={card.jewel} placeholder="Garnet" onSave={(v) => set({ jewel: v })} className="font-serif text-lg" />
             </Field>
-            <div className="grid grid-cols-[auto_1fr] gap-3 items-end">
+            <div className="grid grid-cols-[auto_1fr_auto] gap-3 items-end">
               <Field label="Her colour">
                 <span className="flex items-center gap-2 mt-1">
                   <input type="color" value={hexOk ? card.color : "#6E1F2E"} onChange={(e) => set({ color: e.target.value.toUpperCase() })} className="w-11 h-11 rounded-lg border border-ink/10 bg-transparent cursor-pointer" aria-label="Her colour" />
-                  <span className="w-11 h-11 rounded-lg border border-ink/10" style={{ background: inkOf(swatch) }} title="As ink — light stones are deepened so the words stay readable" />
+                  <span className="w-11 h-11 rounded-lg border border-ink/10" style={{ background: inkOf(swatch) }} title="As ink — a light stone is deepened so the words stay readable" />
                 </span>
               </Field>
               <Field label="Hex">
-                <EditText value={card.color} placeholder="#0A2A6E" onSave={(v) => set({ color: v.trim().startsWith("#") ? v.trim().toUpperCase() : `#${v.trim().toUpperCase()}` })} className={`font-mono text-sm ${hexOk ? "" : "text-burgundy"}`} />
+                <EditText value={card.color} placeholder="#8E1226" onSave={(v) => set({ color: v.trim().startsWith("#") ? v.trim().toUpperCase() : `#${v.trim().toUpperCase()}` })} className={`font-mono text-sm ${hexOk ? "" : "text-burgundy"}`} />
+              </Field>
+              <Field label="The cut">
+                <Select value={card.cut} options={GEM_CUTS} onChange={(v: GemCut) => set({ cut: v })} />
               </Field>
             </div>
-            <Field label="The cut" hint="How the gem is drawn at the top of her card.">
-              <Select value={card.cut} options={GEM_CUTS} onChange={(v: GemCut) => set({ cut: v })} className="w-full" />
-            </Field>
           </div>
         </Card>
 
         <Card title="The top of the card">
           <div className="grid md:grid-cols-2 gap-4">
-            <Field label="Capitals at the very top">
-              <EditText value={card.kicker} placeholder="For my bridesmaid" onSave={(v) => set({ kicker: v })} className="text-sm" />
+            <Field label="The greeting (in script)" hint="Her stone's name inside it is picked out in her colour.">
+              <EditText value={card.greeting} placeholder="Thank you, my Garnet" onSave={(v) => set({ greeting: v })} className="font-script text-3xl" />
             </Field>
             <Field label="Capitals under the greeting">
               <EditText value={card.subline} placeholder="for saying yes, Ana" onSave={(v) => set({ subline: v })} className="text-sm" />
             </Field>
-            <Field label="The greeting (in script)" hint="Her stone's name inside it is picked out in her colour." className="md:col-span-2">
-              <EditText value={card.greeting} placeholder="Thank you, my Sapphire" onSave={(v) => set({ greeting: v })} className="font-script text-3xl" />
-            </Field>
             <Field label="What her stone embodies" hint="One line under the gem, in her colour." className="md:col-span-2">
-              <EditText value={card.embodies} placeholder="Wisdom, loyalty and a deep, steady calm — the stone of true friends." onSave={(v) => set({ embodies: v })} className="font-serif italic text-lg" />
+              <EditText value={card.embodies} placeholder="Commitment, protection and keeping things whole — the stone of the ones who hold you up." onSave={(v) => set({ embodies: v })} className="font-serif italic text-lg" />
             </Field>
           </div>
         </Card>
@@ -235,7 +264,7 @@ function Editor({ card, ctx, onSave, onDelete }: { card: BridesmaidCard; ctx: Ca
           <p className="text-xs text-ink/45 mt-2">Each new line starts a new paragraph. If the note runs long the card's type steps down a little to keep everything on the page.</p>
         </Card>
 
-        <Card title="Her role on the day" action={preset && <Btn variant="ghost" onClick={refill}>Rewrite from {preset.name}</Btn>}>
+        <Card title="Her role on the day" action={(stone || role) && <Btn variant="ghost" onClick={refill}>Rewrite from {[stone?.name, role ? "the role" : ""].filter(Boolean).join(" & ")}</Btn>}>
           <div className="grid md:grid-cols-2 gap-4">
             <Field label="Small heading over the role">
               <EditText value={card.role_kicker} placeholder="Her role on the day" onSave={(v) => set({ role_kicker: v })} className="text-sm" />
