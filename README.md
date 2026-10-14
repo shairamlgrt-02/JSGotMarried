@@ -92,28 +92,31 @@ about the *day* rather than the guest, so it leads with the thing guests keep ge
    reception at 6:30;
 2. the **small plan of the venue** (`lib/venue-map.ts`: the hall with its reserved rows and doors,
    the majlis just outside, the courtyard, the entrance and the path in — numbered to match the
-   one-line legend, with the parking note under it) and, **beside it, where to go if you arrive at
-   another hour** (before 4:00 → the hall, if you wish to witness the ceremony; 4:00–5:30 → the
-   majlis, the ceremony is behind closed doors — we will come and find you);
+   one-line legend under it) and, **beside it, the wayfinding notes**: where to go if you arrive at
+   another hour (before 4:00 → the hall, if you wish to witness the ceremony; 4:00–5:30 → the
+   majlis, the ceremony is behind closed doors — we will come and find you) and where the cars go
+   (parking → a separate area, not the courtyard; The Heaven's team tell you where at the gate);
 3. the order of the day — each fact as a short tag beside its stop (*entourage & wedding team*,
    *doors close at 4:00 PM*, *everyone welcome*) and the couple's own line under the two hours that
    hold the evening (`programmeNote`: *the hour we get to hug you*; *dinner, our film on the big
    screen, games and giveaways — then we dance*) — the dress code in one line and the sign-off.
 
-Every fact is said once and the card uses its full width wherever two things belong side by side,
-so it comes out about **1200 × 2750** — a long phone screen — in type that reads without zooming
-(it was 4000+ when every section stacked and repeated the hours). Nothing is set smaller to get
-there; if it ever needs to be shorter still, the levers are the two `programmeNote`s, the parking
-sentence under the plan (the plan says it in small type too) and the *how it unfolds* line in the
-header — not the type size.
+The card is a **9:16 portrait — 1500 × 2667, a phone screen, a story** — so it is seen whole and
+never scrolled. Every fact is said once and the card uses its width wherever two things belong side
+by side, so everything fits that frame in type that reads without zooming (the first version
+stacked six sections, repeated the hours in each, and ran to 1200 × 4000+). Whatever room is left
+over inside the frame is shared out between the sections as air, so the frame is always full and
+never crowded; should the wording ever outgrow it (a two-line dress code, say), the card grows
+taller rather than cut a line — the type is never set smaller.
 
 The plan in `lib/venue-map.ts` is a schematic drawn in a logical 640 × 440 space, with the two
 arrival notes written onto it (*Entourage & wedding team · 3:30 PM arrival* on the hall, *Guests
 welcome · 5:30 – 6:30 PM arrival* on the majlis) and the parking note at the entrance. **Parking is
 deliberately not on the plan**: the open yard beside the path is just the courtyard, and the cars go
 to a separate area that The Heaven's team point each guest to when they arrive at the gate — so the
-map, the sentence under it and the FAQ's *Is there parking?* all say exactly that (`PARKING_NOTE`).
-Redraw the shapes there from the couple's own sketch of The Heaven and every card follows.
+map, the parking note beside it and the FAQ's *Is there parking?* all say exactly that
+(`PARKING_NOTE`). Redraw the shapes there from the couple's own sketch of The Heaven and every card
+follows.
 Like the venue itself, the card is only offered on an unsealed invitation — never on `/preview`.
 
 ## Invite codes: generate, send, track (`Invite Codes`)

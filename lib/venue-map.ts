@@ -1,4 +1,4 @@
-import { ALL_WELCOME_FROM, ENTOURAGE_CALL_TIME, RECEPTION_AT } from "./program";
+import { ALL_WELCOME_FROM, ENTOURAGE_CALL_TIME, RECEPTION_AT, type ArrivalWindow } from "./program";
 import { EDGE, LACE, MOCHA, PAPER, TAUPE, WINE, caps, capsWidth, pin, roundRect, serif, text } from "./card-draw";
 
 /**
@@ -24,10 +24,15 @@ export const MAP_NOTE_ENTOURAGE = [`Entourage & wedding team · ${ENTOURAGE_CALL
 export const MAP_NOTE_GUESTS = ["Guests welcome", `${ALL_WELCOME_FROM.replace(/\s*PM$/, "")} – ${RECEPTION_AT} arrival`];
 /**
  * Where the cars go: not the courtyard, but a separate area that The Heaven's team point each car
- * to on arrival at the gate — written in full under the map, and in two short lines at the gate.
+ * to on arrival at the gate. Two short lines at the gate on the plan itself — and, beside the plan
+ * on the programme card, the third wayfinding note, in the same shape as the arrival windows.
  */
-export const PARKING_NOTE = "Parking is in a separate area, not the courtyard — The Heaven's team will tell you where to park when you arrive at the gate.";
 export const MAP_NOTE_PARKING = ["parking is in a separate area —", "The Heaven's team will tell you where at the gate"];
+export const PARKING_NOTE: ArrivalWindow = {
+  when: "Parking",
+  where: "A separate area",
+  detail: "Not in the courtyard — The Heaven's team will tell you where to park when you arrive at the gate.",
+};
 
 /** The legend under the map — the same numbers as the pins, in the order a guest meets them. */
 export const VENUE_MAP_LEGEND: { n: number; place: string }[] = [
