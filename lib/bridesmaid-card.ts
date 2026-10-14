@@ -1,6 +1,6 @@
 /**
  * The bridesmaid card — an A4 thank-you note, drawn in the browser in the keepsake's paper and
- * inks, with her stone cut in her colour at the top.
+ * inks, with her jewel cut in her colour at the top.
  *
  * The page is laid out in a 1500-wide logical space and scaled to A4 at 300 dpi (2480 × 3508),
  * so a 28px line here prints at about 11pt. The card is measured once without drawing: if the
@@ -286,20 +286,42 @@ function pass(g: Ctx, c: BridesmaidCard, f: number, air: number[], dry: boolean)
   let start = y;
   if (c.kicker.trim()) { if (!dry) caps(g, c.kicker, CX, y, 22, TAUPE, 0.34); y += 20; }
   y += 36 + air[0];
-  const gemSize = 236;
+  const gemSize = 220;
   const [gw, gh] = gemBox(c.cut, gemSize);
   if (!dry) drawGem(g, CX, y + gemSize / 2, gw, gh, c.color, c.cut);
-  y += gemSize + 62;
+  y += gemSize + 56;
   if (c.jewel.trim()) { if (!dry) caps(g, c.jewel, CX, y, 28, tone, 0.42); y += 30; }
   if (c.greeting.trim()) { y += px(84); greeting(g, c.greeting, c.jewel, y, px(96), tone, dry); y += 10; }
-  if (c.subline.trim()) { y += 66; if (!dry) caps(g, c.subline, CX, y, 22, TAUPE, 0.3); }
-  y += 50;
+  if (c.subline.trim()) { y += 64; if (!dry) caps(g, c.subline, CX, y, 22, TAUPE, 0.3); }
+  y += 46;
   if (!dry) diamondRule(g, CX, y, 220);
   if (c.embodies.trim()) {
-    y += 52;
+    y += 48;
     const lines = balanced(g, c.embodies, serif(px(30), "i500"), MEASURE - 80);
     if (!dry) drawLines(g, lines, CX, y, serif(px(30), "i500"), tone, px(40));
     y += (lines.length - 1) * px(40);
+  }
+  // the verse: the quotation in italic with its reference in small capitals — on one line when it fits
+  const verse = (c.verse ?? "").trim();
+  if (verse) {
+    const m = /^(.*?)\s+[—–-]\s+([^—–-]+)$/.exec(verse);
+    const quote = m ? m[1].trim() : verse;
+    const ref = m ? m[2].trim() : "";
+    const font = serif(px(28), "i400");
+    y += c.embodies.trim() ? 46 : 52;
+    g.font = font;
+    const quoteW = g.measureText(quote).width;
+    const refW = ref ? capsWidth(g, ref, 17, 0.34) : 0;
+    const gap = 26;
+    if (ref && quoteW + gap + refW <= MEASURE - 60) {
+      const x0 = CX - (quoteW + gap + refW) / 2;
+      if (!dry) { text(g, quote, x0, y, font, MOCHA, "left"); caps(g, ref, x0 + quoteW + gap, y, 17, TAUPE, 0.34, "left"); }
+    } else {
+      const lines = balanced(g, quote, font, MEASURE - 120);
+      if (!dry) drawLines(g, lines, CX, y, font, MOCHA, px(38));
+      y += (lines.length - 1) * px(38);
+      if (ref) { y += 34; if (!dry) caps(g, ref, CX, y, 17, TAUPE, 0.34); }
+    }
   }
   heights.push(y - start);
 
@@ -308,7 +330,7 @@ function pass(g: Ctx, c: BridesmaidCard, f: number, air: number[], dry: boolean)
   y += air[1];
   const note = paragraphs(c.note);
   if (note.length) {
-    y += 56 + px(30);
+    y += 44 + px(30);
     const font = serif(px(30), "i400");
     note.forEach((p, i) => {
       const lines = wrapLines(g, p, font, MEASURE);
@@ -323,29 +345,29 @@ function pass(g: Ctx, c: BridesmaidCard, f: number, air: number[], dry: boolean)
   y += air[2];
   const role = c.role_title.trim() || c.mission.trim() || c.duties.trim() || c.tagline.trim() || c.pro_tip.trim();
   if (role) {
-    y += 62;
+    y += 56;
     if (!dry) diamondRule(g, CX, y, 220);
-    if (c.role_kicker.trim()) { y += 56; if (!dry) caps(g, c.role_kicker, CX, y, 20, TAUPE, 0.34); }
+    if (c.role_kicker.trim()) { y += 52; if (!dry) caps(g, c.role_kicker, CX, y, 20, TAUPE, 0.34); }
     if (c.role_title.trim()) {
       // one line if it can be had by stepping down a little; otherwise two balanced lines
       let size = px(34);
       while (capsWidth(g, c.role_title, size, 0.22) > MEASURE && size > px(29)) size -= 1;
       const lines = capsWidth(g, c.role_title, size, 0.22) <= MEASURE ? [c.role_title] : capsLines(g, c.role_title, (size = px(34)), MEASURE, 0.22, true);
-      y += 20 + size;
+      y += 16 + size;
       if (!dry) lines.forEach((l, i) => caps(g, l, CX, y + i * (size + 14), size, WINE, 0.22));
       y += (lines.length - 1) * (size + 14);
     }
     if (c.tagline.trim()) {
       const font = serif(px(31), "i500");
       const lines = balanced(g, `“${c.tagline.trim().replace(/^["“]|["”]$/g, "")}”`, font, MEASURE - 60);
-      y += 22 + px(31);
+      y += 18 + px(31);
       if (!dry) drawLines(g, lines, CX, y, font, MOCHA, px(40));
       y += (lines.length - 1) * px(40);
     }
     const body = serif(px(28), "400");
-    const lead = px(39);
+    const lead = px(38);
     if (c.mission.trim()) {
-      y += 54;
+      y += 50;
       if (!dry) caps(g, "Your mission", LEFT, y, 20, tone, 0.34, "left");
       const ps = paragraphs(c.mission);
       ps.forEach((p, i) => {
@@ -357,7 +379,7 @@ function pass(g: Ctx, c: BridesmaidCard, f: number, air: number[], dry: boolean)
     }
     const duties = bulletLines(c.duties);
     if (duties.length) {
-      y += 50;
+      y += 46;
       if (!dry) caps(g, "The duties", LEFT, y, 20, tone, 0.34, "left");
       y += 20 + px(28);
       duties.forEach((d, i) => {
@@ -371,7 +393,7 @@ function pass(g: Ctx, c: BridesmaidCard, f: number, air: number[], dry: boolean)
           g.restore();
           drawLines(g, lines, LEFT + 44, y, body, INK, lead, "left");
         }
-        y += (lines.length - 1) * lead + (i < duties.length - 1 ? lead + 6 : 0);
+        y += (lines.length - 1) * lead + (i < duties.length - 1 ? lead + 4 : 0);
       });
     }
     if (c.pro_tip.trim()) {
@@ -391,7 +413,7 @@ function pass(g: Ctx, c: BridesmaidCard, f: number, air: number[], dry: boolean)
   start = y;
   y += air[3];
   if (c.closing.trim()) {
-    y += 54 + px(60);
+    y += 48 + px(60);
     let sz = px(60);
     g.font = script(sz);
     while (g.measureText(c.closing).width > MEASURE && sz > 40) { sz -= 2; g.font = script(sz); }

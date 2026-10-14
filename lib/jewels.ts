@@ -1,31 +1,37 @@
 import type { BridesmaidCard, GemCut } from "./types";
 
 /**
- * The bridesmaids' stones and the roles a bridesmaid can be given on the day.
+ * The bridesmaids' jewels, and the roles a bridesmaid can be given on the day.
  *
- * The stones are the bridesmaids' palette from the Dress Code, with the exact hexes the site
+ * The jewels are the bridesmaids' palette from the Dress Code, with the exact hexes the site
  * swatches: Garnet for the Maid of Honor, the Matron of Honor and the bride's sister-in-law, and
- * Turquoise, Citrine, Amethyst, Sapphire and Ruby for the bridesmaids. (The greens, browns, greys
- * and the like belong to the groom's side and the guests, so they are not offered here — though a
- * stone of your own is only a word and a swatch away.)
+ * Turquoise, Citrine, Sapphire and Ruby for the four bridesmaids. (Amethyst was in the running and
+ * lost out to Ruby; the greens, browns, greys and the like belong to the groom's side and the
+ * guests — so none of those are offered here, though a jewel of your own is only a word and a
+ * swatch away.)
  *
- * Roles are separate from stones, because three women share Garnet and each needs her own job.
- * Every role is written so it reads after any stone's opening sentence — a card's mission is the
- * stone's `spirit` followed by the role's `mission` — and each stone still has the role that was
- * written in its spirit (`ownRole`), which is what a card starts with.
+ * A jewel here is a picture of the woman who wears it, nothing more: its colour and what that
+ * colour says of her (`embodies`), and why the bride chose it for her (`why`). The card says the
+ * rest in the bride's own words — "she is far more precious than jewels" (Proverbs 31:10) — so
+ * nothing in this file gives a stone powers, luck or protection. They are jewels, and she is worth
+ * far more than them.
  *
- * Picking a stone or a role in the binder fills the card in from here; every line stays editable.
+ * Roles are separate from jewels, because three women share Garnet and each needs her own job.
+ * Every role is written so it reads after any jewel's opening sentence — a card's mission is the
+ * jewel's `why` followed by the role's `mission` — and most jewels have a role that was written
+ * with them in mind (`ownRole`), which is what a new card starts with. Roles without a jewel (the
+ * family anchor, the timekeeper…) are simply picked.
  */
 export type Stone = {
   id: string;
   name: string;
   hex: string;
   cut: GemCut;
-  /** What the stone stands for — printed under the gem. */
+  /** What the jewel's colour says of her — printed under the gem. */
   embodies: string;
-  /** The stone's opening sentence of the mission — "Sapphire is the stone of…". */
-  spirit: string;
-  /** The role written in this stone's spirit. */
+  /** Why the bride chose it for her — the opening sentence of the mission. */
+  why: string;
+  /** The role written with this jewel in mind. */
   ownRole: string;
 };
 
@@ -33,7 +39,7 @@ export type Role = {
   id: string;
   title: string;
   tagline: string;
-  /** The "you are…" of the mission — reads after any stone's `spirit`. */
+  /** The "you are…" of the mission — reads after any jewel's `why`. */
   mission: string;
   duties: string[];
   pro_tip: string;
@@ -42,52 +48,49 @@ export type Role = {
 export const STONES: Stone[] = [
   {
     id: "garnet", name: "Garnet", hex: "#8E1226", cut: "cushion",
-    embodies: "Commitment, protection and keeping things whole — the stone of the ones who hold you up.",
-    spirit: "Garnet is the stone of commitment and of holding things together — travellers carried it so nothing would come apart on the road.",
+    embodies: "Deep, warm red — the colour of commitment and of a heart that keeps its word.",
+    why: "Garnet is the deepest, warmest red — I chose it for you because you are commitment itself: you hold things together and keep your word.",
     ownRole: "wardrobe_medic",
   },
   {
     id: "turquoise", name: "Turquoise", hex: "#0F7E7A", cut: "oval",
-    embodies: "Friendship, protection and good fortune — worn as a shield for a thousand years.",
-    spirit: "Turquoise is the friendship stone, worn for protection since forever.",
+    embodies: "Bright and clear as shallow sea — the colour of friendship and fresh, honest joy.",
+    why: "Turquoise is the bright, clear colour of shallow sea — I chose it for you because you are my fresh air: the easiest company and the truest friend.",
     ownRole: "hydration",
   },
   {
     id: "citrine", name: "Citrine", hex: "#BE8B0F", cut: "pear",
-    embodies: "Joy, sunshine and good energy — the stone that does not know how to dim.",
-    spirit: "Citrine is bottled sunshine — the stone of joy and of energy that never runs out.",
+    embodies: "Sunlight held in gold — the colour of joy, gratitude and a generous heart.",
+    why: "Citrine is sunlight held in gold — I chose it for you because you carry joy into every room, and you have never once run out of it.",
     ownRole: "hype_girl",
   },
   {
-    id: "amethyst", name: "Amethyst", hex: "#5E2487", cut: "oval",
-    embodies: "Peace, clarity and a clear head — the stone people reach for when they need to breathe.",
-    spirit: "Amethyst is the stone of calm and clear thinking — the one people reach for when they need to breathe.",
-    ownRole: "family_anchor",
-  },
-  {
     id: "sapphire", name: "Sapphire", hex: "#0A2A6E", cut: "cushion",
-    embodies: "Wisdom, loyalty and a deep, steady calm — the stone of true friends.",
-    spirit: "Sapphire is the stone of wisdom and loyalty — the deep blue that steadies everything around it.",
+    embodies: "Deep, steady blue — the colour of wisdom, loyalty and a calm that holds.",
+    why: "Sapphire is the deepest, steadiest blue — I chose it for you because that is what you are to me: wisdom, loyalty and a calm that holds.",
     ownRole: "keeper_of_vows",
   },
   {
     id: "ruby", name: "Ruby", hex: "#B01A63", cut: "brilliant",
-    embodies: "Radiance, passion and a glow that does not fade as the night goes on.",
-    spirit: "Ruby is the stone of radiance — the light that stays bright long after everyone else has faded.",
+    embodies: "Red that catches every light — the colour of love, courage and a lasting glow.",
+    why: "A ruby catches every light and gives it back — I chose it for you because your glow does not fade, however long the night runs.",
     ownRole: "glow_up",
   },
 ];
 
-/** Who gets Garnet: the stones the rest of the bridesmaids are handed, in this order. */
+/** Who gets Garnet: the jewels the rest of the bridesmaids are handed, in this order. */
 export const HONOR_STONE = "garnet";
-export const BRIDESMAID_STONES = ["turquoise", "citrine", "amethyst", "sapphire", "ruby"];
+export const BRIDESMAID_STONES = ["turquoise", "citrine", "sapphire", "ruby"];
+
+/** The line of Scripture a new card carries under the jewel — editable like everything else. */
+export const DEFAULT_VERSE = "“She is far more precious than jewels.” — Proverbs 31:10";
 
 export const ROLES: Role[] = [
   {
     id: "keeper_of_vows",
     title: "Keeper of the Vows & Calm in the Storm",
     tagline: "You hold the words. I hold the nerves. You hold me.",
-    mission: "That is you: my rock and my confidante, the guardian of the most sacred minutes of the day, and the voice in my ear that says — breathe, you have got this.",
+    mission: "You are my rock and my confidante, the guardian of the day's most sacred minutes, and the voice in my ear saying — breathe, you have got this.",
     duties: [
       "Keep the vow books and the rings safe until the very second they are needed.",
       "Talk me down from any pre-ceremony jitters — deep breaths, a squeeze of the hand, a terrible joke.",
@@ -159,7 +162,7 @@ export const ROLES: Role[] = [
     id: "hype_girl",
     title: "Hype Girl & Energy Officer",
     tagline: "Turning up the volume, the laughs and the celebration.",
-    mission: "You are the vibe-setter of the morning and the heartbeat of the night: any trace of nerves gets cured on contact with you, and nobody within earshot is allowed to be bored.",
+    mission: "You set the mood of the morning and you are the heartbeat of the night: any trace of nerves gets cured on contact with you, and nobody within earshot is allowed to be bored.",
     duties: [
       "Own the bridal-suite speaker — the getting-ready playlist is yours.",
       "Lead the toasts, start the dancing, keep the room laughing.",
@@ -229,7 +232,7 @@ export const ROLES: Role[] = [
   },
   {
     id: "morning_light",
-    title: "Morning Light & Good-Omen Officer",
+    title: "Morning Light & First-Coffee Officer",
     tagline: "Sunshine before the sun is even up.",
     mission: "You are the first smile of the morning: coffee, something to eat and the gentle “we have got this” that sets the tone of the entire day.",
     duties: [
@@ -254,11 +257,11 @@ export function findRole(idOrTitle: string): Role | undefined {
   return ROLES.find((r) => r.id === key || r.title.toLowerCase() === key);
 }
 export const roleById = (id: string) => ROLES.find((r) => r.id === id);
-/** The stone a role was written for, if any — Garnet's own is the wardrobe medic, Sapphire's the keeper of the vows… */
+/** The jewel a role was written for, if any — Garnet's is the wardrobe medic, Sapphire's the keeper of the vows… */
 export const stoneOfRole = (roleId: string) => STONES.find((s) => s.ownRole === roleId);
 
-/** The card's mission: the stone's opening sentence, then the role's — or just the role's for a stone of her own. */
-export const missionFor = (stone: Stone | undefined, role: Role) => (stone ? `${stone.spirit} ${role.mission}` : role.mission);
+/** The card's mission: why the bride chose her jewel, then the role — or just the role for a jewel of her own. */
+export const missionFor = (stone: Stone | undefined, role: Role) => (stone ? `${stone.why} ${role.mission}` : role.mission);
 
 /** The wedding details a card's default lines are written from. */
 export type CardContext = { bride: string; initials: string; date: string };
@@ -281,17 +284,17 @@ export function renamed(c: BridesmaidCard, name: string): Partial<BridesmaidCard
   return patch;
 }
 
-/** The lines a stone fills in: her colour, cut, the greeting and what the stone embodies. */
+/** The lines a jewel fills in: her colour, cut, the greeting and what the jewel says of her. */
 export function stoneLines(s: Stone): Pick<BridesmaidCard, "jewel" | "color" | "cut" | "greeting" | "embodies"> {
   return { jewel: s.name, color: s.hex, cut: s.cut, greeting: `Thank you, my ${s.name}`, embodies: s.embodies };
 }
 
-/** The lines a role fills in, with the mission opened by her stone. */
+/** The lines a role fills in, with the mission opened by her jewel. */
 export function roleLines(r: Role, stone?: Stone): Pick<BridesmaidCard, "role_title" | "tagline" | "mission" | "duties" | "pro_tip"> {
   return { role_title: r.title, tagline: r.tagline, mission: missionFor(stone, r), duties: r.duties.join("\n"), pro_tip: r.pro_tip };
 }
 
-/** A complete card for a new bridesmaid, written from her stone, her role and the wedding's details. */
+/** A complete card for a new bridesmaid, written from her jewel, her role and the wedding's details. */
 export function newBridesmaidCard(id: string, name: string, stone: Stone, role: Role, ctx: CardContext, order: number, kicker = "For my bridesmaid"): BridesmaidCard {
   return {
     id,
@@ -300,7 +303,8 @@ export function newBridesmaidCard(id: string, name: string, stone: Stone, role: 
     ...roleLines(role, stone),
     kicker,
     subline: sublineFor(name),
-    note: `${salutationFor(name)}\n\nThank you for saying yes to standing beside me. Of all the people in my life, you are one of the few I could not imagine this day without — and now I don't have to.\n\nYou have been my ${stone.name.toLowerCase()} long before I asked: steady when I wobble, honest when I need it, and always, always on my side. I cannot wait to turn around on the day and find you there.`,
+    verse: DEFAULT_VERSE,
+    note: `${salutationFor(name)}\n\nThank you for saying yes to standing beside me. Of all the people in my life, you are one of the few I could not imagine this day without — and now I don't have to.\n\nI gave each of my girls a jewel, because that is how I see you: rare, bright and lasting. But a jewel is only a picture — you are far more precious to me than any of them: steady when I wobble, honest when I need it, and always on my side. I cannot wait to turn around and find you there.`,
     role_kicker: "Her role on the day",
     closing: `With all my love, ${ctx.bride || "the bride"}`,
     footer: [ctx.initials, ctx.date].filter(Boolean).join(" · "),
@@ -318,7 +322,7 @@ export function shade(hex: string, amount: number): string {
   return `#${[r, g, b].map((c) => c.toString(16).padStart(2, "0")).join("")}`;
 }
 
-/** The stone's colour as an ink: a light stone is deepened so words stay legible on paper. */
+/** The jewel's colour as an ink: a light jewel is deepened so words stay legible on paper. */
 export function inkOf(hex: string): string {
   const rgb = parseHex(hex);
   if (!rgb) return "#6E1F2E";

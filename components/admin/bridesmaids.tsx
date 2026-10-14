@@ -4,7 +4,7 @@ import { cardFilename, downloadBridesmaidCard, previewDataUrl } from "@/lib/brid
 import { loadCardFonts } from "@/lib/card-draw";
 import { uid } from "@/lib/db";
 import { useTable } from "@/lib/hooks";
-import { BRIDESMAID_STONES, HONOR_STONE, ROLES, STONES, findRole, findStone, inkOf, missionFor, newBridesmaidCard, parseHex, renamed, roleById, roleLines, stoneById, stoneLines, stoneOfRole, type CardContext, type Role, type Stone } from "@/lib/jewels";
+import { BRIDESMAID_STONES, DEFAULT_VERSE, HONOR_STONE, ROLES, STONES, findRole, findStone, inkOf, missionFor, newBridesmaidCard, parseHex, renamed, roleById, roleLines, stoneById, stoneLines, stoneOfRole, type CardContext, type Role, type Stone } from "@/lib/jewels";
 import { shortDate } from "@/lib/guests";
 import { GEM_CUTS, type BridesmaidCard, type EntourageMember, type GemCut, type WeddingInfo } from "@/lib/types";
 import { Btn, Card, EditText, PageHead, Select } from "./ui";
@@ -24,16 +24,16 @@ function contextOf(info?: WeddingInfo): CardContext {
   };
 }
 
-/** The stone picker's options: the bridesmaids' stones, plus "her own stone" when the card's word isn't one of them. */
+/** The jewel picker's options: the bridesmaids' jewels, plus "her own jewel" when the card's word isn't one of them. */
 function stoneOptions(current: string) {
-  const own = findStone(current) ? [] : [{ value: "__own__", label: current.trim() ? `${current.trim()} (her own stone)` : "Choose a stone…" }];
+  const own = findStone(current) ? [] : [{ value: "__own__", label: current.trim() ? `${current.trim()} (her own jewel)` : "Choose a jewel…" }];
   return [...own, ...STONES.map((s) => ({ value: s.id, label: s.name }))];
 }
 
-/** The role picker's options: every role, naming the stone it was written for. */
+/** The role picker's options: every role, naming the jewel it was written for. */
 function roleOptions(currentTitle: string) {
   const own = findRole(currentTitle) ? [] : [{ value: "__own__", label: currentTitle.trim() ? `${currentTitle.trim()} (her own role)` : "Choose a role…" }];
-  return [...own, ...ROLES.map((r) => { const s = stoneOfRole(r.id); return { value: r.id, label: s ? `${r.title} — ${s.name}'s own` : r.title }; })];
+  return [...own, ...ROLES.map((r) => { const s = stoneOfRole(r.id); return { value: r.id, label: s ? `${r.title} — written for ${s.name}` : r.title }; })];
 }
 
 type Person = { name: string; role: EntourageMember["role"]; title?: string };
@@ -58,7 +58,7 @@ export function BridesmaidCards() {
 
   /**
    * New cards. The maid of honor, the matron of honor and the sister-in-law wear Garnet; everyone
-   * else takes the next bridesmaid stone nobody has. Each gets her stone's own role unless another
+   * else takes the next bridesmaid jewel nobody has. Each gets her jewel's own role unless another
    * card already has it, then the first role still free — so no two cards start with the same job.
    */
   const makeCards = (people: Person[]) => {
@@ -105,10 +105,11 @@ export function BridesmaidCards() {
       </PageHead>
 
       <p className="text-sm text-ink/70 max-w-3xl mb-6">
-        One A4 card for each of the girls: <em>thank you for saying yes</em>, in her own stone and its colour, with a note from you and her role
-        on the day — a title, a motto, her mission, the duties and a pro tip. <b>Garnet</b> is for the maid of honor, the matron of honor and your
-        sister-in-law; the bridesmaids wear Turquoise, Citrine, Amethyst, Sapphire or Ruby. Stones and roles are picked separately, so three
-        Garnets can each have a different job; <b>every line is yours to change</b> afterwards. Downloads print at 300 dpi, exactly A4.
+        One A4 card for each of the girls: <em>thank you for saying yes</em>, in her own jewel and its colour, a line on what that colour says of
+        her, <em>“she is far more precious than jewels”</em> (Proverbs 31:10), a note from you, and her role on the day — a title, a motto, her
+        mission, the duties and a pro tip. <b>Garnet</b> is for the maid of honor, the matron of honor and your sister-in-law; the four bridesmaids
+        wear Turquoise, Citrine, Sapphire or Ruby. Jewels and roles are picked separately, so three Garnets can each have a different job;
+        <b>every line is yours to change</b> afterwards. Downloads print at 300 dpi, exactly A4.
       </p>
 
       {cards.error && (
@@ -161,24 +162,24 @@ function Editor({ card, ctx, onSave, onDelete }: { card: BridesmaidCard; ctx: Ca
   const stone: Stone | undefined = findStone(card.jewel);
   const role: Role | undefined = findRole(card.role_title);
 
-  /** Pick a stone: her colour, cut, greeting and the embodies line change; the role's mission re-opens with the new stone if it was untouched. */
+  /** Pick a jewel: her colour, cut, greeting and the line under the gem change; the role's mission re-opens with the new jewel if it was untouched. */
   const pickStone = (id: string) => {
     const next = stoneById(id);
     if (!next) return;
     const patch: Partial<BridesmaidCard> = { ...stoneLines(next) };
-    // keep a greeting she rewrote, swapping only the stone's name in it
+    // keep a greeting she rewrote, swapping only the jewel's name in it
     if (stone && card.greeting.toLowerCase().includes(stone.name.toLowerCase())) patch.greeting = card.greeting.replace(new RegExp(stone.name, "i"), next.name);
     if (role && card.mission.trim() === missionFor(stone, role)) patch.mission = missionFor(next, role);
     set(patch);
   };
-  /** Pick a role: the title, motto, mission (opened by her stone), duties and tip come from it. */
+  /** Pick a role: the title, motto, mission (opened by her jewel), duties and tip come from it. */
   const pickRole = (id: string) => {
     const next = roleById(id);
     if (next) set({ ...roleLines(next, stone) });
   };
   const refill = () => {
     if (!stone && !role) return;
-    if (!confirm(`Rewrite the card's lines from ${[stone?.name, role?.title].filter(Boolean).join(" and ")}? Your name lines, note and sign-off are kept.`)) return;
+    if (!confirm(`Rewrite the card's lines from ${[stone?.name, role?.title].filter(Boolean).join(" and ")}? Your name lines, verse, note and sign-off are kept.`)) return;
     set({ ...(stone ? stoneLines(stone) : {}), ...(role ? roleLines(role, stone) : {}) });
   };
 
@@ -219,20 +220,20 @@ function Editor({ card, ctx, onSave, onDelete }: { card: BridesmaidCard; ctx: Ca
             <Field label="Capitals at the very top" hint="“For my maid of honor”, “For my matron of honor”, “For my bridesmaid”…">
               <EditText value={card.kicker} placeholder="For my bridesmaid" onSave={(v) => set({ kicker: v })} className="font-serif text-lg" />
             </Field>
-            <Field label="Her stone" hint="Brings its colour, cut, greeting and meaning. Garnet is the honour stone; the bridesmaids wear the other five.">
+            <Field label="Her jewel" hint="Brings its colour and cut, the greeting and the line on what its colour says of her. Garnet is the honour jewel; the bridesmaids wear the other four.">
               <Select value={stone?.id ?? "__own__"} options={stoneOptions(card.jewel)} onChange={pickStone} className="w-full font-serif text-lg !capitalize" />
             </Field>
-            <Field label="Her role" hint="Any role fits any stone — the mission opens with her stone's own sentence.">
+            <Field label="Her role" hint="Any role fits any jewel — the mission opens with why you chose her jewel for her.">
               <Select value={role?.id ?? "__own__"} options={roleOptions(card.role_title)} onChange={pickRole} className="w-full font-serif text-lg !normal-case" />
             </Field>
-            <Field label="The stone's name on the card" hint="Any word works — a stone of your own gets its colour from the swatch beside it.">
+            <Field label="The jewel's name on the card" hint="Any word works — a jewel of your own gets its colour from the swatch beside it.">
               <EditText value={card.jewel} placeholder="Garnet" onSave={(v) => set({ jewel: v })} className="font-serif text-lg" />
             </Field>
             <div className="grid grid-cols-[auto_1fr_auto] gap-3 items-end">
               <Field label="Her colour">
                 <span className="flex items-center gap-2 mt-1">
                   <input type="color" value={hexOk ? card.color : "#6E1F2E"} onChange={(e) => set({ color: e.target.value.toUpperCase() })} className="w-11 h-11 rounded-lg border border-ink/10 bg-transparent cursor-pointer" aria-label="Her colour" />
-                  <span className="w-11 h-11 rounded-lg border border-ink/10" style={{ background: inkOf(swatch) }} title="As ink — a light stone is deepened so the words stay readable" />
+                  <span className="w-11 h-11 rounded-lg border border-ink/10" style={{ background: inkOf(swatch) }} title="As ink — a light jewel is deepened so the words stay readable" />
                 </span>
               </Field>
               <Field label="Hex">
@@ -247,14 +248,17 @@ function Editor({ card, ctx, onSave, onDelete }: { card: BridesmaidCard; ctx: Ca
 
         <Card title="The top of the card">
           <div className="grid md:grid-cols-2 gap-4">
-            <Field label="The greeting (in script)" hint="Her stone's name inside it is picked out in her colour.">
+            <Field label="The greeting (in script)" hint="Her jewel's name inside it is picked out in her colour.">
               <EditText value={card.greeting} placeholder="Thank you, my Garnet" onSave={(v) => set({ greeting: v })} className="font-script text-3xl" />
             </Field>
             <Field label="Capitals under the greeting">
               <EditText value={card.subline} placeholder="for saying yes, Ana" onSave={(v) => set({ subline: v })} className="text-sm" />
             </Field>
-            <Field label="What her stone embodies" hint="One line under the gem, in her colour." className="md:col-span-2">
-              <EditText value={card.embodies} placeholder="Commitment, protection and keeping things whole — the stone of the ones who hold you up." onSave={(v) => set({ embodies: v })} className="font-serif italic text-lg" />
+            <Field label="What her jewel's colour says of her" hint="One line under the gem, in her colour." className="md:col-span-2">
+              <EditText value={card.embodies} placeholder="Deep, warm red — the colour of commitment and of a heart that keeps its word." onSave={(v) => set({ embodies: v })} className="font-serif italic text-lg" />
+            </Field>
+            <Field label="The verse" hint="Printed under that line — the words in italic, the reference after the dash in small capitals. Leave empty to print none." className="md:col-span-2">
+              <EditText value={card.verse ?? ""} placeholder={DEFAULT_VERSE} onSave={(v) => set({ verse: v })} className="font-serif italic text-lg" />
             </Field>
           </div>
         </Card>

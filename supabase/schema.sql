@@ -68,13 +68,15 @@ create table if not exists story (id text primary key default gen_random_uuid():
 create table if not exists bridesmaid_cards (
   id text primary key default gen_random_uuid()::text,
   name text default '', jewel text default '', color text default '', cut text default 'brilliant',
-  kicker text default '', greeting text default '', subline text default '', embodies text default '',
+  kicker text default '', greeting text default '', subline text default '', embodies text default '', verse text default '',
   note text default '',
   role_kicker text default '', role_title text default '', tagline text default '', mission text default '',
   duties text default '', pro_tip text default '',
   closing text default '', footer text default '',
   "order" int default 0
 );
+-- the line of Scripture under the jewel ("She is far more precious than jewels" — Proverbs 31:10)
+alter table bridesmaid_cards add column if not exists verse text default '';
 
 -- ── anonymous audio guestbook ─────────────────────────────────────────────────────────────────────
 -- Audio itself lives in a private Storage bucket. This table contains no guest name, invite code,
@@ -102,12 +104,12 @@ on conflict (id) do update set
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
 
--- ── attire palette (round 21): Garnet goes to the Maid of Honor, the Matron of Honor and the bride's
--- sister-in-law; the bridesmaids keep Turquoise, Citrine, Amethyst, Sapphire and Ruby ──
+-- ── attire palette (round 22): Garnet goes to the Maid of Honor, the Matron of Honor and the bride's
+-- sister-in-law; the four bridesmaids wear Turquoise, Citrine, Sapphire and Ruby (Amethyst retired) ──
 insert into attire (id, "group", label, colors, reserved, notes, swatch_url, "order") values
   ('a3', 'shai_family', 'Shai''s Family', '[{"name":"Copper","hex":"#8C3617"}]'::jsonb, true, '', '', 3),
   ('a4', 'jeg_family', 'Jeg''s Family', '[{"name":"Burgundy","hex":"#5C1223"}]'::jsonb, true, '', '', 4),
-  ('a5', 'bridesmaids', 'Bridesmaids', '[{"name":"Garnet","hex":"#8E1226"},{"name":"Turquoise","hex":"#0F7E7A"},{"name":"Citrine","hex":"#BE8B0F"},{"name":"Amethyst","hex":"#5E2487"},{"name":"Sapphire","hex":"#0A2A6E"},{"name":"Ruby","hex":"#B01A63"}]'::jsonb, true, 'Garnet for the Maid of Honor, the Matron of Honor and the bride''s sister-in-law; the bridesmaids in Turquoise, Citrine, Amethyst, Sapphire and Ruby', '', 5),
+  ('a5', 'bridesmaids', 'Bridesmaids', '[{"name":"Garnet","hex":"#8E1226"},{"name":"Turquoise","hex":"#0F7E7A"},{"name":"Citrine","hex":"#BE8B0F"},{"name":"Sapphire","hex":"#0A2A6E"},{"name":"Ruby","hex":"#B01A63"}]'::jsonb, true, 'Garnet for the Maid of Honor, the Matron of Honor and the bride''s sister-in-law; the bridesmaids in Turquoise, Citrine, Sapphire and Ruby', '', 5),
   ('a7', 'groomsmen', 'Groomsmen', '[{"name":"Grey","hex":"#6E6E6E"},{"name":"Black","hex":"#101010"}]'::jsonb, true, 'Satin-lapel tux or suit', '', 6),
   ('a6', 'guests', 'Our Guests', '[{"name":"Emerald","hex":"#0A5C33","fabric":"Velvet"},{"name":"Laurel","hex":"#35562B","fabric":"Fine suit wool"},{"name":"Jade","hex":"#23825A","fabric":"Silk charmeuse"},{"name":"Scarab","hex":"#2C8C3C","fabric":"Shiny polyester · dry-fit"},{"name":"Olive","hex":"#5F6B24","fabric":"Duchesse satin"},{"name":"Peridot","hex":"#9AA62C","fabric":"Silk charmeuse"},{"name":"Coffee","hex":"#452A18","fabric":"Velvet"},{"name":"Smoky Topaz","hex":"#5E4630","fabric":"Fine suit wool"},{"name":"Bronze","hex":"#6F4F1D","fabric":"Duchesse satin"},{"name":"Toffee","hex":"#7C5230","fabric":"Silk charmeuse"},{"name":"Dark Honey","hex":"#8A5A0C","fabric":"Liquid satin · poly"},{"name":"Caramel","hex":"#9C6A28","fabric":"Velvet"}]'::jsonb, false, 'Black tie in glossy greens and warm shining browns — kindly avoid black, white, burgundy and copper. Shine welcome: satin, velvet, silk, fine suit or liquid poly — please skip tulle, chiffon and anything fully matte.', '', 7)
 on conflict (id) do update set "group" = excluded."group", label = excluded.label, colors = excluded.colors,
