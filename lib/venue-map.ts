@@ -1,4 +1,4 @@
-import { ALL_WELCOME_FROM, CEREMONY_DOORS_CLOSE, ENTOURAGE_CALL_TIME, RECEPTION_AT } from "./program";
+import { ALL_WELCOME_FROM, ENTOURAGE_CALL_TIME, RECEPTION_AT } from "./program";
 import { EDGE, LACE, MOCHA, PAPER, TAUPE, WINE, caps, capsWidth, pin, roundRect, serif, text } from "./card-draw";
 
 /**
@@ -26,14 +26,14 @@ export const MAP_NOTE_GUESTS = ["Guests welcome", `${ALL_WELCOME_FROM.replace(/\
  * Where the cars go: not the courtyard, but a separate area that The Heaven's team point each car
  * to on arrival at the gate — written in full under the map, and in two short lines at the gate.
  */
-export const PARKING_NOTE = "parking is in a separate area, not the courtyard, and The Heaven's team will tell you where to park when you arrive at the gate";
+export const PARKING_NOTE = "Parking is in a separate area, not the courtyard — The Heaven's team will tell you where to park when you arrive at the gate.";
 export const MAP_NOTE_PARKING = ["parking is in a separate area —", "The Heaven's team will tell you where at the gate"];
 
-/** The legend under the map — the same numbers as the pins. */
-export const VENUE_MAP_LEGEND: { n: number; place: string; detail: string }[] = [
-  { n: 1, place: "The entrance", detail: PARKING_NOTE },
-  { n: 2, place: "The majlis", detail: `just outside the hall — welcome toast, snacks & photos from ${ALL_WELCOME_FROM}` },
-  { n: 3, place: "The hall", detail: `ceremony at ${CEREMONY_DOORS_CLOSE} (doors close as the procession begins) · reception at ${RECEPTION_AT}` },
+/** The legend under the map — the same numbers as the pins, in the order a guest meets them. */
+export const VENUE_MAP_LEGEND: { n: number; place: string }[] = [
+  { n: 1, place: "The entrance" },
+  { n: 2, place: "The majlis" },
+  { n: 3, place: "The hall" },
 ];
 
 type Ctx = CanvasRenderingContext2D;

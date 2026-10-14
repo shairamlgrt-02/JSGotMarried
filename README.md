@@ -70,10 +70,10 @@ calendar note.
 
 | | Where it shows |
 |---|---|
-| `WEDDING_PROGRAM_STOPS` | the timeline, and the *Order of the day* on both cards. A stop's short `tag` ("Entourage & wedding team", "Doors close at 4:00 PM", "Everyone welcome") sits under its name on the timeline; its one-line `note` is printed under it on the cards. |
+| `WEDDING_PROGRAM_STOPS` | the timeline, and the *Order of the day* on both cards. A stop's short `tag` ("Entourage & wedding team", "Doors close at 4:00 PM", "Everyone welcome") sits under its name on the timeline and beside it on the programme card; its one-line `note` is printed under it on the keepsake; its `programmeNote` — the warm line, where the facts are already said higher up — under it on the programme card. |
 | `WEDDING_PROGRAM_HIGHLIGHTS` | the three cards: the span of hours on the ribbon and the couple's own warm description underneath. Wrap the parts a guest must not miss in `*asterisks*` — `*4:00 PM*`, `*everyone is welcome*` — and the card sets them in bold wine. |
 | `CEREMONY_DOORS_CLOSE` · `ALL_WELCOME_FROM` · `ENTOURAGE_CALL_TIME` · `RECEPTION_AT` | the hours guests must not miss, written once: the ceremony is intimate and **closed-door — be seated before 4:00 PM, the doors close the moment the procession begins**; the entourage's call time is **3:30 PM**; from **5:30 PM everyone is welcome** for the Welcome Toast & Snacks, then the reception at **6:30**. |
-| `PROGRAM_HEADLINE` · `ARRIVAL_NOTES` · `GUEST_ARRIVAL_GUIDE` | the programme card's wording (and the two one-line "who arrives when" tiles under the timeline): *You don't need to be there at 4:00 PM*, the note for the entourage & wedding team (3:30 — reserved seats, wait for the coordinators' cue), the note for every other guest (5:30 at the majlis, reception at 6:30), and where a guest should go by the hour they arrive. |
+| `PROGRAM_HEADLINE` · `ARRIVAL_NOTES` · `GUEST_ARRIVAL_GUIDE` | the programme card's wording (and the two one-line "who arrives when" tiles under the timeline): *You don't need to be there at 4:00 PM*, the note for the entourage & wedding team (3:30 — reserved seats, wait for the coordinators' cue), the note for every other guest (5:30 at the majlis, reception at 6:30), and where a guest should go if they arrive at another hour (early for the ceremony, or while it is under way). A stop's `programmeNote` is the warm line under it on that card. |
 
 Edit the words there and the next deploy carries them to the site and to every card a guest saves
 afterwards. The FAQ's *Can I watch the ceremony?* answer repeats the same two facts; on a project
@@ -85,24 +85,35 @@ section (**Download the programme card**) and again beside the keepsake after a 
 *yes*. It is drawn in the guest's own browser (`lib/program-card.ts`, no server, no upload) and is
 about the *day* rather than the guest, so it leads with the thing guests keep getting wrong:
 
-1. **You don't need to be there at 4:00 PM** — the headline, the warm reason why, and the two hours
-   that matter in large type: **5:30 PM** at the majlis, **6:30 PM** the reception;
-2. two notes side by side — **Entourage & wedding team: 3:30 PM**, head to the hall, find your
-   reserved seat and wait for the coordinators' cue for the procession · **All other guests: 5:30 PM**,
-   head to the majlis for the welcome toast, snacks & photos, then the reception at 6:30;
-3. for guests, **where to go by the hour they arrive** (before 4:00 → the hall; 4:00–5:30 → the
-   majlis, the ceremony is behind closed doors; 5:30 → the majlis; 6:30 → the hall), and a **small
-   plan of the venue** (`lib/venue-map.ts`: the hall with its reserved rows and doors, the majlis
-   just outside, the courtyard, the entrance and the path in — numbered to match the legend);
-4. the order of the day, the dress code in one line and the couple's sign-off.
+1. **one panel to read first** — *You don't need to be there at 4:00 PM*, the ceremony in two warm
+   sentences, and under a hairline the two notes side by side in large type: **Entourage & wedding
+   team: 3:30 PM**, head to the hall, find your reserved seat and wait for the coordinators' cue ·
+   **All other guests: 5:30 PM**, head to the majlis for the welcome toast, snacks & photos, then the
+   reception at 6:30;
+2. the **small plan of the venue** (`lib/venue-map.ts`: the hall with its reserved rows and doors,
+   the majlis just outside, the courtyard, the entrance and the path in — numbered to match the
+   one-line legend, with the parking note under it) and, **beside it, where to go if you arrive at
+   another hour** (before 4:00 → the hall, if you wish to witness the ceremony; 4:00–5:30 → the
+   majlis, the ceremony is behind closed doors — we will come and find you);
+3. the order of the day — each fact as a short tag beside its stop (*entourage & wedding team*,
+   *doors close at 4:00 PM*, *everyone welcome*) and the couple's own line under the two hours that
+   hold the evening (`programmeNote`: *the hour we get to hug you*; *dinner, our film on the big
+   screen, games and giveaways — then we dance*) — the dress code in one line and the sign-off.
+
+Every fact is said once and the card uses its full width wherever two things belong side by side,
+so it comes out about **1200 × 2750** — a long phone screen — in type that reads without zooming
+(it was 4000+ when every section stacked and repeated the hours). Nothing is set smaller to get
+there; if it ever needs to be shorter still, the levers are the two `programmeNote`s, the parking
+sentence under the plan (the plan says it in small type too) and the *how it unfolds* line in the
+header — not the type size.
 
 The plan in `lib/venue-map.ts` is a schematic drawn in a logical 640 × 440 space, with the two
 arrival notes written onto it (*Entourage & wedding team · 3:30 PM arrival* on the hall, *Guests
 welcome · 5:30 – 6:30 PM arrival* on the majlis) and the parking note at the entrance. **Parking is
 deliberately not on the plan**: the open yard beside the path is just the courtyard, and the cars go
 to a separate area that The Heaven's team point each guest to when they arrive at the gate — so the
-map, its legend and the FAQ's *Is there parking?* all say exactly that (`PARKING_NOTE`). Redraw the
-shapes there from the couple's own sketch of The Heaven and every card follows.
+map, the sentence under it and the FAQ's *Is there parking?* all say exactly that (`PARKING_NOTE`).
+Redraw the shapes there from the couple's own sketch of The Heaven and every card follows.
 Like the venue itself, the card is only offered on an unsealed invitation — never on `/preview`.
 
 ## Invite codes: generate, send, track (`Invite Codes`)

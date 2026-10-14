@@ -15,6 +15,12 @@ export type ProgramStop = {
   tag?: string;
   /** One short sentence for the keepsake card, where there is room to say it properly. */
   note?: string;
+  /**
+   * The programme card's line under the stop. That card has already said who arrives when and
+   * where the doors are, higher up — so this is the warm part: what the hour holds. (The `tag`
+   * is printed beside the title there; this goes underneath.)
+   */
+  programmeNote?: string;
 };
 
 /** When the ceremony doors close — as the procession begins. Guests are asked to be seated before this. */
@@ -47,8 +53,13 @@ export const WEDDING_PROGRAM_STOPS: ProgramStop[] = [
     title: "Welcome Toast & Snacks",
     tag: "Everyone welcome",
     note: "Everyone is welcome from here — join us before the reception.",
+    programmeNote: "this is the hour we expect you, and the hour we get to hug you",
   },
-  { time: RECEPTION_AT, title: "Wedding Reception" },
+  {
+    time: RECEPTION_AT,
+    title: "Wedding Reception",
+    programmeNote: "dinner, our film on the big screen, games and giveaways — then we dance",
+  },
   { time: SEND_OFF_AT, title: "Send off" },
 ];
 
@@ -60,11 +71,13 @@ export const WEDDING_PROGRAM_STOPS: ProgramStop[] = [
 
 /** The sentence at the top of the programme card — the one thing every guest must read. */
 export const PROGRAM_HEADLINE = `You don't need to be there at ${CEREMONY_DOORS_CLOSE}.`;
-/** …and the warm explanation under it: the ceremony is welcome-but-small, the real arrival time is 5:30. */
+/**
+ * …and the warm explanation under it: the ceremony is welcome-but-small. It stops there on purpose —
+ * the two notes (ARRIVAL_NOTES) sit right under it on the card and say when everyone else is expected.
+ */
 export const PROGRAM_HEADLINE_DETAIL =
   `Our ${CEREMONY_DOORS_CLOSE} ceremony is small and intimate — our families, our entourage and a few honoured guests. ` +
-  `If your heart wishes to witness it, you are more than welcome; just be seated before ${CEREMONY_DOORS_CLOSE}, as the doors close the moment the procession begins. ` +
-  `Everyone else, we expect you by ${ALL_WELCOME_FROM} — join us at the majlis for the welcome toast, snacks and photos, then celebrate with us at the reception at ${RECEPTION_AT}.`;
+  `If your heart wishes to witness it, you are more than welcome; just be seated before ${CEREMONY_DOORS_CLOSE}, as the doors close the moment the procession begins.`;
 
 export type ArrivalNote = {
   /** Who the note is for — its heading. */
@@ -108,7 +121,12 @@ export type ArrivalWindow = {
   detail: string;
 };
 
-/** For guests who are not in the entourage: where to go, by the hour they arrive. */
+/**
+ * For guests who are not in the entourage and turn up at some *other* hour — early for the ceremony,
+ * or while it is under way behind closed doors: where to go. The expected hours (5:30 at the majlis,
+ * 6:30 the reception) are the guests' note above and the `programmeNote`s in the order of the day,
+ * so they are not repeated here. Printed beside the plan of the venue on the programme card.
+ */
 export const GUEST_ARRIVAL_GUIDE: ArrivalWindow[] = [
   {
     when: `Before ${CEREMONY_DOORS_CLOSE}`,
@@ -116,19 +134,9 @@ export const GUEST_ARRIVAL_GUIDE: ArrivalWindow[] = [
     detail: `Wish to witness the ceremony? Take an open seat around the reserved rows and be seated before ${CEREMONY_DOORS_CLOSE} — the doors close the moment the procession begins.`,
   },
   {
-    when: `${CEREMONY_DOORS_CLOSE} – ${ALL_WELCOME_FROM}`,
+    when: `${CEREMONY_DOORS_CLOSE.replace(/\s*PM$/, "")} – ${ALL_WELCOME_FROM}`,
     where: "The majlis",
     detail: "The ceremony is under way behind closed doors. Make yourself at home at the majlis, just outside the hall — we will come and find you.",
-  },
-  {
-    when: ALL_WELCOME_FROM,
-    where: "The majlis",
-    detail: "Welcome toast, snacks and photos — this is the hour we expect you, and the hour we get to hug you.",
-  },
-  {
-    when: RECEPTION_AT,
-    where: "The hall",
-    detail: `The reception — dinner, our film on the big screen, games, giveaways and dancing until the send-off at ${SEND_OFF_AT}.`,
   },
 ];
 
