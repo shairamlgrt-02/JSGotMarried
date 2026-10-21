@@ -964,6 +964,12 @@ export function Rsvp({ info, invite, code, onReplied, dressNote }: { info: Weddi
   const daysLeft = Math.max(0, Math.ceil((deadline.getTime() - Date.now()) / 86400000));
   useEffect(() => { if (state === "done") try { localStorage.setItem("jsos:rsvped", "1"); window.dispatchEvent(new Event("rsvped")); } catch {} }, [state]);
   const choice = (on: boolean) => `font-serif text-body px-6 py-2 rounded-full border transition-colors ${on ? "bg-wine text-lace border-wine" : "border-taupe/40 text-mocha hover:border-wine"}`;
+  /**
+   * The seat picker's own button: a snug circle, never a wide pill. Two to four of them share one
+   * line with the label on every screen, so the row never wraps (which used to drop "4" underneath).
+   */
+  const seatChoice = (on: boolean) =>
+    `shrink-0 grid place-items-center h-8 w-8 rounded-full border font-serif text-[15px] leading-none tabular-nums transition-colors sm:h-9 sm:w-9 sm:text-body md:h-10 md:w-10 ${on ? "bg-wine text-lace border-wine" : "border-taupe/40 text-mocha hover:border-wine"}`;
   /** Prompt the keepsake card for this guest — personal PNG with their seats and the day in short. */
   const makeKeepsake = (guestName: string, plusOne?: string, seats?: number) =>
     downloadKeepsake({
@@ -1100,10 +1106,10 @@ export function Rsvp({ info, invite, code, onReplied, dressNote }: { info: Weddi
                     <button type="button" className={choice(f.attending === "no")} onClick={() => setF({ ...f, attending: "no" })}>Regretfully declines</button>
                   </div>
                   {f.attending === "yes" && (
-                    <div className="flex flex-wrap justify-center items-center gap-2 sm:gap-3">
-                      <span className="font-serif italic text-taupe text-body mr-1">Number of guests/seats</span>
+                    <div className="flex flex-nowrap items-center justify-center gap-1.5 whitespace-nowrap sm:gap-2.5 md:gap-3">
+                      <span className="shrink-0 font-serif italic text-taupe text-[11.5px] leading-none sm:text-fine">No. of guests/seats</span>
                       {Array.from({ length: seatCap }, (_, i) => i + 1).map((n) => (
-                        <button key={n} type="button" className={choice(f.pax === n)} onClick={() => setF({ ...f, pax: n })}>{n}</button>
+                        <button key={n} type="button" aria-pressed={f.pax === n} className={seatChoice(f.pax === n)} onClick={() => setF({ ...f, pax: n })}>{n}</button>
                       ))}
                     </div>
                   )}
