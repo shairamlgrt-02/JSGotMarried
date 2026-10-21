@@ -110,7 +110,7 @@ export type InviteState = { name: string; pax: number; reply: InviteReply | null
  * agree on one code — demo replies stay in this browser only (localStorage), never reach
  * Supabase and never e-mail the couple.
  */
-import { DEMO_CODE, codeMatches, hasReplied, isReply, whoIsItFor } from "./guests";
+import { DEMO_CODE, codeMatches, hasReplied, isReply, MAX_RSVP_SEATS, planParty, seatCapFor, whoIsItFor } from "./guests";
 export { DEMO_CODE, isReply };
 const DEMO_HOUSEHOLD = "The Demo Household";
 const demoReplyKey = "jsos:demo-reply";
@@ -133,13 +133,14 @@ export async function resolveInvite(code: string): Promise<InviteResult> {
   if (cc.length < 3) return { ok: false, error: "That code is too short — check the four characters at the end of your link." };
   if (cc === DEMO_CODE) {
     const reply = readDemoReply();
-    return { ok: true, found: { code: DEMO_CODE, state: { name: DEMO_HOUSEHOLD, label: DEMO_HOUSEHOLD, pax: 2, reply, code: DEMO_CODE, demo: true } } };
+    // the test household is invited with the card's full range, so the couple can rehearse 3 and 4 seats
+    return { ok: true, found: { code: DEMO_CODE, state: { name: DEMO_HOUSEHOLD, label: DEMO_HOUSEHOLD, pax: MAX_RSVP_SEATS, reply, code: DEMO_CODE, demo: true } } };
   }
   try {
     const r = await fetch(`/api/rsvp?code=${encodeURIComponent(cc)}`, { cache: "no-store" });
     const j = await r.json().catch(() => ({}));
     if (r.ok && j.ok)
-      return { ok: true, found: { code: (j.code as string) || cc, state: { name: j.name as string, label: (j.label as string) || (j.name as string) || "", pax: Number(j.pax) || 1, reply: (j.reply as InviteReply) || null, code: (j.code as string) || cc } } };
+      return { ok: true, found: { code: (j.code as string) || cc, state: { name: j.name as string, label: (j.label as string) || (j.name as string) || "", pax: seatCapFor(j.pax), reply: (j.reply as InviteReply) || null, code: (j.code as string) || cc } } };
     if (j.ambiguous) return { ok: false, error: "That code belongs to more than one invitation — open the personal link the couple sent you." };
     if (r.status !== 503) return { ok: false, error: "We couldn't match that code to an invitation. Try the full code from your link (it looks like JS-7KQF), or ask the couple for it." };
   } catch { /* offline — fall through to the list saved in this browser */ }
@@ -157,7 +158,7 @@ export async function resolveInvite(code: string): Promise<InviteResult> {
       state: {
         name: invite?.name ?? reply!.name,
         label: whoIsItFor(invite ?? reply!),
-        pax: Number(invite?.pax ?? reply?.pax) || 1,
+        pax: seatCapFor(invite?.pax ?? reply?.pax),
         // a code that has been opened is stamped, so the binder's ledger shows it as "opened"
         code: hits[0],
         reply: reply
@@ -192,10 +193,12 @@ export async function submitRsvp(g: Omit<Guest, "id" | "source" | "created_at"> 
   if ((g.code || "").toUpperCase() === DEMO_CODE) {
     // throwaway loop: seal a demo reply in this browser only, so reopen shows the welcome card
     if (readDemoReply()) return { approved: null, already: true };
-    const approved = (g.pax ?? 1) === 1;
-    const reply: InviteReply = { name: g.name || "Demo Guest", attending: g.attending === "no" ? "no" : "yes", pax: g.pax ?? 1, plus_one: g.plus_one || "", approved, dietary: g.dietary || "", song_request: g.song_request || "", message: g.message || "" };
+    const declinedDemo = g.attending === "no";
+    const demo = planParty(g.pax, MAX_RSVP_SEATS, g.plus_one, declinedDemo);
+    if (demo.missingNames > 0) throw new Error(`Please add a name for each of your ${demo.needed} guest${demo.needed === 1 ? "" : "s"}.`);
+    const reply: InviteReply = { name: g.name || "Demo Guest", attending: declinedDemo ? "no" : "yes", pax: demo.pax, plus_one: demo.plusOne, approved: demo.approved, dietary: g.dietary || "", song_request: g.song_request || "", message: g.message || "" };
     try { localStorage.setItem(demoReplyKey, JSON.stringify(reply)); } catch {}
-    return { approved, already: false };
+    return { approved: demo.approved, already: false };
   }
   // The server saves to Supabase and e-mails the couple; the browser keeps a copy only when the server can't be reached.
   try {
@@ -212,10 +215,11 @@ export async function submitRsvp(g: Omit<Guest, "id" | "source" | "created_at"> 
   if (same.some(isReply)) return { approved: null, already: true };
   const invite = same.find((x) => !isReply(x)) || null;
   const declined = g.attending === "no";
-  const wantsPax = g.pax === 2 ? 2 : 1;
-  const pax = declined ? 0 : Math.min(wantsPax, Number(invite?.pax) || 1);
-  const approved = declined || pax === 1; // a second seat waits for the couple, exactly as on the server
-  const row: Guest = { ...g, pax, id: invite?.id ?? crypto.randomUUID(), code: canonical, source: "RSVP form", created_at: new Date().toISOString(), viewed_at: invite?.viewed_at ?? new Date().toISOString(), approved } as Guest;
+  // the same arithmetic the server runs: invitation cap, four-seat ceiling, a name per extra seat
+  const party = planParty(g.pax, invite?.pax, g.plus_one, declined);
+  if (party.missingNames > 0) throw new Error(`Please add a name for each of your ${party.needed} guest${party.needed === 1 ? "" : "s"}.`);
+  const { pax, approved } = party;
+  const row: Guest = { ...g, pax, plus_one: party.plusOne, id: invite?.id ?? crypto.randomUUID(), code: canonical, source: "RSVP form", created_at: new Date().toISOString(), viewed_at: invite?.viewed_at ?? new Date().toISOString(), approved } as Guest;
   const i = cur.findIndex((x) => x.id === row.id);
   if (i >= 0) cur[i] = row; else cur.push(row);
   localWrite("guests", cur);

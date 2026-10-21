@@ -51,7 +51,7 @@ export type InviteStatus =
  *   to_send      the code exists, the link hasn't left your phone
  *   sent         you copied / shared it (marked on the Invite codes tab)
  *   opened       they tapped the link but haven't answered yet (stamped by the server)
- *   needs_review they answered "yes" for two seats — you approve the plus-one
+ *   needs_review they answered "yes" for more than one seat — you approve the extra guests
  *   confirmed    they answered (or you marked it by hand) and the seats are sealed
  *   declined     they can't make it
  */
@@ -60,7 +60,7 @@ export const STATUS: Record<InviteStatus, { label: string; hint: string; tone: "
   to_send: { label: "to send", hint: "Code issued — copy the link and send it over.", tone: "ink" },
   sent: { label: "sent", hint: "Shared with the guest; nothing back yet.", tone: "wine" },
   opened: { label: "opened", hint: "They opened the link but haven't replied — a nudge is kind.", tone: "amethyst" },
-  needs_review: { label: "needs review", hint: "They asked for a second seat — approve or decline.", tone: "amethyst" },
+  needs_review: { label: "needs review", hint: "They asked for more than one seat — approve or settle it.", tone: "amethyst" },
   confirmed: { label: "confirmed", hint: "Seats are sealed. They're coming.", tone: "moss" },
   declined: { label: "declined", hint: "Declined with love — seat freed for someone else.", tone: "burgundy" },
 };
@@ -285,6 +285,73 @@ export function parseGuestLines(text: string): NewHousehold[] {
  */
 export const whoIsItFor = (g: { greet?: string | null; name?: string | null }) =>
   String(g.greet ?? "").trim() || String(g.name ?? "").trim();
+
+/* ─────────── seats, and the names that fill them ─────────── */
+
+/**
+ * The most seats one reply card will ever offer, no matter how many the household was invited
+ * with. An invitation can carry more (a family of six typed into the binder by mistake, say) —
+ * the card offers 1…4 and the couple settles the rest in person.
+ */
+export const MAX_RSVP_SEATS = 4;
+
+/**
+ * `plus_one` holds the names of *every* guest beyond the first, comma-separated: "Ben, Carla" is a
+ * party of three. Rows written before the card offered more than two seats hold a single name,
+ * which reads exactly the same way.
+ */
+export function splitPlusOnes(csv?: string | null): string[] {
+  if (!csv) return [];
+  return String(csv)
+    .split(",")
+    .map((name) => name.trim().replace(/\s+/g, " "))
+    .filter(Boolean);
+}
+
+/** The names a reply card collected → the one `plus_one` string the row stores. */
+export const joinPlusOnes = (names?: (string | null | undefined)[] | null): string =>
+  (names || [])
+    .map((name) => String(name ?? "").trim().replace(/\s+/g, " "))
+    .filter(Boolean)
+    .join(", ");
+
+/** The extra guests as prose — "Ben", "Ben & Carla", "Ben, Carla & Devi". */
+export function plusOneLabel(csv?: string | null, joiner = " & "): string {
+  const names = splitPlusOnes(csv);
+  if (names.length <= 1) return names[0] ?? "";
+  return `${names.slice(0, -1).join(", ")}${joiner}${names[names.length - 1]}`;
+}
+
+/** How many seats the card may offer for an invitation — at least one, never more than four. */
+export const seatCapFor = (pax: unknown): number => {
+  const n = Math.round(Number(pax) || 0);
+  return Math.max(1, Math.min(MAX_RSVP_SEATS, n || 1));
+};
+
+/**
+ * The reply's arithmetic, in one place so the server route, the browser-only fallback and the
+ * tests all agree. A guest asks for `wantsPax` seats; the household's invitation (`cap`) and the
+ * four-seat ceiling decide what they can actually have, and every seat past the first must carry
+ * a name. `missingNames` is what the form still has to ask for.
+ */
+export function planParty(wantsPax: unknown, cap: unknown, companions?: string | null, declined = false) {
+  const paxMax = seatCapFor(cap);
+  const wanted = Math.max(1, Math.min(MAX_RSVP_SEATS, Math.round(Number(wantsPax) || 1)));
+  const pax = declined ? 0 : Math.min(wanted, paxMax);
+  const needed = Math.max(0, pax - 1);
+  const names = splitPlusOnes(companions).slice(0, needed);
+  return {
+    pax,
+    paxMax,
+    needed,
+    names,
+    /** Every extra guest's name, comma-separated — what the row stores in `plus_one`. */
+    plusOne: joinPlusOnes(names),
+    missingNames: needed - names.length,
+    /** Any seat beyond the first waits for the couple's personal confirmation. */
+    approved: declined || pax === 1,
+  };
+}
 
 /** Hide a literal instruction accidentally saved by an older Invite Codes screen as note data. */
 export function cleanInviteNote(note?: string | null): string {
