@@ -391,24 +391,20 @@ With love,
   },
   {
     id: "preset_rsvp_final_call",
-    name: "RSVP · Final Call (No Reply = Not Coming)",
+    name: "RSVP · Final Check-in (No Reply = Not Coming)",
     label: "Final call",
-    hint: "The last message before the deadline: no RSVP by the date means we take it as a no and the seats are released.",
+    hint: "For the guests who haven't replied — personal, warm, and clear: no RSVP by the deadline means we count it as a no and release the seats.",
     categories: ["pending_rsvp"],
-    body: `Hi {first_name},
+    body: `Hi {first_name}! 🤍
 
-Hope you're doing well! This is our final reminder about our wedding on {wedding_date}. 🤍
+Just checking in — we noticed your RSVP hasn't come in yet. Totally understand, life gets busy!
 
-On {rsvp_deadline} we have to hand our venue and caterers the final guest numbers, so that's when the guest list closes.
-
-If you haven't replied yet, please take a minute to fill out the short RSVP on your invitation link — it's the only way we can hold your {seats}:
-
+We'd really love to have you with us on {wedding_date}, so when you get a minute, please fill it out here:
 {invitation_link}
 
-Please understand: *if we don't receive your RSVP by {rsvp_deadline}, we will regrettably have to take that as a "no"*. Your seats will be released, and we won't be able to accommodate anyone who hasn't confirmed — so kindly don't leave it for the day itself.
+One small but important thing: we finalise our guest list on {rsvp_deadline}, so if we don't hear from you by then, we'll have to lovingly take that as a "no" and release your {seats}. Either way, just let us know! 😊
 
-If you can't join us, no worries at all — just tap "no" on the link so we can plan properly. Either way, thank you, and we hope to see you soon. 😊
-
+Love,
 {couple_names}`,
   },
   {
