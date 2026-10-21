@@ -2,6 +2,7 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { submitRsvp, type InviteState } from "@/lib/db";
+import { joinPlusOnes, MAX_RSVP_SEATS, plusOneLabel, seatCapFor } from "@/lib/guests";
 import { entourageHeading } from "@/lib/entourage";
 import { useCountdown } from "@/lib/hooks";
 import { downloadKeepsake } from "@/lib/keepsake";
@@ -913,19 +914,44 @@ export function Rsvp({ info, invite, code, onReplied, dressNote }: { info: Weddi
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
   const [err, setErr] = useState("");
   const [approved, setApproved] = useState<boolean | null>(null);
-  const [f, setF] = useState({ name: invite.name, phone: "", attending: "yes" as "yes" | "no", pax: 1, dietary: "", message: "", song_request: "", plus_one: "" });
+  const [f, setF] = useState({
+    name: invite.name, phone: "", attending: "yes" as "yes" | "no", pax: 1,
+    dietary: "", message: "", song_request: "",
+    /** One name per seat beyond the first — a party of three collects two names ("Ana" plus these). */
+    companions: [] as string[],
+  });
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
-  const seatCap = invite.pax || 1;
+  const setCompanion = (i: number, v: string) => {
+    const next = [...f.companions];
+    next[i] = v;
+    setF({ ...f, companions: next });
+  };
+  /** The invitation's seat count, trimmed to what the card offers: 1…4. */
+  const seatCap = seatCapFor(invite.pax);
   /** The couple's label for this link — shown, never typed into the guest's name field. */
   const household = invite.label || invite.name;
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!f.name.trim()) return;
-    if (f.attending === "yes" && f.pax === 2 && !f.plus_one.trim()) { setErr("Please add your plus-one's name so we can save their seat."); return; }
+    const extra = f.attending === "yes" ? Math.max(0, f.pax - 1) : 0;
+    if (f.companions.slice(0, extra).some((n) => !n.trim())) {
+      setErr(`Please add a name for each of your ${extra} guest${extra === 1 ? "" : "s"} so we can save their seats.`);
+      return;
+    }
     setErr("");
     setState("sending");
     try {
-      const res = await submitRsvp({ ...f, pax: f.attending === "no" ? 0 : f.pax, code: code || undefined });
+      const res = await submitRsvp({
+        name: f.name,
+        phone: f.phone,
+        attending: f.attending,
+        pax: f.attending === "no" ? 0 : f.pax,
+        dietary: f.dietary,
+        message: f.message,
+        song_request: f.song_request,
+        plus_one: joinPlusOnes(f.companions.slice(0, extra)),
+        code: code || undefined,
+      });
       if (res.already) { onReplied(); setErr("This invitation link has already replied — your confirmation is sealed below."); setState("idle"); return; }
       setApproved(res.approved);
       setState("done");
@@ -938,11 +964,22 @@ export function Rsvp({ info, invite, code, onReplied, dressNote }: { info: Weddi
   const daysLeft = Math.max(0, Math.ceil((deadline.getTime() - Date.now()) / 86400000));
   useEffect(() => { if (state === "done") try { localStorage.setItem("jsos:rsvped", "1"); window.dispatchEvent(new Event("rsvped")); } catch {} }, [state]);
   const choice = (on: boolean) => `font-serif text-body px-6 py-2 rounded-full border transition-colors ${on ? "bg-wine text-lace border-wine" : "border-taupe/40 text-mocha hover:border-wine"}`;
+  /**
+   * The seat picker's own button: a bold round number, never a wide pill. The size is fluid
+   * (`clamp`) rather than stepped, so one to four of them share a single line with the label on
+   * every screen — snug on a phone, generous on a desktop — and "4" never drops underneath.
+   */
+  const seatChoice = (on: boolean) =>
+    `shrink-0 grid place-items-center h-[clamp(2.25rem,11vw,3rem)] w-[clamp(2.25rem,11vw,3rem)] rounded-full border font-serif font-semibold text-[clamp(1rem,4.2vw,1.35rem)] leading-none tabular-nums lining-nums transition-colors ${
+      on
+        ? "bg-wine text-lace border-wine shadow-[0_6px_14px_-5px_rgba(110,31,46,.6)]"
+        : "border-taupe/45 text-mocha hover:border-wine hover:text-wine"
+    }`;
   /** Prompt the keepsake card for this guest — personal PNG with their seats and the day in short. */
-  const makeKeepsake = (guestName: string, plusOne?: string) =>
+  const makeKeepsake = (guestName: string, plusOne?: string, seats?: number) =>
     downloadKeepsake({
       groom: info.groom, bride: info.bride,
-      guestName, plusOne: plusOne || undefined,
+      guestName, plusOne: plusOne || undefined, seats,
       code: invite.code || code || undefined,
       dateISO: info.date, venue: info.venue_name, address: info.venue_address,
       program: WEDDING_PROGRAM_STOPS,
@@ -983,11 +1020,15 @@ export function Rsvp({ info, invite, code, onReplied, dressNote }: { info: Weddi
                 <div className="absolute inset-3 border border-taupe/30 pointer-events-none" />
                 <Corners className="w-16 h-16 md:w-28 md:h-28" inset="0.25rem" />
                 <p className="micro text-taupe tracking-[0.18em]">11 . 11 . 2026 · Bahrain</p>
-                {yes && reply.plus_one && <p className="font-serif italic text-body text-mocha mt-5 text-balance">A seat is saved for <b className="font-semibold text-wine">{reply.plus_one}</b> beside you.</p>}
+                {yes && reply.plus_one && (
+                  <p className="font-serif italic text-body text-mocha mt-5 text-balance">
+                    {reply.pax > 2 ? "Seats are" : "A seat is"} saved for <b className="font-semibold text-wine">{plusOneLabel(reply.plus_one)}</b> beside you.
+                  </p>
+                )}
                 <p className="font-serif italic text-body text-mocha mt-5 text-balance">
                   {yes
                     ? reply.approved === false
-                      ? "Your reply is in — we're confirming your plus-one personally, and then your seats are sealed. Keep an eye on your messages."
+                      ? `Your reply is in — we're confirming your ${reply.pax > 2 ? "extra guests" : "plus-one"} personally, and then your seats are sealed. Keep an eye on your messages.`
                       : "Your seats are confirmed — we can't wait to celebrate with you. Come hungry, come ready to dance."
                     : "You'll be missed — thank you for letting us know early so we can plan our seats with love."}
                 </p>
@@ -1007,7 +1048,7 @@ export function Rsvp({ info, invite, code, onReplied, dressNote }: { info: Weddi
                     </button>
                   )}
                 </div>
-                {yes && <KeepsakeOffer onBuild={() => makeKeepsake(reply.name, reply.plus_one || undefined)} onBuildProgram={makeProgramCard} />}
+                {yes && <KeepsakeOffer onBuild={() => makeKeepsake(reply.name, plusOneLabel(reply.plus_one) || undefined, reply.pax)} onBuildProgram={makeProgramCard} />}
               </div>
             </div>
           </motion.div>
@@ -1055,9 +1096,9 @@ export function Rsvp({ info, invite, code, onReplied, dressNote }: { info: Weddi
                   <h3 className="script text-wine text-script mt-6 text-balance">Wish granted</h3>
                   <p className="micro text-taupe mt-4">{info.hashtags[0] ?? "#JSGotMarried"}</p>
                   <p className="font-serif italic text-body text-mocha mt-5 text-balance">{f.attending === "yes" ? `We can't wait to celebrate with you, ${f.name.split(" ")[0]}.` : `You'll be missed, ${f.name.split(" ")[0]}. Thank you for letting us know.`}</p>
-                  <p className="micro text-taupe mt-4 tracking-[0.16em]">{approved === true ? "Confirmed with your invitation — see you on the 11th!" : approved === false ? (f.pax === 2 ? "Reply received — the couple will confirm your plus-one personally." : "Reply received — it's waiting in the couple's review queue.") : ""}</p>
+                  <p className="micro text-taupe mt-4 tracking-[0.16em]">{approved === true ? "Confirmed with your invitation — see you on the 11th!" : approved === false ? (f.pax > 2 ? "Reply received — the couple will confirm your extra guests personally." : "Reply received — the couple will confirm your plus-one personally.") : ""}</p>
                   <p className="micro text-taupe mt-2 tracking-[0.16em]">Reopen this link any time — your reply will be waiting here</p>
-                  {f.attending === "yes" && <KeepsakeOffer onBuild={() => makeKeepsake(f.name, f.plus_one || undefined)} onBuildProgram={makeProgramCard} />}
+                  {f.attending === "yes" && <KeepsakeOffer onBuild={() => makeKeepsake(f.name, plusOneLabel(joinPlusOnes(f.companions.slice(0, Math.max(0, f.pax - 1)))) || undefined, f.pax)} onBuildProgram={makeProgramCard} />}
                 </motion.div>
               ) : (
                 <motion.form key="form" onSubmit={submit} exit={{ opacity: 0 }} className="relative space-y-4 text-center sm:space-y-5">
@@ -1070,15 +1111,23 @@ export function Rsvp({ info, invite, code, onReplied, dressNote }: { info: Weddi
                     <button type="button" className={choice(f.attending === "no")} onClick={() => setF({ ...f, attending: "no" })}>Regretfully declines</button>
                   </div>
                   {f.attending === "yes" && (
-                    <div className="flex justify-center items-center gap-2 sm:gap-3">
-                      <span className="font-serif italic text-taupe text-body mr-1">Number of guests/seats</span>
-                      {[1, 2].map((n) => <button key={n} type="button" disabled={seatCap < n} className={choice(f.pax === n) + (seatCap < n ? " opacity-35 pointer-events-none" : "")} onClick={() => setF({ ...f, pax: n })}>{n}</button>)}
+                    <div className="flex flex-nowrap items-center justify-center gap-[clamp(0.35rem,1.6vw,0.75rem)] whitespace-nowrap">
+                      <span className="shrink-0 font-serif font-semibold italic text-taupe text-[clamp(0.8rem,3.5vw,1rem)] leading-none">No. of guests/seats</span>
+                      {Array.from({ length: seatCap }, (_, i) => i + 1).map((n) => (
+                        <button key={n} type="button" aria-pressed={f.pax === n} className={seatChoice(f.pax === n)} onClick={() => setF({ ...f, pax: n })}>{n}</button>
+                      ))}
                     </div>
                   )}
-                  {f.attending === "yes" && f.pax === 2 && (
+                  {f.attending === "yes" && f.pax > 1 && (
                     <div className="space-y-1.5">
-                      <input className="field !py-2 text-center" placeholder="Name of your plus-one" required value={f.plus_one} onChange={set("plus_one")} maxLength={120} />
-                      <p className="micro text-taupe tracking-[0.14em]">Two seats always wait for the couple&apos;s personal confirmation</p>
+                      {Array.from({ length: f.pax - 1 }, (_, i) => (
+                        <input key={i} className="field !py-2 text-center" required
+                          placeholder={f.pax === 2 ? "Name of your plus-one" : `Name of guest ${i + 2}`}
+                          value={f.companions[i] ?? ""} onChange={(e) => setCompanion(i, e.target.value)} maxLength={120} />
+                      ))}
+                      <p className="micro text-taupe tracking-[0.14em] text-balance">
+                        {f.pax === 2 ? "Two seats always wait for the couple’s personal confirmation" : `Parties over two wait for the couple’s personal confirmation — up to ${MAX_RSVP_SEATS} seats per invitation`}
+                      </p>
                     </div>
                   )}
                   <input className="field !py-2 text-center" placeholder="Dietary requirements" value={f.dietary} onChange={set("dietary")} maxLength={200} />

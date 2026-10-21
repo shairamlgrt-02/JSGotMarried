@@ -205,7 +205,7 @@ every single invitation stands.
      `+2` / `2 pax` / `(3 seats)` becomes the seat cap, and anything left over becomes your note.
      Each name lands in **Who it's for**; households already on the list are skipped, so re-pasting
      is safe.
-   * or **add N blank codes** (seats 1 or 2) for a card table, and write who each one is for later.
+   * or **add N blank codes** (seats 1 to 4) for a card table, and write who each one is for later.
    * Tick *copy every new link afterwards* and your clipboard holds one line per household:
      `name — JS-7KQF — https://your-site/JS-7KQF`. Paste into a chat, done.
 2. Per row: **Who it's for** (the name the WhatsApp letter greets — `Ana & Ivan`), **Their name**
@@ -214,8 +214,8 @@ every single invitation stands.
    ready), **send ↗** (opens WhatsApp to that number), **mark sent** (or undo), **new code** (retires
    the old link), **issue code** for a row that never had one, and **✕** to remove the household.
 3. Every link you copy or send is marked `sent`; the first time the guest opens it the server stamps
-   `opened`; when they answer, the row becomes `confirmed`, `needs review` (a second seat you approve
-   with one click) or `declined`. Filter by any of those words, search a name or a code, and read the
+   `opened`; when they answer, the row becomes `confirmed`, `needs review` (more than one seat, which
+   you approve with one click) or `declined`. Filter by any of those words, search a name or a code, and read the
    counts at the top. **Copy this view** / **Mark all sent** work on whatever the filter left showing,
    and **Export CSV** carries who it's for, name, code, link, status, sent/opened/replied timestamps,
    seats, plus-one and message.
@@ -224,6 +224,14 @@ every single invitation stands.
    hand). Guests who already replied see a sealed "welcome" card instead of the form, and the same
    code can't reply twice. If your list still shows doubled rows from an older build, the
    **Merge N duplicates** button at the top of Guests & RSVP folds each household back into one row.
+
+**Seats on the reply card.** The card offers **1 to 4 seats**, never more than the row's **Seats**
+value: a household invited with five seats can answer for four of them online, and the couple settles
+any further guest in person. Picking 2, 3 or 4 opens one name field per extra guest, so a party of
+three stores `Ana` plus `Ben, Carla` in the row's plus-one line — and the whole party waits in
+**needs review** for the couple's confirmation. The binder splits those names into their own rows on
+**Guests & RSVP** (and paints a small `card offers 4` note beside any row invited with more seats
+than the card can take).
 
 `greet` and `note` are required for the **Who it's for** and notes fields to persist. On a project
 created before those columns were added, re-run `supabase/schema.sql` in Supabase → SQL Editor (it is

@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { plusOneLabel } from "./guests";
 
 type RsvpForMail = {
   name: string;
@@ -32,9 +33,9 @@ export async function sendRsvpEmail(row: RsvpForMail): Promise<boolean> {
     const yes = row.attending === "yes";
     const rows: [string, string][] = [
       ["Name", row.name],
-      ["Attending", yes ? `Yes — ${row.pax} ${row.pax === 2 ? "guests" : "guest"}` : "Sorry, can't make it"],
+      ["Attending", yes ? `Yes — ${row.pax} ${row.pax === 1 ? "guest" : "guests"}` : "Sorry, can't make it"],
       ...(row.phone ? [["Phone", row.phone] as [string, string]] : []),
-      ...(row.plus_one ? [["Plus-one", row.plus_one] as [string, string]] : []),
+      ...(row.plus_one ? [["Additional guests", plusOneLabel(row.plus_one, ", ")] as [string, string]] : []),
       ...(row.dietary ? [["Dietary needs", row.dietary] as [string, string]] : []),
       ...(row.message ? [["Message", row.message] as [string, string]] : []),
       ...(row.song_request ? [["Song request", row.song_request] as [string, string]] : []),

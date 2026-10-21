@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { uid } from "@/lib/db";
 import {
   STATUS, cleanCode, cleanInviteNote, genCode, inviteHref, inviteLink, inviteMessage, inviteSheet, inviteStatus,
-  parseGuestLines, previewLink, tallyInvites, whoIsItFor, type InviteStatus, type InviteText,
+  MAX_RSVP_SEATS, parseGuestLines, plusOneLabel, previewLink, tallyInvites, whoIsItFor, type InviteStatus, type InviteText,
 } from "@/lib/guests";
 import { useTable } from "@/lib/hooks";
 import type { Guest } from "@/lib/types";
@@ -247,7 +247,7 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
                 </label>
                 <label className="label !text-[10px] text-ink/60">Seats each
                   <select value={seatDefault} onChange={(e) => setSeatDefault(Number(e.target.value))} className="block mt-1 bg-white/60 rounded-md border border-ink/10 focus:border-wine outline-none px-3 py-2 text-base">
-                    {[1, 2].map((n) => <option key={n} value={n}>{n}</option>)}
+                    {Array.from({ length: MAX_RSVP_SEATS }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
                   </select>
                 </label>
                 <span className="self-end pb-2.5"><Btn variant="dark" onClick={() => void generate("blanks")}>Add {Math.max(1, Math.min(500, Math.round(blanks) || 1))} blank codes</Btn></span>
@@ -362,7 +362,12 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
                     <EditText value={g.phone} onSave={(v) => save({ ...g, phone: v })} />
                     {g.phone && <a className="label !text-[9px] text-moss px-2" target="_blank" rel="noreferrer" href={`https://wa.me/${g.phone.replace(/\D/g, "")}`}>message ↗</a>}
                   </td>
-                  <td className="px-1"><EditText type="number" value={g.pax} onSave={(v) => save({ ...g, pax: Math.max(0, Math.min(9, Math.round(Number(v) || 0))) })} className="tabular-nums" /></td>
+                  <td className="px-1">
+                    <EditText type="number" value={g.pax} onSave={(v) => save({ ...g, pax: Math.max(0, Math.min(9, Math.round(Number(v) || 0))) })} className="tabular-nums" />
+                    {Number(g.pax) > MAX_RSVP_SEATS && (
+                      <div className="px-2 text-[10px] text-burgundy/70" title={`The reply card offers up to ${MAX_RSVP_SEATS} seats`}>card offers {MAX_RSVP_SEATS}</div>
+                    )}
+                  </td>
                   <td className="px-2 py-2 whitespace-nowrap">
                     {g.code ? (
                       <>
@@ -404,7 +409,7 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
                     </div>
                   </td>
                   <td className="px-2 py-2 max-w-[220px] text-[12px] leading-snug">
-                    {g.attending === "yes" && <p><b className="text-moss">Yes</b> · {g.pax} seat{g.pax === 1 ? "" : "s"}{g.plus_one ? ` (+ ${g.plus_one})` : ""}</p>}
+                    {g.attending === "yes" && <p><b className="text-moss">Yes</b> · {g.pax} seat{g.pax === 1 ? "" : "s"}{g.plus_one ? ` (+ ${plusOneLabel(g.plus_one)})` : ""}</p>}
                     {g.attending === "no" && <p className="text-burgundy/80">Declined with love</p>}
                     {g.message && <p className="italic text-ink/55 truncate" title={g.message}>“{g.message}”</p>}
                     {s === "needs_review" && (

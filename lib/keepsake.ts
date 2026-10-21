@@ -14,7 +14,8 @@ export type KeepsakeData = {
   groom: string;
   bride: string;
   guestName: string;   // the guest's own name — the card speaks to them, not about them
-  plusOne?: string;
+  plusOne?: string;    // every extra guest's name, "Ben & Carla" or "Ben, Carla & Devi"
+  seats?: number;      // how many seats the household holds — 2 names means a party of three
   code?: string;       // personal invitation code (e.g. "JS-7KQF") for tracking
   dateISO: string;
   venue: string;
@@ -196,12 +197,19 @@ function draw(g: CanvasRenderingContext2D, d: KeepsakeData, photo: HTMLImageElem
   // personal: the card belongs to the guest holding it
   caps(g, "A seat at our table is saved for", y, 25, TAUPE, 0.3);
   y += 84;
-  const bothNames = d.plusOne ? `${d.guestName.split(" ")[0]} & ${d.plusOne.split(" ")[0]}` : d.guestName;
+  // the card is drawn for a party of one, two, three or four — the names arrive as one line from the reply
+  const extra = (d.plusOne || "").split(/[,&]/).map((n) => n.trim()).filter(Boolean);
+  const seats = Math.max(1, Math.round(Number(d.seats) || extra.length + 1));
+  const first = (name: string) => name.split(" ")[0];
+  const prose = [d.guestName, ...extra].length > 1
+    ? `${[d.guestName, ...extra].slice(0, -1).join(", ")} & ${[d.guestName, ...extra].slice(-1)[0]}`
+    : d.guestName;
+  const bothNames = extra.length === 1 ? `${first(d.guestName)} & ${first(extra[0])}` : d.guestName;
   fit(g, bothNames, y, 84, script, WINE);
   y += 62;
-  const seatsLine = d.plusOne
-    ? `Two seats — for ${d.guestName} & ${d.plusOne} — we can't wait to celebrate with you.`
-    : `We can't wait to celebrate with you, ${d.guestName.split(" ")[0]}.`;
+  const seatsLine = extra.length
+    ? `${seats === 2 ? "Two" : seats} seat${seats === 2 ? "" : "s"} — for ${prose} — we can't wait to celebrate with you.`
+    : `We can't wait to celebrate with you, ${first(d.guestName)}.`;
   y = wrap(g, seatsLine, y, serif(30, "i400"), MOCHA, 40);
   const inviteCode = (d.code || "").trim().toUpperCase();
   if (inviteCode) {

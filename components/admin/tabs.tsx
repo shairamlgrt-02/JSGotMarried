@@ -3,7 +3,7 @@ import { Reorder, useDragControls } from "framer-motion";
 import { useMemo, useState } from "react";
 import { getMode, pushSeedSafely, refreshFaqCopy, refreshStoryCopy, resetLocal, uid } from "@/lib/db";
 import { entourageGroups } from "@/lib/entourage";
-import { STATUS, cleanInviteNote, genCodeFor, inviteHref, inviteLink, inviteMessage, inviteStatus, mergeHousehold, planHouseholdMerges, tallyInvites, cleanCode, whoIsItFor, type InviteText } from "@/lib/guests";
+import { STATUS, cleanInviteNote, genCodeFor, inviteHref, inviteLink, inviteMessage, inviteStatus, joinPlusOnes, MAX_RSVP_SEATS, mergeHousehold, planHouseholdMerges, splitPlusOnes, tallyInvites, cleanCode, whoIsItFor, type InviteText } from "@/lib/guests";
 import { useCountdown, useTable } from "@/lib/hooks";
 import type { Attending, Attire, BudgetItem, BudgetStatus, ChecklistItem, EntourageMember, Guest, Priority, ScheduleItem, StoryChapter, Vendor, VendorStatus } from "@/lib/types";
 import { ENTOURAGE_ROLES, GUEST_TAG_IDS, TABLES, formatGuestTags, guestTagIcon, guestTagIdFor, guestTagLabel, isPresetGuestTag, parseGuestTags, sortGuestTagIds } from "@/lib/types";
@@ -419,6 +419,8 @@ type GuestEntry = {
   companionName: string;
   invitedAs: string;
   idx: number;
+  /** Which extra guest this row is, when the household is more than two (0 = the first plus-one). */
+  companionIndex?: number;
 };
 
 export function Guests({ go }: { go: (tab: string) => void }) {
@@ -451,25 +453,29 @@ export function Guests({ go }: { go: (tab: string) => void }) {
     rows.forEach((g, idx) => {
       const invitedAs = whoIsItFor(g);
       const primaryName = (g.name || "").trim() || invitedAs;
-      const plusName = (g.plus_one || "").trim();
+      // `plus_one` is a comma-separated list when the household brought more than one extra guest
+      const companions = splitPlusOnes(g.plus_one);
       list.push({
         key: `${g.id}:primary`,
         g,
         role: "primary",
         displayName: primaryName,
-        companionName: plusName,
+        companionName: companions.join(", "),
         invitedAs,
-        idx: idx * 2,
+        idx: idx * 8,
       });
-      if (expandPlusOnes && plusName) {
-        list.push({
-          key: `${g.id}:plus_one`,
-          g,
-          role: "plus_one",
-          displayName: plusName,
-          companionName: primaryName,
-          invitedAs,
-          idx: idx * 2 + 1,
+      if (expandPlusOnes) {
+        companions.forEach((name, i) => {
+          list.push({
+            key: `${g.id}:plus_one:${i}`,
+            g,
+            role: "plus_one",
+            displayName: name,
+            companionName: primaryName,
+            invitedAs,
+            idx: idx * 8 + i + 1,
+            companionIndex: i,
+          });
         });
       }
     });
@@ -797,15 +803,32 @@ export function Guests({ go }: { go: (tab: string) => void }) {
               <th />
             </tr></thead>
             <tbody className="divide-y divide-ink/10">
-              {shown.map(({ key, g, role, displayName, companionName, invitedAs }) => {
+              {shown.map(({ key, g, role, displayName, companionName, invitedAs, companionIndex }) => {
                 const isPlusOneRow = role === "plus_one";
+                const companionAt = companionIndex ?? 0;
+                /** Rewrite one name in the household's `plus_one` list, keeping the others in order. */
+                const setCompanion = (i: number, v: string) => {
+                  const names = splitPlusOnes(g.plus_one);
+                  const next = [...names];
+                  next[i] = v;
+                  const clean = splitPlusOnes(joinPlusOnes(next));
+                  // seats follow the names: two extra guests means a party of three
+                  save({ ...g, plus_one: joinPlusOnes(clean), pax: Math.max(Number(g.pax) || 1, clean.length + 1) });
+                };
+                const removeCompanion = (i: number) => {
+                  const names = splitPlusOnes(g.plus_one).filter((_, x) => x !== i);
+                  const left = Math.max(1, (Number(g.pax) || 1) - 1);
+                  save({ ...g, plus_one: joinPlusOnes(names), pax: left });
+                };
                 return (
                   <tr key={key} className={`align-top ${isPlusOneRow ? "bg-wine/[0.03]" : ""}`}>
                     <td className="px-1 py-1.5 font-medium min-w-[180px]">
                       {isPlusOneRow ? (
                         <>
-                          <EditText value={g.plus_one ?? ""} placeholder="Plus-one's full name" onSave={(v) => save({ ...g, plus_one: v })} />
-                          <div className="px-2 text-[10px] text-wine font-medium">✦ Official plus-one of {companionName || invitedAs}</div>
+                          <EditText value={displayName} placeholder="Guest's full name" onSave={(v) => setCompanion(companionAt, v)} />
+                          <div className="px-2 text-[10px] text-wine font-medium">
+                            ✦ {companionAt === 0 ? "Official plus-one of" : `Additional guest ${companionAt + 1} of`} {companionName || invitedAs}
+                          </div>
                         </>
                       ) : (
                         <>
@@ -831,8 +854,11 @@ export function Guests({ go }: { go: (tab: string) => void }) {
                       ) : (
                         <EditText
                           value={g.plus_one ?? ""}
-                          placeholder={Number(g.pax) >= 2 ? "Plus-one name" : "Add plus-one…"}
-                          onSave={(v) => save({ ...g, plus_one: v, pax: v.trim() && (Number(g.pax) || 1) < 2 ? 2 : g.pax })}
+                          placeholder={Number(g.pax) >= 3 ? "Extra guests (comma-separated)" : Number(g.pax) >= 2 ? "Plus-one name" : "Add plus-one…"}
+                          onSave={(v) => {
+                            const names = splitPlusOnes(v);
+                            save({ ...g, plus_one: joinPlusOnes(names), pax: names.length ? Math.max(Number(g.pax) || 1, names.length + 1) : Number(g.pax) || 1 });
+                          }}
                           className="text-ink/75"
                         />
                       )}
@@ -843,7 +869,12 @@ export function Guests({ go }: { go: (tab: string) => void }) {
                     </td>
                     <td className="px-1">
                       <EditText type="number" value={g.pax} onSave={(v) => save({ ...g, pax: Math.max(0, Math.round(num(v))) })} className="tabular-nums" />
-                      <div className="px-2 text-[10px] text-ink/45">{isPlusOneRow ? "Seat 2" : g.plus_one ? "Seat 1 (+1)" : `${g.pax} seat${g.pax === 1 ? "" : "s"}`}</div>
+                      <div className="px-2 text-[10px] text-ink/45">
+                        {isPlusOneRow ? `Seat ${companionAt + 2}` : g.plus_one ? `Seat 1 (+${Math.max(1, (Number(g.pax) || 1) - 1)})` : `${g.pax} seat${g.pax === 1 ? "" : "s"}`}
+                      </div>
+                      {!isPlusOneRow && Number(g.pax) > MAX_RSVP_SEATS && (
+                        <div className="px-2 text-[10px] text-burgundy/70" title={`The reply card offers up to ${MAX_RSVP_SEATS} seats`}>card offers {MAX_RSVP_SEATS}</div>
+                      )}
                     </td>
                     <td className="px-1">
                       <Select value={g.attending} options={ATT} onChange={(v) => save({ ...g, attending: v })} />
@@ -886,7 +917,7 @@ export function Guests({ go }: { go: (tab: string) => void }) {
                     </td>
                     <td className="px-1">
                       {isPlusOneRow ? (
-                        <button onClick={() => confirm(`Remove plus-one ${displayName}?`) && save({ ...g, plus_one: "", pax: 1 })} title="Remove plus-one" className="text-ink/30 hover:text-burgundy px-2 py-2">✕</button>
+                        <button onClick={() => confirm(`Remove guest ${displayName}?`) && removeCompanion(companionAt)} title="Remove this guest" className="text-ink/30 hover:text-burgundy px-2 py-2">✕</button>
                       ) : (
                         <button onClick={() => confirm(`Remove ${displayName || "this guest"}?`) && del(g.id)} className="text-ink/30 hover:text-burgundy px-2 py-2">✕</button>
                       )}
