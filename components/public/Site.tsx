@@ -143,7 +143,7 @@ export default function Home({ code = "", variant = "guest" }: { code?: string; 
             {unlocked && <>
               <Rsvp info={info} invite={rsvpInvite} code={replyCode} onReplied={load} dressNote={dressNote} />
               <ScrollContinue />
-              <D deco={<Deco at="tr" rotate={6}><Sticker kind="dance" /></Deco>}><FaqSection faqs={faq} /></D>
+              <D deco={<Deco at="tr" rotate={6}><Sticker kind="dance" /></Deco>}><FaqSection faqs={faq} info={info} /></D>
             </>}
             <Moments info={info} />
             <ScrollContinue />

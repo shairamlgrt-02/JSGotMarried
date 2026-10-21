@@ -1,4 +1,4 @@
-import type { TableMap, TableName } from "./types";
+import type { Priority, TableMap, TableName } from "./types";
 
 const c = (name: string, hex: string, fabric?: string) => ({ name, hex, fabric });
 
@@ -75,7 +75,21 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     { id: "v5", type: "p/v", name: "Mark Villaruel", quote: 0, contact: "", status: "pending", notes: "Awaiting quote" },
     { id: "v6", type: "projector", name: "ViewSonic", quote: 25, contact: "", status: "booked", notes: "For 120\" screen video" },
   ],
+  /**
+   * The to-do list, in two halves:
+   *  · c1… — the original starter list. NEVER reword these: a live project already holds them
+   *    (ticked, edited, re-dated) and "push starter data" only fills in rows whose id is missing,
+   *    so changed words would reach nobody.
+   *  · k1… — the couple's updated sheet, transcribed row by row (their Category → `section`,
+   *    Item → `task`, Details/Notes → `details`, Deadline → `due_date`, Person In-charge →
+   *    `owner`, Done → `completed`), followed by the finer-grained tasks that grew out of
+   *    reviewing it. Press "Push starter data" once and every missing k-row appears; a handful of
+   *    the old c-rows cover the same ground (rings, vows, rehearsal, emergency kit, headcount,
+   *    street food) — keep whichever copy you like and delete the other.
+   */
   checklist: [
+    // ── the original starter list (c1…) ──
+    ...([
     ["Decide caterer: Shai's Resto vs Heaven", "critical", "2026-10-03"],
     ["Collect P/V quotes (Alexandria, Mark Villaruel)", "critical", "2026-10-03"],
     ["Book photo/video team & pay deposit", "critical", "2026-10-08"],
@@ -100,7 +114,147 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     ["Final vendor payments", "critical", "2026-11-08"],
     ["Pack wedding-day emergency kit", "medium", "2026-11-09"],
     ["Rehearsal with entourage", "high", "2026-11-09"],
-  ].map(([task, category, due], i) => ({ id: `c${i + 1}`, task, category: category as "critical", due_date: due, completed: false })),
+    ] as [string, Priority, string][]).map(([task, category, due], i) => ({
+      id: `c${i + 1}`, task, category, due_date: due, completed: false,
+    })),
+
+    // ── the couple's updated sheet + the fine detail (k1…) ──
+    ...([
+    // ── Legal & Admin ──
+    ["Legal & Admin", "Embassy wedding", "high", "2026-11-06", "Couple", "Date confirmed: Nov 09 @ 3:00 PM — documents ready; confirm the witness.", ""],
+    ["Legal & Admin", "Marriage licence & church paperwork", "critical", "2026-10-28", "Couple", "Confirm with Pastor Deon exactly which documents the church needs (baptismal/confirmation certs, licence, seminar); originals + photocopies.", ""],
+    ["Legal & Admin", "Civil-register witnesses confirmed", "high", "2026-11-01", "Couple", "Two witnesses for the civil signing — confirm they're attending and brief them on when to sign.", ""],
+    ["Legal & Admin", "Embassy documents pack", "high", "2026-11-06", "Couple", "Passports, IDs, certificates and copies in one folder for the Nov 9 appointment; re-check the embassy checklist the week before.", ""],
+    ["Legal & Admin", "Marriage certificate collection", "medium", "2026-11-20", "Couple", "Ask the officiant / civil registrar when and how to claim it; assign a runner if you'll be travelling.", ""],
+    // ── Invitations & Guests ──
+    ["Invitations & Guests", "Invitation reminders to send out", "high", "2026-10-30", "Jeg", "The second wave of reminder invites — Binder → Compose has the ready-made templates.", ""],
+    ["Invitations & Guests", "RSVP reminders (Oct 16 & Oct 20)", "critical", "2026-10-20", "Jeg", "Gentle reminder first, then the final call — both pre-written in Binder → Templates.", ""],
+    ["Invitations & Guests", "Table numbers / reserved signs", "medium", "2026-10-30", "Shai & Coordinator", "Check name spellings twice; print 2 of each (spares).", ""],
+    ["Invitations & Guests", "Table seatings", "high", "2026-11-02", "Couple", "Identify tables, decor + plan; lock after the Oct 25 RSVP deadline.", ""],
+    ["Invitations & Guests", "Chase \u201copened link, no reply\u201d households", "critical", "2026-10-22", "Jeg", "Binder → Compose → \u201cOpened Link · No Reply\u201d: send the gentle reminder, then the final call.", ""],
+    ["Invitations & Guests", "Send the final-call RSVP message", "critical", "2026-10-24", "Jeg", "One day before the deadline: kind but firm — no reply by Oct 25 means we can't save the seats.", ""],
+    ["Invitations & Guests", "Master guest sheet for coordinators", "high", "2026-10-28", "Jeg", "Export CSV from Guests & RSVP — dietary notes, song requests, plus-ones, tags; one printed copy per coordinator.", ""],
+    ["Invitations & Guests", "Welcome sign & direction signage", "medium", "2026-10-30", "Shai & Coordinator", "Welcome + arrows for majlis / hall / parking; A4 prints on kraft or an acrylic stand.", ""],
+    ["Invitations & Guests", "Dietary & kids' meal list to caterer", "high", "2026-10-30", "Couple", "Allergies and special requests from the RSVP notes; count kids' plates separately.", ""],
+    ["Invitations & Guests", "Elderly & PWD assistance plan", "medium", "2026-11-08", "Coordinator", "One usher per elderly guest who needs a hand; confirm step-free access to the majlis and hall.", ""],
+    ["Invitations & Guests", "Special-seat requests locked", "medium", "2026-11-05", "Couple", "Guests with babies, wheelchairs or hearing needs nearest the aisle/exit; keep 2 spare seats per side.", ""],
+    // ── Venue & Catering ──
+    ["Venue & Catering", "The Heaven meeting", "critical", "2026-10-22", "Couple & Coordinator", "Buffet + decor + plan — get the final agreement in writing.", ""],
+    ["Venue & Catering", "Venue visit with coordinators", "high", "2026-10-24", "Couple & Coordinator", "Schedule date & time; walk the majlis-to-hall flow while you're there.", ""],
+    ["Venue & Catering", "Catering — confirm and pay", "critical", "2026-10-30", "Couple", "Final headcount in hand first (RSVP closes Oct 25); receipt filed with the payment envelopes.", ""],
+    ["Venue & Catering", "Wedding cake — to order", "high", "2026-11-01", "Couple", "Design, size vs. headcount, topper, delivery time and who receives it.", ""],
+    ["Venue & Catering", "Wedding cake / sparkling wine", "critical", "2026-10-23", "Couple", "To order.", ""],
+    ["Venue & Catering", "Cocktail-hour street food (pass-around)", "medium", "2026-10-30", "Gracie", "Donuts; confirm quantity, delivery time and serving trays.", ""],
+    ["Venue & Catering", "Coffee & tea station", "medium", "2026-10-30", "Tita Lorle", "Coffee & tea, sugar, milk — assign this role on the Guest Roles tab so reminders reach her.", ""],
+    ["Venue & Catering", "Serveware (snacks area)", "medium", "2026-10-30", "Marilyn", "Coffee cups, drinking glasses, stirrers, forks, small plates.", ""],
+    ["Venue & Catering", "Serveware (cake & wine table)", "medium", "2026-10-30", "Marilyn", "Cake plates, cake knife, 2 forks, 2 wine glasses.", ""],
+    ["Venue & Catering", "Tissue & table napkins", "medium", "2026-10-30", "Marilyn", "Boxes & table napkin.", ""],
+    ["Venue & Catering", "Wine glasses — rental", "high", "2026-10-30", "Couple", "Confirm rental at Al Wasmiva (20 BD); delivery, count +10% spares, return plan.", ""],
+    ["Venue & Catering", "Buffet menu & quantities locked", "critical", "2026-10-30", "Couple", "Final dishes, servings per pan, lechon confirmed in writing at The Heaven meeting.", ""],
+    ["Venue & Catering", "Vendor & staff entry at 4:00 PM", "critical", "2026-11-08", "Couple & Coordinator", "The hall is closed 2:00–4:00 PM for The Heaven's cleaning — cake, decor and sound teams enter WITH everyone at 4:00; brief each vendor personally.", ""],
+    ["Venue & Catering", "Majlis refreshments for the 3:30 briefing", "high", "2026-11-08", "Gracie", "Snacks, water and juice at the majlis for the entourage briefing (hall is closed 2–4 PM); assign a server.", ""],
+    ["Venue & Catering", "Cake delivery & placement", "high", "2026-11-09", "Couple", "Delivery time, who receives it, where it sits (clear of the cross backdrop), cake table styled.", ""],
+    ["Venue & Catering", "Sparkling wine chilled & toast glasses", "high", "2026-11-10", "Couple", "Chill by 4 PM; 2 glasses on the cake table (Marilyn's serveware) + the rest for the toasts.", ""],
+    ["Venue & Catering", "Coffee & tea supplies box", "medium", "2026-11-08", "Tita Lorle", "Coffee, tea, sugar, milk, cups, stirrers, small plates, napkins — one labelled box per station.", ""],
+    ["Venue & Catering", "Ice, water & refill duty", "medium", "2026-11-09", "Couple", "Confirm what The Heaven provides; bottled water for hall + majlis; assign who refills.", ""],
+    ["Venue & Catering", "Leftovers & cleanup plan", "medium", "2026-11-10", "Couple", "Containers for leftovers and who takes them home; confirm what The Heaven's cleaning covers and what we carry out.", ""],
+    // ── Ceremony Team ──
+    ["Ceremony Team", "Wedding officiant", "high", "2026-10-30", "Couple", "Couple needs to meet with Pastor Deon.", ""],
+    ["Ceremony Team", "MC / Host — Carlo to confirm", "critical", "2026-10-23", "Jeg", "Backup: Tito Ramon. Confirm before the program writing starts.", ""],
+    ["Ceremony Team", "Ushers", "medium", "2026-10-30", "Marilyn", "Snacks & souvenir server; assign them on the Guest Roles tab.", ""],
+    ["Ceremony Team", "Wedding singer — to confirm", "high", "2026-10-23", "Couple", "Ceremony songs; check against the musician's set.", ""],
+    ["Ceremony Team", "Musician — to confirm; keyboard needed", "critical", "2026-10-23", "Couple", "Keyboard, mic stand and power point at the venue.", ""],
+    ["Ceremony Team", "Reception playlist DJ — to confirm; laptop needed", "critical", "2026-10-23", "Jeg", "Laptop + aux cable as backup to the band.", ""],
+    ["Ceremony Team", "Meet Pastor Deon: order of service", "critical", "2026-10-30", "Couple", "Bring the paperwork, ceremony outline, music cues, entourage names & pronunciations; walk through the 4:00 PM entrance together.", ""],
+    ["Ceremony Team", "MC script & rundown to Carlo", "high", "2026-11-08", "Jeg", "One-pager: sequence, transitions, games, thanking sponsors; set the mic-check time.", ""],
+    ["Ceremony Team", "Ushers' briefing card", "medium", "2026-11-08", "Marilyn", "Who seats whom, reserved rows, walk-ins at 5:30, souvenir-table handover.", ""],
+    ["Ceremony Team", "Singer & musician song list", "high", "2026-11-03", "Couple", "Ceremony + reception songs, lyrics and keys shared; keyboard, mic stands and sound-check slot confirmed.", ""],
+    ["Ceremony Team", "Procession order cards for coordinators", "medium", "2026-11-08", "Coordinator", "Who walks when and with whom, pacing, where each pair stands at the front.", ""],
+    // ── Attire & Beauty ──
+    ["Attire & Beauty", "Bride's bouquet", "critical", "2026-10-23", "Shai & Coordinator", "Image samples; find a supplier.", ""],
+    ["Attire & Beauty", "Make-up artist — to confirm", "critical", "2026-10-23", "Shai & Rhema", "Contract, call time and touch-up terms.", ""],
+    ["Attire & Beauty", "Groomsmen fitting", "high", "2026-10-30", "Jeg", "", "done"],
+    ["Attire & Beauty", "Bridesmaids' bags & gifts", "high", "2026-10-23", "Shai", "Order from Shein.", "done"],
+    ["Attire & Beauty", "Pocket squares for groomsmen", "high", "2026-10-16", "Jeg", "Confirm with seamstress.", ""],
+    ["Attire & Beauty", "Family corsages", "high", "2026-10-23", "Shai", "Count: parents, grandparents, sponsors who wish; pins included.", ""],
+    ["Attire & Beauty", "HMUA day-of timeline", "high", "2026-11-05", "Shai", "Call time per person (bride first), touch-up after the ceremony, payment envelope ready.", ""],
+    ["Attire & Beauty", "Bridal accessories tray", "medium", "2026-11-09", "Shai", "Veil, earrings, shoes, perfume, something borrowed/blue — one box + a checklist photo in the group chat.", ""],
+    ["Attire & Beauty", "Steam & press everything", "medium", "2026-11-10", "Couple", "Gown, suits, dresses and the white chiffon cloth; assign who brings the steamer.", ""],
+    ["Attire & Beauty", "Bouquet & boutonnière pick-up", "high", "2026-11-11", "Shai & Coordinator", "Confirm the supplier's delivery time and receiver; pins for the boutonnières.", ""],
+    ["Attire & Beauty", "Break in your shoes", "medium", "2026-11-08", "Couple", "Both of you — and pack flats / backup heels in the emergency kit.", ""],
+    ["Attire & Beauty", "Emergency kit", "medium", "2026-11-09", "Shai", "Fashion tape, stain stick, extra tights, meds, phone batteries, sewing kit, heel tips, oil blotting, extra earrings.", ""],
+    // ── Photo & Video ──
+    ["Photo & Video", "Photographer / videographer", "critical", "2026-10-23", "Couple", "To confirm with Mark Villanueva team.", ""],
+    ["Photo & Video", "Photo/video mood board & shot list", "critical", "2026-10-22", "Couple", "Create the list.", ""],
+    ["Photo & Video", "Livestream", "medium", "2026-11-08", "Jeg", "Included in the package + guestbook booth. Need to provide internet & YouTube account.", ""],
+    ["Photo & Video", "Livestream equipment (DIY)", "medium", "2026-11-08", "Jeg", "Stand, phone/camera, laptop & HDMI cable, charger/powerbank, pocket wifi.", "done"],
+    ["Photo & Video", "Photo booth / DIY video guestbook", "medium", "2026-10-23", "Shai", "Included in the package.", "done"],
+    ["Photo & Video", "Family photo groupings list", "high", "2026-11-05", "Couple", "Every grouping written with names (\u201cShai's family: parents + siblings\u201d) so the photographer calls them fast.", ""],
+    ["Photo & Video", "Same-day edit & screen test", "high", "2026-11-09", "Couple", "Confirm the film plays on the venue's projector/screen; bring HDMI + adapters.", ""],
+    ["Photo & Video", "YouTube livestream test & link", "medium", "2026-11-09", "Jeg", "Create the stream, test on the venue's internet, assign who watches the comments.", ""],
+    ["Photo & Video", "Guestbook booth kit", "medium", "2026-11-10", "Shai", "Sign, phone/tablet stand, charger; a quiet corner spot at the majlis.", ""],
+    // ── Decor ──
+    ["Decor", "Cross backdrop", "high", "2026-11-10", "Pastor Benny", "Cross installation on Nov 11.", ""],
+    ["Decor", "White chiffon cloth", "medium", "2026-10-30", "Couple", "To purchase.", ""],
+    ["Decor", "Cross backdrop install team & fixings", "high", "2026-11-09", "Pastor Benny", "Confirm who helps carry and install on Nov 11, and that wall fixings are allowed.", ""],
+    ["Decor", "Flowers: bouquets, corsages, aisle", "high", "2026-11-10", "Shai & Coordinator", "One list with counts per person; a cool spot to store; water tubes for the aisle pieces.", ""],
+    ["Decor", "Entrance & majlis styling", "medium", "2026-11-10", "Coordinator", "Welcome sign, guestbook table, souvenir table (church table + cloth), photo corner.", ""],
+    ["Decor", "Ceremony bags master checklist", "medium", "2026-11-10", "Couple", "One labelled bag per rite — rings, cords, bible, bucket/dipper/towel, stones & jars — one bearer per bag.", ""],
+    // ── Music ──
+    ["Music", "Ceremony background playlist", "medium", "2026-10-30", "Couple", "", ""],
+    ["Music", "Reception background playlist", "medium", "2026-10-30", "Couple", "", ""],
+    ["Music", "Father & daughter's dance song", "medium", "2026-10-30", "Couple", "", ""],
+    ["Music", "Mother & son's dance song", "medium", "2026-10-30", "Couple", "", ""],
+    ["Music", "Cake and wine background song", "medium", "2026-10-30", "Couple", "", ""],
+    ["Music", "Processional & recessional cues", "high", "2026-11-08", "Couple", "Who cues each song (coordinator), what's sung live vs. played back.", ""],
+    ["Music", "Parents' dance songs confirmed with parents", "medium", "2026-11-03", "Couple", "Send the final picks to the DJ/laptop operator and to the parents themselves.", ""],
+    ["Music", "Do-not-play list", "medium", "2026-11-08", "Couple", "A short list for the DJ; include the cake & wine dance song.", ""],
+    // ── Ceremony Elements ──
+    ["Ceremony Elements", "Wedding rings", "critical", "2026-10-30", "Couple", "Order and confirm; engraving checked on pick-up.", ""],
+    ["Ceremony Elements", "Bucket, dipper & towel", "medium", "2026-11-08", "Couple", "Purchase and prepare in 1 bag.", ""],
+    ["Ceremony Elements", "Stones, jars & instruction display", "high", "2026-10-30", "Couple", "Stones (different sizes), 4 jars, sand jar, instruction display.", ""],
+    ["Ceremony Elements", "Cords", "high", "2026-10-30", "Couple", "Purchase and prepare in 1 bag.", ""],
+    ["Ceremony Elements", "Bible for the wedding", "medium", "2026-11-08", "Couple", "Prepare in 1 bag.", ""],
+    // ── Sound System ──
+    ["Sound System", "Sound system provider", "critical", "2026-10-23", "Jeg", "Kuya Marvin (check availability & charges) or church sound system.", ""],
+    ["Sound System", "Sound equipment", "high", "2026-11-08", "Jeg", "Microphones (4 pcs), speakers, mixers, socket extension.", ""],
+    ["Sound System", "Kuya Marvin: availability, charges, gear list", "critical", "2026-10-25", "Jeg", "4 mics (2 handheld + lapels if possible), speakers, mixer, extension cords; church system as backup.", ""],
+    ["Sound System", "Sound check schedule", "high", "2026-11-10", "Jeg", "A slot once everyone walks in at 4:00 (or at the majlis); who runs playback (phone + laptop + aux).", ""],
+    ["Sound System", "Projector & screen playback test", "high", "2026-11-09", "Jeg", "Love-story film + livestream feed tested; HDMI, adapters and a taped-down power strip.", ""],
+    // ── Souvenirs ──
+    ["Souvenirs", "Souvenirs", "critical", "2026-10-23", "Rhema", "Need to order ASAP to avoid delays.", ""],
+    ["Souvenirs", "Principal sponsors' gift", "critical", "2026-10-23", "Rhema", "Need to order ASAP to avoid delays.", ""],
+    ["Souvenirs", "Souvenir table", "medium", "2026-10-11", "Rhema", "Borrow 1 table from church & table cloth.", ""],
+    ["Souvenirs", "Souvenir assembly & count", "high", "2026-11-08", "Rhema", "Count against the final yes-headcount + 10 spares; team assembles into bags with tags.", ""],
+    ["Souvenirs", "Principal sponsors' gifts wrapped & cards signed", "high", "2026-11-08", "Rhema", "Assign who hands them out after the ceremony.", ""],
+    ["Souvenirs", "Parents' & entourage thank-you gifts", "medium", "2026-11-08", "Shai", "Personal notes with each; hand out at the reception entrance or during the program.", ""],
+    // ── Programs & Speeches ──
+    ["Programs & Speeches", "Speech / toast list", "high", "2026-10-27", "Couple & Coordinator", "List of who will make a speech/toast; inform the list.", ""],
+    ["Programs & Speeches", "Parents' speech", "medium", "2026-11-01", "Coordinator", "Parents to prepare.", ""],
+    ["Programs & Speeches", "Couple vows", "high", "2026-11-06", "Couple", "Prepare vows.", ""],
+    ["Programs & Speeches", "Rehearsal with entourage", "high", "2026-11-10", "Coordinator", "Select date and confirm with entourage — walk the 3:30 majlis briefing and the 4:00 walk-in while you're at it.", ""],
+    ["Programs & Speeches", "Ceremony program", "high", "2026-11-05", "Coordinator", "", ""],
+    ["Programs & Speeches", "Reception program", "high", "2026-11-05", "Coordinator", "", ""],
+    ["Programs & Speeches", "Speech & toast time limits", "high", "2026-10-27", "Couple & Coordinator", "Tell each speaker 2–3 minutes max; give the MC the running order.", ""],
+    ["Programs & Speeches", "Write & rehearse our vows", "high", "2026-11-06", "Couple", "Write separately, 2–3 minutes each, one practice read-through together.", ""],
+    ["Programs & Speeches", "Ceremony program printing", "medium", "2026-11-05", "Coordinator", "One folded card per seat OR one big sign at the majlis door (fewer prints if livestreamed).", ""],
+    ["Programs & Speeches", "Reception rundown & games kit", "high", "2026-11-05", "Coordinator", "Scratch cards, raffle box, prizes, markers; MC script with music cues.", ""],
+    ["Programs & Speeches", "Coordinator master document", "critical", "2026-11-09", "Couple & Coordinator", "One doc for each coordinator: full timeline, vendor contacts & payments, guest list, seating, procession order, floor plan.", ""],
+    ["Programs & Speeches", "Couple's pocket timeline", "medium", "2026-11-10", "Couple", "Your own version: call times, HMUA, photos, ceremony, grand entrance — on your phone lock screen.", ""],
+    // ── Wedding Day (the last 48 hours) ──
+    ["Wedding Day", "Cash envelopes & designated payer", "critical", "2026-11-09", "Jeg", "Label each envelope (venue, caterer, P/V, sound, HMUA); ONE person holds and pays; amounts checked against receipts.", ""],
+    ["Wedding Day", "Transport & call times", "high", "2026-11-08", "Jeg", "Who drives whom, departure times; parking is the separate area (The Heaven's team point the way at the gate).", ""],
+    ["Wedding Day", "Phone charging station", "medium", "2026-11-10", "Marilyn", "Power bank + cables at the majlis for guests; our own chargers labelled in the emergency kit.", ""],
+    ["Wedding Day", "Weather plan B", "medium", "2026-11-08", "Coordinator", "If it rains: is the majlis covered? Umbrellas, towels, plastic sleeves for anything outdoors.", ""],
+    ["Wedding Day", "The 4:00 PM walk-in marshals", "critical", "2026-11-08", "Coordinator", "Coordinators line everyone up at the majlis by 3:50 and walk the whole party into the hall together; assign who signals it.", ""],
+    ["Wedding Day", "Little ones' quiet basket", "medium", "2026-11-10", "Shai", "Non-messy snacks and a quiet activity for the ring bearer & flower girl during the briefing.", ""],
+    ["Wedding Day", "Final pack check: emergency kit", "high", "2026-11-10", "Shai", "Add safety pins, blotting paper, spare earrings, meds, sewing kit, heel tips, phone batteries, tissue, stain stick.", ""],
+    ] as [string, string, Priority, string, string, string, string][]).map(
+      ([section, task, category, due_date, owner, details, done], i) => ({
+        id: `k${i + 1}`, task, category: category as Priority, due_date, completed: done === "done", section, owner, details,
+      }),
+    ),
+  ],
   attire: [
     { id: "a1", group: "bride", label: "The Bride", colors: [c("White", "#F6F1EB")], reserved: true, notes: "", swatch_url: "", order: 1 },
     { id: "a2", group: "groom", label: "The Groom", colors: [c("Black", "#0B0B0B")], reserved: true, notes: "", swatch_url: "", order: 2 },
@@ -132,12 +286,13 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
   ],
 
   faq: [
-    { id: "f0", question: "Can I watch the ceremony?", answer: "Please do — it would mean the world. We chose to keep our 4 PM ceremony intimate, with our families, our entourage and a few honoured guests — and if your heart wishes to be there as we say “I do”, you are more than welcome to join us. Just please be seated before 4:00 PM, as the doors close the moment the procession begins; reserved rows are for our families and entourage, with open seats around them. From 5:30 PM everyone is welcome — join us for the Welcome Toast & Snacks, then the reception at 6:30 PM.", order: 0 },
+    { id: "f0", question: "Can I watch the ceremony?", answer: "Please do — it would mean the world. We chose to keep our 4 PM ceremony intimate, with our families, our entourage and a few honoured guests — and if your heart wishes to be there as we say “I do”, you are more than welcome to join us. The hall is being cleaned and prepared until 4:00 PM, so please come straight to the majlis, just outside the hall, before 4:00 PM: our coordinators will gather everyone there, snacks and refreshments are served, and a few minutes before the procession we will all walk into the hall together — the doors close the moment it begins. Reserved rows are for our families and entourage, with open seats around them. From 5:30 PM everyone is welcome — join us for the Welcome Toast & Snacks, then the reception at 6:30 PM.", order: 0 },
     { id: "f1", question: "Can I bring a plus one?", answer: "Your invitation lists your seats. The RSVP lets you choose 1 or 2 pax only if we've reserved two for you.", order: 1 },
     { id: "f2", question: "What should I wear?", answer: "Black tie, in glossy greens and warm shining browns. Greens: emerald, laurel, jade, scarab, olive, peridot. Warm browns: coffee, smoky topaz, bronze, dark honey, caramel, toffee — every shade is swatched in the Dress Code section above. Kindly avoid black, white, burgundy and copper, which are reserved for our families and entourage. Do bring the shine: satin, velvet, silk, fine suit wool and liquid poly are all welcome, while tulle, chiffon and anything fully matte are best left at home.", order: 2 },
     { id: "f3", question: "Are kids welcome?", answer: "We adore your little ones — they are welcome to join the reception whenever your invitation says so. The ceremony itself is an adults-only celebration, unless they are part of our entourage: our flower girl and ring bearer hold the front row.", order: 3 },
-    { id: "f4", question: "Is there parking?", answer: "Yes — though not in the courtyard: parking is in a separate area, and The Heaven's team will tell you where to park when you arrive at the gate.", order: 4 },
+    { id: "f4", question: "Is there parking?", answer: "Yes — though not in the courtyard: parking is in a separate area, and The Heaven's team will tell you where to park when you arrive at the gate. Then walk straight to the majlis — it is where everyone is gathered.", order: 4 },
     { id: "f5", question: "Can I post photos?", answer: "Please! Tag @shaiandjeg and use #JSGotMarried — #JSSayIDo and #JSWishComeTrue work beautifully too. We only ask for an unplugged ceremony.", order: 5 },
+    { id: "f6", question: "Where do I go when I arrive?", answer: "Straight to the majlis — the welcome lounge just outside the hall. The hall itself rests from 2:00 to 4:00 PM while The Heaven's team clean and prepare it, so nobody enters until 4:00. Our coordinators will meet you at the majlis, the entourage is briefed there, and snacks and refreshments are served from the moment you arrive. A few minutes before 4:00 PM we all walk into the hall together for the ceremony — and from 5:30 PM the majlis hosts the Welcome Toast & Snacks until the reception at 6:30 PM.", order: 6 },
   ],
   message_templates: [],
   messages: [],

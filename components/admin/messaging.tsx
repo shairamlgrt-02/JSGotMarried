@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useTable } from "@/lib/hooks";
-import { MESSAGE_CATEGORIES, MERGE_TAGS, applyMergeTags, messageCategoryFor, resolveRecipients, type MessageCategory, type Recipient } from "@/lib/messaging";
+import { MESSAGE_CATEGORIES, MERGE_TAGS, PRESET_TEMPLATES, applyMergeTags, messageCategoryFor, resolveRecipients, type MessageCategory, type Recipient } from "@/lib/messaging";
 import type { MessageTemplate, MessageLog } from "@/lib/types";
 import { Btn, Card, Tag } from "./ui";
 import { uid } from "@/lib/db";
@@ -52,6 +52,65 @@ function GroupPicker({ value, onChange }: { value: string[]; onChange: (next: st
   );
 }
 
+/* ═══════════ READY-MADE TEMPLATES ═══════════ */
+/**
+ * The letters written once in the code (PRESET_TEMPLATES in lib/messaging.ts): the RSVP chase — a
+ * gentle reminder, then the kind-but-firm final call — and the thank-yous beside them. One click
+ * copies one into the couple's own templates as an ordinary, editable row; nothing is pushed
+ * behind their back, so an added copy can be reworded or deleted like any other.
+ */
+function PresetTemplates({ templates, onAdd }: { templates: MessageTemplate[]; onAdd: (t: MessageTemplate) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Card className="border-wine/20">
+      <button type="button" onClick={() => setOpen(!open)} className="w-full flex items-center justify-between gap-4 text-left">
+        <div>
+          <h3 className="font-serif text-xl">Ready-made templates ✦</h3>
+          <p className="text-sm text-ink/60 mt-1">
+            The RSVP follow-ups, written for you — {PRESET_TEMPLATES.length} letters from a gentle reminder to the final call. Add one, then edit it freely.
+          </p>
+        </div>
+        <span className="text-2xl text-wine shrink-0">{open ? "−" : "+"}</span>
+      </button>
+      {open && (
+        <div className="grid gap-3 mt-5">
+          {PRESET_TEMPLATES.map((p) => {
+            const added = templates.some((t) => t.name === p.name);
+            return (
+              <div key={p.id} className="border border-taupe/20 rounded-xl p-4 bg-white/50">
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-medium">{p.name}</span>
+                      <Tag>{p.label}</Tag>
+                    </div>
+                    <p className="text-xs text-ink/60">{p.hint}</p>
+                    <p className="text-xs text-ink/40 mt-1">
+                      Goes to: {p.categories.map((id) => messageCategoryFor(id)?.label).filter(Boolean).join(", ") || "whoever you pick when you send it"}
+                    </p>
+                  </div>
+                  <Btn variant={added ? "ghost" : "gold"} disabled={added} onClick={() => onAdd({
+                    id: uid(),
+                    name: p.name,
+                    label: p.label,
+                    body: p.body,
+                    categories: p.categories.join(","),
+                    created_at: new Date().toISOString(),
+                  })}>{added ? "Added ✓" : "Add to my templates"}</Btn>
+                </div>
+                <details className="mt-3 text-xs">
+                  <summary className="cursor-pointer text-ink/60 hover:text-ink">Preview the message</summary>
+                  <div className="mt-2 p-3 bg-oat/50 rounded font-mono whitespace-pre-wrap">{p.body}</div>
+                </details>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 /* ═══════════ TEMPLATES TAB ═══════════ */
 export function TemplatesTab() {
   const { rows: templates, save, del } = useTable("message_templates");
@@ -85,6 +144,8 @@ export function TemplatesTab() {
         </div>
         <Btn onClick={handleNew}>+ New Template</Btn>
       </div>
+
+      <PresetTemplates templates={templates} onAdd={save} />
 
       {showForm && editing && (
         <TemplateForm

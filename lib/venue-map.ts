@@ -1,10 +1,14 @@
-import { ALL_WELCOME_FROM, ENTOURAGE_CALL_TIME, RECEPTION_AT, type ArrivalWindow } from "./program";
+import { ALL_WELCOME_FROM, ENTOURAGE_CALL_TIME, HALL_CLOSED_FROM, HALL_CLOSED_UNTIL, RECEPTION_AT, type ArrivalWindow } from "./program";
 import { EDGE, LACE, MOCHA, PAPER, TAUPE, WINE, caps, capsWidth, pin, roundRect, serif, text } from "./card-draw";
 
 /**
  * A small wayfinding plan of the venue for the programme card: where the hall is, where the
  * majlis is (just outside it), the courtyard beside it and where the entrance is — the places the
  * arrival notes send a guest to, numbered to match the legend printed under the map.
+ *
+ * The one flow on the plan: from the gate, straight to the majlis — the hall is The Heaven's to
+ * clean and prepare until 4:00 PM, so everybody (entourage included) gathers at the majlis first,
+ * and the whole party walks into the hall together just before the procession.
  *
  * Parking is deliberately NOT drawn: it is not in the grounds (the open yard beside the path is
  * just the courtyard) but in a separate area, and The Heaven's team tell each car where to go when
@@ -20,8 +24,12 @@ export const MAP_W = 640;
 export const MAP_H = 440;
 
 /** The two arrival notes written onto the plan itself — one on the hall, one on the majlis. */
-export const MAP_NOTE_ENTOURAGE = [`Entourage & wedding team · ${ENTOURAGE_CALL_TIME} arrival`];
-export const MAP_NOTE_GUESTS = ["Guests welcome", `${ALL_WELCOME_FROM.replace(/\s*PM$/, "")} – ${RECEPTION_AT} arrival`];
+export const MAP_NOTE_HALL = [`Closed ${HALL_CLOSED_FROM} – ${HALL_CLOSED_UNTIL} · being prepared`];
+export const MAP_NOTE_MAJLIS = ["Everyone gathers at the majlis first", `Entourage ${ENTOURAGE_CALL_TIME} · Guests ${ALL_WELCOME_FROM}`];
+/** How a guest gets from the majlis into the hall — the line along the majlis-to-hall arrow. */
+export const MAP_NOTE_WALK_IN = "just before 4:00 PM · all together";
+export const MAP_NOTE_ENTOURAGE = MAP_NOTE_HALL;
+export const MAP_NOTE_GUESTS = MAP_NOTE_MAJLIS;
 /**
  * Where the cars go: not the courtyard, but a separate area that The Heaven's team point each car
  * to on arrival at the gate. Two short lines at the gate on the plan itself — and, beside the plan
@@ -59,10 +67,11 @@ function dashedLine(g: Ctx, pts: [number, number][], color = WINE, width = 2.2, 
   g.restore();
 }
 
-function arrowHead(g: Ctx, x: number, y: number, dir: "up" | "right", size = 9, color = WINE) {
+function arrowHead(g: Ctx, x: number, y: number, dir: "up" | "right" | "left", size = 9, color = WINE) {
   g.fillStyle = color;
   g.beginPath();
   if (dir === "up") { g.moveTo(x, y - size); g.lineTo(x - size * 0.8, y + size * 0.6); g.lineTo(x + size * 0.8, y + size * 0.6); }
+  else if (dir === "left") { g.moveTo(x - size, y); g.lineTo(x + size * 0.6, y - size * 0.8); g.lineTo(x + size * 0.6, y + size * 0.8); }
   else { g.moveTo(x + size, y); g.lineTo(x - size * 0.6, y - size * 0.8); g.lineTo(x - size * 0.6, y + size * 0.8); }
   g.closePath();
   g.fill();
@@ -143,12 +152,12 @@ export function drawVenueMap(g: Ctx, x: number, y: number, w: number, h: number)
   g.fillStyle = GROUND; g.fill();
   g.strokeStyle = EDGE; g.lineWidth = 1.5; g.stroke();
 
-  // ── the hall (ceremony & reception) ──
+  // ── the hall (ceremony & reception) — closed until 4:00 while it is prepared ──
   const hall = { x: 170, y: 28, w: 444, h: 206 };
   roundRect(g, hall.x, hall.y, hall.w, hall.h, 10);
   g.fillStyle = PAPER; g.fill();
   g.strokeStyle = WINE; g.lineWidth = 2.6; g.stroke();
-  band(g, hall.x, hall.y, hall.w, 10, MAP_NOTE_ENTOURAGE);
+  band(g, hall.x, hall.y, hall.w, 10, MAP_NOTE_HALL);
   // stage at the far end
   roundRect(g, hall.x + 110, hall.y + 36, hall.w - 220, 16, 6);
   g.fillStyle = "#E9DCCB"; g.fill();
@@ -171,7 +180,7 @@ export function drawVenueMap(g: Ctx, x: number, y: number, w: number, h: number)
   roundRect(g, majlis.x, majlis.y, majlis.w, majlis.h, 14);
   g.fillStyle = "#F9F1E4"; g.fill();
   g.save(); g.setLineDash([7, 5]); g.strokeStyle = WINE; g.lineWidth = 2; g.stroke(); g.restore();
-  const majlisBand = band(g, majlis.x, majlis.y, majlis.w, 14, MAP_NOTE_GUESTS);
+  const majlisBand = band(g, majlis.x, majlis.y, majlis.w, 14, MAP_NOTE_MAJLIS);
   // low seating around a centre table
   const lounge = majlis.y + majlisBand + 20;
   g.fillStyle = SEAT;
@@ -180,7 +189,7 @@ export function drawVenueMap(g: Ctx, x: number, y: number, w: number, h: number)
   }
   g.beginPath(); g.ellipse(majlis.x + majlis.w / 2, lounge, 22, 10, 0, 0, Math.PI * 2); g.fillStyle = "#E9DCCB"; g.fill();
   caps(g, "the majlis", majlis.x + majlis.w / 2, majlis.y + majlis.h - 24, 16, WINE, 0.26);
-  text(g, "welcome toast, snacks & photos", majlis.x + majlis.w / 2, majlis.y + majlis.h - 8, serif(12, "i400"), MOCHA);
+  text(g, "briefing · snacks · welcome toast & photos", majlis.x + majlis.w / 2, majlis.y + majlis.h - 8, serif(11.5, "i400"), MOCHA);
 
   // ── the courtyard — an open paved yard across the path from the majlis (not the parking) ──
   const yard = { x: 30, y: 262, w: 206, h: 112 };
@@ -203,12 +212,16 @@ export function drawVenueMap(g: Ctx, x: number, y: number, w: number, h: number)
   const noteW = MAP_W - 18 - noteL;
   caps(g, "entrance", noteL, gate.y - 35, 13, WINE, 0.26, "left");
   MAP_NOTE_PARKING.forEach((line, i) => note(g, line, noteL, gate.y - 20 + i * 13.5, noteW));
-  // the path: in from the gate, straight up to the doors — with a step right for the majlis
-  dashedLine(g, [[gate.x, gate.y - 10], [gate.x, door.y + 44]]);
-  arrowHead(g, gate.x, door.y + 40, "up", 8);
+  // the path: in from the gate, straight up the courtyard side, then a step right into the majlis —
+  // everyone gathers there first, because the hall is closed while it is being prepared
   const step = majlis.y + 64;
+  dashedLine(g, [[gate.x, gate.y - 10], [gate.x, step]]);
   dashedLine(g, [[gate.x, step], [majlis.x - 14, step]]);
   arrowHead(g, majlis.x - 10, step, "right", 8);
+  // …and just before the procession, the whole party walks in from the majlis to the hall together
+  dashedLine(g, [[majlis.x + 60, majlis.y - 8], [door.x + door.w + 26, door.y + 16]], WINE, 2.2, [6, 7]);
+  arrowHead(g, door.x + door.w + 22, door.y + 15, "left", 8);
+  note(g, MAP_NOTE_WALK_IN, majlis.x + 66, majlis.y - 17, 210, 11.5, WINE);
 
   // the pins, numbered as in the legend — 1 sits by the entrance, where parking is explained
   pin(g, 1, gate.x + 36, gate.y - 40, 15);

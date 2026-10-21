@@ -1,5 +1,5 @@
 import { EDGE, LACE, MOCHA, PAPER, TAUPE, WINE, caps, diamondRule, drawLines, fit, loadCardFonts, paper, pin, roundRect, savePng, script, serif, text, wrap, wrapLines } from "./card-draw";
-import { ARRIVAL_NOTES, ENTOURAGE_CALL_TIME, GUEST_ARRIVAL_GUIDE, PROGRAM_HEADLINE, PROGRAM_HEADLINE_DETAIL, type ProgramStop } from "./program";
+import { ARRIVAL_NOTES, GUEST_ARRIVAL_GUIDE, PROGRAM_HEADLINE, PROGRAM_HEADLINE_DETAIL, type ProgramStop } from "./program";
 import { MAP_H, MAP_W, PARKING_NOTE, VENUE_MAP_LEGEND, drawVenueMap } from "./venue-map";
 
 /**
@@ -147,7 +147,7 @@ function drawMap(g: CanvasRenderingContext2D, y: number, venue: string) {
   const colW = W - x - colL;
   let cy = y + 24;
   cy = drawLines(g, ["Arriving at another hour?", "Here's where to go"], colL, cy, serif(28, "i500"), WINE, 35, "left");
-  cy = wrap(g, `for our guests — the entourage & wedding team keep their ${ENTOURAGE_CALL_TIME} call time`, colL, cy + 34, serif(22, "i400"), TAUPE, 28, colW, "left");
+  cy = wrap(g, `everyone begins at the majlis — the hall rests until 4:00 PM while it is cleaned & prepared`, colL, cy + 34, serif(22, "i400"), TAUPE, 28, colW, "left");
   cy += 54;
   const rows = [...GUEST_ARRIVAL_GUIDE, PARKING_NOTE];
   rows.forEach((row, i) => {

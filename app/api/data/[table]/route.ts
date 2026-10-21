@@ -85,6 +85,8 @@ export async function POST(req: NextRequest, { params }: { params: { table: stri
         { col: "greet", label: "Who it's for", ddl: "ALTER TABLE public.guests ADD COLUMN IF NOT EXISTS greet text DEFAULT '';" },
         { col: "note", label: "notes", ddl: "ALTER TABLE public.guests ADD COLUMN IF NOT EXISTS note text DEFAULT '';" },
         { col: "tags", label: "guest tags", ddl: "ALTER TABLE public.guests ADD COLUMN IF NOT EXISTS tags text DEFAULT '';" },
+        { col: "role", label: "day-of role", ddl: "ALTER TABLE public.guests ADD COLUMN IF NOT EXISTS role text DEFAULT '';" },
+        { col: "role_note", label: "role note", ddl: "ALTER TABLE public.guests ADD COLUMN IF NOT EXISTS role_note text DEFAULT '';" },
       ];
       const missing = knownColumns.filter(({ col }) => new RegExp(`\\b${col}\\b`, "i").test(finalError.message));
       if (missing.length) {
@@ -92,6 +94,26 @@ export async function POST(req: NextRequest, { params }: { params: { table: stri
         const ddl = missing.map((m) => m.ddl).join(" ");
         return NextResponse.json({
           error: `Couldn't save ${labels}: this Supabase project's guests table is missing a required column. In Supabase → SQL Editor, run: ${ddl} Then reload the Binder and try again. This edit was not saved.`,
+        }, { status: 409 });
+      }
+    }
+  }
+  if (params.table === "checklist" && columnError(result.error.message)) {
+    // The sheet's Category (section), Person In-charge (owner) and Details/Notes columns: like
+    // greet/note above, they are never silently dropped — a project that hasn't re-run
+    // schema.sql gets the exact SQL to run, and the edit is not saved.
+    const finalError = result.error;
+    if (finalError && columnError(finalError.message)) {
+      const knownColumns: { col: string; ddl: string }[] = [
+        { col: "section", ddl: "ALTER TABLE public.checklist ADD COLUMN IF NOT EXISTS section text DEFAULT '';" },
+        { col: "owner", ddl: "ALTER TABLE public.checklist ADD COLUMN IF NOT EXISTS owner text DEFAULT '';" },
+        { col: "details", ddl: "ALTER TABLE public.checklist ADD COLUMN IF NOT EXISTS details text DEFAULT '';" },
+      ];
+      const missing = knownColumns.filter(({ col }) => new RegExp(`\\b${col}\\b`, "i").test(finalError.message));
+      if (missing.length) {
+        const ddl = missing.map((m) => m.ddl).join(" ");
+        return NextResponse.json({
+          error: `Couldn't save the checklist columns (section / owner / details): this Supabase project's checklist table is missing them. In Supabase → SQL Editor, run: ${ddl} Then reload the Binder and try again. This edit was not saved.`,
         }, { status: 409 });
       }
     }

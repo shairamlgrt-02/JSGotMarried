@@ -8,7 +8,7 @@ A digital art piece plus a wedding binder, in one Next.js app.
 | **The invitation preview** | `/preview` | The one-page editorial site in the Midnight Botanical style as the world may see it: loader, hero + countdown, story chapters, 11.11, dress code, entourage, gallery, moments, hashtags. **No venue, no programme, no reply card, no FAQ.** Safe to post anywhere. |
 | **An invitation** | `/JS-7KQF` | The same site, unsealed for one household: the invitation wording, the pinned programme, the venue + map, the postcard, the RSVP card and the FAQ. This is the link you send. |
 | **RSVP** | `/rsvp` | The code door for guests who lost the link: type the **last 4 characters** of your code (or the whole thing) and you're taken to your own reply card. |
-| **The Binder** | `/admin` | Private admin (password: `ADMIN_PASSWORD`, default `JS2026`). Tabs: Overview · Details · Schedule (drag to reorder) · Checklist · Budget · **Invite Codes** · **Guests & RSVP** · **Audio Guestbook** · Vendors · Attire & Colors · **Bridesmaid Cards** · Content · Settings |
+| **The Binder** | `/admin` | Private admin (password: `ADMIN_PASSWORD`, default `JS2026`). Tabs: Overview · Details · Schedule (drag to reorder) · Checklist · Budget · **Invite Codes** · **Guests & RSVP** · **Guest Roles** · **Audio Guestbook** · **Compose / Templates / Tracker** · Vendors · Attire & Colors · **Bridesmaid Cards** · Content · Settings |
 
 Anything you edit in the Binder shows up on the public site.
 
@@ -68,12 +68,22 @@ section, the guest's downloadable **invitation card** (the PNG offered after the
 downloadable **programme card** (below), and — for the two times that matter — the FAQ and the
 calendar note.
 
+**The one flow of the day (updated with The Heaven's rule):** the hall is **closed 2:00 – 4:00 PM**
+while The Heaven's team clean and prepare it — so *nobody* enters before 4:00, and *everyone*
+(entourage and wedding team included) comes **straight to the majlis**, where the coordinators meet
+them, the entourage is briefed, and snacks & refreshments are served. A few minutes before 4:00 the
+whole party **walks into the hall together**, and the doors close as the procession begins. Every
+surface tells the same story: the timeline's first stop, the "read this first" panel and the map on
+the programme card, the keepsake's programme, the FAQ's *Where do I go when I arrive?* and the
+calendar note. Change an hour in `lib/program.ts` (`HALL_CLOSED_FROM`, `CEREMONY_DOORS_CLOSE`,
+`ENTOURAGE_CALL_TIME`, `ALL_WELCOME_FROM`, `RECEPTION_AT`) and every one of them follows.
+
 | | Where it shows |
 |---|---|
-| `WEDDING_PROGRAM_STOPS` | the timeline, and the *Order of the day* on both cards. A stop's short `tag` ("Entourage & wedding team", "Doors close at 4:00 PM", "Everyone welcome") sits under its name on the timeline and beside it on the programme card; its one-line `note` is printed under it on the keepsake; its `programmeNote` — the warm line, where the facts are already said higher up — under it on the programme card. |
+| `WEDDING_PROGRAM_STOPS` | the timeline, and the *Order of the day* on both cards. A stop's short `tag` ("Doors close at 4:00 PM", "Everyone welcome") sits under its name on the timeline and beside it on the programme card; its one-line `note` is printed under it on the keepsake; its `programmeNote` — the warm line, where the facts are already said higher up — under it on the programme card. |
 | `WEDDING_PROGRAM_HIGHLIGHTS` | the three cards: the span of hours on the ribbon and the couple's own warm description underneath. Wrap the parts a guest must not miss in `*asterisks*` — `*4:00 PM*`, `*everyone is welcome*` — and the card sets them in bold wine. |
-| `CEREMONY_DOORS_CLOSE` · `ALL_WELCOME_FROM` · `ENTOURAGE_CALL_TIME` · `RECEPTION_AT` | the hours guests must not miss, written once: the ceremony is intimate and **closed-door — be seated before 4:00 PM, the doors close the moment the procession begins**; the entourage's call time is **3:30 PM**; from **5:30 PM everyone is welcome** for the Welcome Toast & Snacks, then the reception at **6:30**. |
-| `PROGRAM_HEADLINE` · `ARRIVAL_NOTES` · `GUEST_ARRIVAL_GUIDE` | the programme card's wording (and the two one-line "who arrives when" tiles under the timeline): *You don't need to be there at 4:00 PM*, the note for the entourage & wedding team (3:30 — reserved seats, wait for the coordinators' cue), the note for every other guest (5:30 at the majlis, reception at 6:30), and where a guest should go if they arrive at another hour (early for the ceremony, or while it is under way). A stop's `programmeNote` is the warm line under it on that card. |
+| `HALL_CLOSED_FROM` · `CEREMONY_DOORS_CLOSE` · `ENTOURAGE_CALL_TIME` · `ALL_WELCOME_FROM` · `RECEPTION_AT` | the hours guests must not miss, written once: the **hall rests 2:00 – 4:00 PM** while it is cleaned and prepared; the entourage's call time is **3:30 PM at the majlis** (coordinators brief them there); everyone walks in together just before **4:00 PM**; from **5:30 PM everyone is welcome** for the Welcome Toast & Snacks, then the reception at **6:30**. |
+| `PROGRAM_HEADLINE` · `ARRIVAL_NOTES` · `GUEST_ARRIVAL_GUIDE` | the programme card's wording (and the two one-line "who arrives when" tiles under the timeline): *You don't need to be there at 4:00 PM*, the note for the entourage & wedding team (3:30 — straight to the majlis, the coordinators brief you there), the note for every other guest (5:30 at the majlis, reception at 6:30), and where a guest should go if they arrive at another hour (before 4:00 → the majlis, everyone walks in together; 4:00–5:30 → the majlis, the ceremony is behind closed doors). A stop's `programmeNote` is the warm line under it on that card. |
 
 Edit the words there and the next deploy carries them to the site and to every card a guest saves
 afterwards. The FAQ's *Can I watch the ceremony?* answer repeats the same two facts; on a project
@@ -85,21 +95,25 @@ section (**Download the programme card**) and again beside the keepsake after a 
 *yes*. It is drawn in the guest's own browser (`lib/program-card.ts`, no server, no upload) and is
 about the *day* rather than the guest, so it leads with the thing guests keep getting wrong:
 
-1. **one panel to read first** — *You don't need to be there at 4:00 PM*, the ceremony in two warm
-   sentences, and under a hairline the two notes side by side in large type: **Entourage & wedding
-   team: 3:30 PM**, head to the hall, find your reserved seat and wait for the coordinators' cue ·
-   **All other guests: 5:30 PM**, head to the majlis for the welcome toast, snacks & photos, then the
-   reception at 6:30;
+1. **one panel to read first** — *You don't need to be there at 4:00 PM*, the ceremony in a few warm
+   sentences (the hall is being prepared until 4:00, so everyone gathers at the majlis first and
+   walks in together), and under a hairline the two notes side by side in large type: **Entourage &
+   wedding team: 3:30 PM**, head to the majlis — the coordinators meet & brief you there, snacks &
+   refreshments served · **All other guests: 5:30 PM**, head to the majlis for the welcome toast,
+   snacks & photos, then the reception at 6:30 (wishing to witness the ceremony? come to the majlis
+   before 4:00 instead);
 2. the **small plan of the venue** (`lib/venue-map.ts`: the hall with its reserved rows and doors,
    the majlis just outside, the courtyard, the entrance and the path in — numbered to match the
-   one-line legend under it) and, **beside it, the wayfinding notes**: where to go if you arrive at
-   another hour (before 4:00 → the hall, if you wish to witness the ceremony; 4:00–5:30 → the
-   majlis, the ceremony is behind closed doors — we will come and find you) and where the cars go
-   (parking → a separate area, not the courtyard; The Heaven's team tell you where at the gate);
-3. the order of the day — each fact as a short tag beside its stop (*entourage & wedding team*,
-   *doors close at 4:00 PM*, *everyone welcome*) and the couple's own line under the two hours that
-   hold the evening (`programmeNote`: *the hour we get to hug you*; *dinner, our film on the big
-   screen, games and giveaways — then we dance*) — the dress code in one line and the sign-off.
+   one-line legend under it, with the hall's *closed 2:00–4:00 PM* band and the dashed walk-in
+   arrow from majlis to doors, *just before 4:00 PM · all together*) and, **beside it, the
+   wayfinding notes**: where to go if you arrive at another hour (before 4:00 → the majlis;
+   4:00–5:30 → the majlis, the ceremony is behind closed doors — we will come and find you) and
+   where the cars go (parking → a separate area, not the courtyard; The Heaven's team tell you
+   where at the gate);
+3. the order of the day — each fact as a short tag beside its stop (*doors close at 4:00 PM*,
+   *everyone welcome*) and the couple's own line under the two hours that hold the evening
+   (`programmeNote`: *the hour we get to hug you*; *dinner, our film on the big screen, games and
+   giveaways — then we dance*) — the dress code in one line and the sign-off.
 
 The card is a **9:16 portrait — 1500 × 2667, a phone screen, a story** — so it is seen whole and
 never scrolled. Every fact is said once and the card uses its width wherever two things belong side
@@ -110,14 +124,24 @@ never crowded; should the wording ever outgrow it (a two-line dress code, say), 
 taller rather than cut a line — the type is never set smaller.
 
 The plan in `lib/venue-map.ts` is a schematic drawn in a logical 640 × 440 space, with the two
-arrival notes written onto it (*Entourage & wedding team · 3:30 PM arrival* on the hall, *Guests
-welcome · 5:30 – 6:30 PM arrival* on the majlis) and the parking note at the entrance. **Parking is
-deliberately not on the plan**: the open yard beside the path is just the courtyard, and the cars go
-to a separate area that The Heaven's team point each guest to when they arrive at the gate — so the
-map, the parking note beside it and the FAQ's *Is there parking?* all say exactly that
-(`PARKING_NOTE`). Redraw the shapes there from the couple's own sketch of The Heaven and every card
-follows.
+arrival notes written onto it (*Closed 2:00–4:00 PM · being prepared* on the hall, *Everyone
+gathers at the majlis first · entourage 3:30 PM · guests 5:30 PM* on the majlis) and the parking
+note at the entrance. **Parking is deliberately not on the plan**: the open yard beside the path is
+just the courtyard, and the cars go to a separate area that The Heaven's team point each guest to
+when they arrive at the gate — so the map, the parking note beside it and the FAQ's *Is there
+parking?* all say exactly that (`PARKING_NOTE`). Redraw the shapes there from the couple's own
+sketch of The Heaven and every card follows.
 Like the venue itself, the card is only offered on an unsealed invitation — never on `/preview`.
+
+### The FAQ card
+A third downloadable PNG, offered at the foot of the **Questions** section (`lib/faq-card.ts` —
+**Download the FAQ card**). Same paper, same inks, same 9:16 frame, and one plain idea: the whole
+little rulebook of the day, kept on a phone instead of scrolled. It prints **the exact questions
+and answers the section shows** (binder → Content → FAQ is the one source — edit a question there
+and the next guest's card carries it), with the *Where do I go when I arrive?* answer set first in
+a "read this first" panel, a dotted hairline between pairs, and the couple's sign-off at the foot.
+Like the programme card it grows taller rather than cut a line, and it is only offered on an
+unsealed invitation.
 
 ## Bridesmaid cards (`Bridesmaid Cards`)
 One A4 thank-you card for each of the girls — *thank you for saying yes* — in the keepsake's paper
@@ -252,6 +276,66 @@ Shaira & Jeger
   the `── THIS IS THE MESSAGE TEMPLATE ──` heading. Edit those lines and the next deploy carries the
   new wording to every household.
 
+### Ready-made templates (Templates tab)
+The RSVP chase, written once in the code so nobody starts from a blank box
+(`PRESET_TEMPLATES` in `lib/messaging.ts`). The **Templates** tab lists them under
+**Ready-made templates ✦** with a preview and a one-click **Add to my templates** — the added copy
+is an ordinary template, free to reword or delete; nothing is pushed behind your back:
+
+| Template | For | Tone |
+|---|---|---|
+| **RSVP · Gentle Reminder** | Pending RSVP | warm, no pressure — "one quiet minute, please fill in the short form" |
+| **RSVP · Final Call (deadline)** | Pending RSVP | kind but firm — replies close on the deadline because seating and catering are finalised; *no reply after it is lovingly taken as a no, no hard feelings, door always open* |
+| **RSVP · Thank You for Your Yes** | Confirmed (Yes) | thanks + the one arrival fact (majlis first, everyone walks in together) |
+| **RSVP · Thank You for Letting Us Know** | Declined (No) | all love, zero guilt, "coffee soon" |
+| **Day-of Role · We'd Love to Entrust You** | any role group | asks a household to serve in `{role}` — pair it with the Guest Roles tab |
+
+Each arrives with its recipient groups pre-ticked (Compose fills the rest in one click), and the
+merge tags — `{first_name}`, `{seats}` ("2 seats" / "1 seat" / "a seat"), `{rsvp_deadline}`,
+`{invitation_link}`, `{wedding_date}`, `{couple_names}`, `{role}`… — fill themselves in per
+household, exactly like the tracker's logs expect.
+
+## Guest Roles (the day-of jobs)
+One role per household — the coffee & tea station, the souvenir table, the ushers, the parking
+point person — assigned in the binder's **Guest Roles** tab (`components/admin/roles.tsx`). A role
+is stored on the guest row itself (`guests.role`), as a preset id from the shared dictionary
+`lib/roles.ts` (fourteen suggested roles, each with a one-line brief) **or the couple's own words**
+— which then *are* the id, the same trick the guest tags use, so nothing needs a table of its own.
+A short `role_note` carries the "how" ("bring the thermos", "handles the espresso machine").
+
+* **By household** — search a name, code or role; pick from the suggested list or type your own.
+* **By role** — the teams, each with **Copy list** and **📨 Message this team**, which jumps into
+  Compose with that role pre-ticked as the recipient group (the *Day-of Role* ready-made template
+  fills the `{role}` in). Roles resolve in the messaging module exactly like tags, including ones
+  you invented.
+* **Copy roster** pastes the whole assignment into Excel/Sheets; **Export CSV** keeps it in the
+  binder's paper trail.
+
+On a live Supabase project run `supabase/schema.sql` once more (it adds `guests.role` and
+`guests.role_note`); until then a save shows the same clear migration message the greet/note
+columns taught the binder to give, instead of silently dropping the edit.
+
+## The Checklist (the couple's sheet, plus the fine detail)
+The binder's Checklist now carries the whole sheet, not just the words: each row has a
+**section** (the sheet's Category — *Venue & Catering*, *Programs & Speeches*…), an
+**owner** (Person In-charge) and **details** (Details / Notes), all editable inline, with a
+**Section filter** and **Export CSV** beside the priority/date filters. The columns are optional —
+`supabase/schema.sql` adds `checklist.section/owner/details`; an older project saves without them
+and is told the one line of SQL to catch up.
+
+The starter data (`lib/seed.ts`) holds it in two untouched halves:
+
+* **c1…c24** — the original starter list, never reworded: a live project already holds those rows
+  (ticked, edited, re-dated) and *push starter data* only fills in rows whose id is missing.
+* **k1…k116** — the couple's updated sheet transcribed row by row (their four pre-done rows come
+  across already ticked), **plus** the finer-grained tasks a review of that sheet grew: vendor
+  entry at 4:00 PM with the hall closed 2–4, the majlis briefing refreshments, the walk-in
+  marshals, speech time limits, the do-not-play list, cake delivery & placement, cash envelopes
+  with a designated payer, the coordinator master document, a pocket timeline for the couple, and
+  so on. Press **Settings → Push starter data** once and every missing k-row appears — a handful
+  overlap the old c-rows (rings, vows, rehearsal, emergency kit, headcount, street food); keep
+  whichever copy you like and delete the other.
+
 ### The guest's side
 * Their link is `https://your-site/JS-7KQF`. The older `https://your-site/?rsvp=JS-7KQF` you may
   already have sent still works — it lands on the same page.
@@ -342,7 +426,10 @@ components/admin/…           binder tabs + UI kit
 lib/program.ts               the order of the day — timeline, highlight cards, both cards' wording, in one place
 lib/keepsake.ts              the guest's downloadable invitation card (canvas → PNG, in the browser)
 lib/program-card.ts          the downloadable programme card — who arrives when, where to go, the map
+lib/faq-card.ts              the downloadable FAQ card — every question & answer on one paper PNG
 lib/venue-map.ts             the small plan of the venue printed on the programme card
+lib/roles.ts                 the day-of roles dictionary (Guest Roles tab, messaging groups)
+lib/messaging.ts             recipient groups, merge tags, ready-made templates (the RSVP chase)
 lib/card-draw.ts             shared canvas lettering (paper, caps, wrap, pins) for the cards
 lib/bridesmaid-card.ts       the bridesmaids' A4 thank-you card — her jewel, the verse, her note, her role (binder → Bridesmaid Cards)
 lib/jewels.ts                the bridesmaids' jewels (colour, what it says of her) and the roles any of them can be given
