@@ -292,8 +292,11 @@ is an ordinary template, free to reword or delete; nothing is pushed behind your
 
 Each arrives with its recipient groups pre-ticked (Compose fills the rest in one click), and the
 merge tags — `{first_name}`, `{seats}` ("2 seats" / "1 seat" / "a seat"), `{rsvp_deadline}`,
-`{invitation_link}`, `{wedding_date}`, `{couple_names}`, `{role}`… — fill themselves in per
-household, exactly like the tracker's logs expect.
+`{rsvp_link}`, `{invitation_link}`, `{wedding_date}`, `{couple_names}`, `{role}`… — fill themselves
+in per household, exactly like the tracker's logs expect. The chase messages use `{rsvp_link}`: the
+guest's own page, landed **straight on the reply card** (`…/JS-7KQF#rsvp` — the site's own deep
+link, the same handoff the `/rsvp` door uses), while the thank-you keeps the plain invitation link
+so a confirmed guest lands on the whole letter.
 
 ## Guest Roles (the day-of jobs)
 One role per household — the coffee & tea station, the souvenir table, the ushers, the parking

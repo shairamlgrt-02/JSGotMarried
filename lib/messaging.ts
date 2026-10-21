@@ -295,6 +295,7 @@ export const MERGE_TAGS: MergeTag[] = [
   { tag: "{phone}",          label: "Phone Number",     hint: "Their phone number from RSVP" },
   { tag: "{invitation_code}", label: "Invitation Code", hint: "Their personal invitation code" },
   { tag: "{invitation_link}", label: "Invitation Link", hint: "Full link to their personal invitation" },
+  { tag: "{rsvp_link}",       label: "RSVP Link",        hint: "Their invitation link, opened straight on the reply card (…#rsvp)" },
   { tag: "{rsvp_status}",    label: "RSVP Status",      hint: "Their current RSVP status (Confirmed ✓ / Declined ✗ / Pending ⏳)" },
   { tag: "{pax}",            label: "Number of Seats",  hint: "How many seats they have" },
   { tag: "{seats}",          label: "Seats (readable)", hint: "\"2 seats\" / \"1 seat\" / \"a seat\" — drops straight into a sentence" },
@@ -320,6 +321,10 @@ export function applyMergeTags(template: string, recipient: Recipient, info: Wed
     : "October 25, 2026";
   const base = typeof window !== "undefined" ? window.location.origin : "";
   const link = recipient.inviteLink || (recipient.code ? `${base}/${recipient.code}` : "");
+  // The chase messages point here: the guest's own page, landed straight on the reply card.
+  // #rsvp is the site's own deep link (the /rsvp door hands guests over the same way), and the
+  // page smooth-scrolls them down the moment their code is verified.
+  const rsvpLink = link ? `${link}#rsvp` : "";
   // "2 seats" / "1 seat" / "a seat" — phrased so the template's sentence always reads naturally
   const seats = recipient.pax && recipient.pax > 0 ? `${recipient.pax} seat${recipient.pax === 1 ? "" : "s"}` : "a seat";
 
@@ -330,6 +335,7 @@ export function applyMergeTags(template: string, recipient: Recipient, info: Wed
     .replace(/\{phone\}/g, recipient.phone)
     .replace(/\{invitation_code\}/g, recipient.code || "")
     .replace(/\{invitation_link\}/g, link)
+    .replace(/\{rsvp_link\}/g, rsvpLink)
     .replace(/\{rsvp_status\}/g, recipient.rsvpStatus || "")
     .replace(/\{pax\}/g, recipient.pax?.toString() || "")
     .replace(/\{seats\}/g, seats)
@@ -378,9 +384,9 @@ export const PRESET_TEMPLATES: PresetTemplate[] = [
 
 We hope you've been well! We're counting down the days to our wedding on {wedding_date}, and we wanted to send a gentle little reminder about your RSVP.
 
-We've saved {seats} just for you, and we'd love to know if you can join us. When you have a quiet minute, could you please fill out the short RSVP form on your personal invitation link? It only takes a minute — and your reply is how we hold your seat:
+We've saved {seats} just for you, and we'd love to know if you can join us. When you have a quiet minute, could you please fill out the short RSVP form here? It only takes a minute — and your reply is how we hold your seat:
 
-{invitation_link}
+{rsvp_link}
 
 Even a "no" helps us plan, so whatever your answer, please tell us there. 😊
 
@@ -400,9 +406,9 @@ With love,
 Just checking in — we noticed your RSVP hasn't come in yet. Totally understand, life gets busy!
 
 We'd really love to have you with us on {wedding_date}, so when you get a minute, please fill it out here:
-{invitation_link}
+{rsvp_link}
 
-One small but important thing: we finalise our guest list on {rsvp_deadline}, so if we don't hear from you by then, we'll have to lovingly take that as a "no" and release your {seats}. Either way, just let us know! 😊
+📌 *One small but important thing:* we finalise our guest list on *{rsvp_deadline}* — if we don't hear from you by then, we'll have to lovingly take that as a "no" and release your {seats}. Either way, just let us know! 😊
 
 Love,
 {couple_names}`,
