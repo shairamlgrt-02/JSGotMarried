@@ -391,23 +391,24 @@ With love,
   },
   {
     id: "preset_rsvp_final_call",
-    name: "RSVP · Final Call (deadline)",
+    name: "RSVP · Final Call (No Reply = Not Coming)",
     label: "Final call",
-    hint: "The kind-but-firm last message before the deadline — no reply after it means we can't save the seats.",
+    hint: "The last message before the deadline: no RSVP by the date means we take it as a no and the seats are released.",
     categories: ["pending_rsvp"],
     body: `Hi {first_name},
 
-This is our last little reminder about our wedding on {wedding_date} — we close the guest list on {rsvp_deadline}, because that's when we finalise the seating and catering with our venue. 💛
+Hope you're doing well! This is our final reminder about our wedding on {wedding_date}. 🤍
 
-We truly hope you can be part of our day! If you haven't replied yet, please take a minute to fill out the short RSVP on your invitation link — it's how we hold your {seats} and confirm your attendance:
+On {rsvp_deadline} we have to hand our venue and caterers the final guest numbers, so that's when the guest list closes.
+
+If you haven't replied yet, please take a minute to fill out the short RSVP on your invitation link — it's the only way we can hold your {seats}:
 
 {invitation_link}
 
-And if you're unable to come, or life is just full right now — we completely understand, and there are no hard feelings at all. If we haven't heard from you by {rsvp_deadline}, we'll lovingly take it that you can't make it this time. You'll be missed, and there will be other celebrations to share. 🤍
+Please understand: *if we don't receive your RSVP by {rsvp_deadline}, we will regrettably have to take that as a "no"*. Your seats will be released, and we won't be able to accommodate anyone who hasn't confirmed — so kindly don't leave it for the day itself.
 
-Either way, thank you so much for the love and support you've shown us. If anything changes, just message us — there's always room in our hearts (and at the door) for you.
+If you can't join us, no worries at all — just tap "no" on the link so we can plan properly. Either way, thank you, and we hope to see you soon. 😊
 
-With love and understanding,
 {couple_names}`,
   },
   {

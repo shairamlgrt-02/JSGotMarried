@@ -285,7 +285,7 @@ is an ordinary template, free to reword or delete; nothing is pushed behind your
 | Template | For | Tone |
 |---|---|---|
 | **RSVP · Gentle Reminder** | Pending RSVP | warm, no pressure — "one quiet minute, please fill in the short form" |
-| **RSVP · Final Call (deadline)** | Pending RSVP | kind but firm — replies close on the deadline because seating and catering are finalised; *no reply after it is lovingly taken as a no, no hard feelings, door always open* |
+| **RSVP · Final Call (No Reply = Not Coming)** | Pending RSVP | polite, and completely clear: the list closes on the deadline when the venue gets its final numbers; *no RSVP by then is regrettably taken as a "no" — seats are released, and unconfirmed guests can't be accommodated on the day* |
 | **RSVP · Thank You for Your Yes** | Confirmed (Yes) | thanks + the one arrival fact (majlis first, everyone walks in together) |
 | **RSVP · Thank You for Letting Us Know** | Declined (No) | all love, zero guilt, "coffee soon" |
 | **Day-of Role · We'd Love to Entrust You** | any role group | asks a household to serve in `{role}` — pair it with the Guest Roles tab |
