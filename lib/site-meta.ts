@@ -34,18 +34,29 @@ export function siteOrigin(fallback = "https://jsgotmarried.vercel.app"): string
 const absolute = (src: string, origin: string) =>
   /^(https?:|data:)/i.test(src) ? src : `${origin}${src.startsWith("/") ? "" : "/"}${src}`;
 
+const META_COLS = "id, date, bride, groom, venue_name, cover_photo, rsvp_deadline, site_title, site_description, share_image, favicon, hashtags, instagram_note";
+let metaCache: { info: WeddingInfo; expires: number } | null = null;
+const META_TTL_MS = 60_000;
+
+export function invalidateSiteMetaCache() {
+  metaCache = null;
+}
+
 /** Wedding details as the server knows them — Supabase when configured, the starter data otherwise. */
 export async function weddingInfo(): Promise<WeddingInfo> {
+  if (metaCache && Date.now() < metaCache.expires) return metaCache.info;
   const db = serverSupabase();
   if (db) {
-    const { data } = await db.from("wedding_info").select("*").eq("id", "main").maybeSingle();
+    const { data } = await db.from("wedding_info").select(META_COLS).eq("id", "main").maybeSingle();
     if (data) {
+      const merged = { ...(SEED.wedding_info[0] as WeddingInfo), ...(data as Partial<WeddingInfo>) };
       // Repair wording renamed in the code (e.g. #JSWeDo → #JSSayIDo) as it is read, and save it
       // back once — the tab title, the share preview and the site all agree from here on.
-      const { rows, patches } = fixRows("wedding_info", [data as WeddingInfo]);
+      const { rows, patches } = fixRows("wedding_info", [merged]);
       if (patches.length) {
         try { await db.from("wedding_info").update(patches[0].fields).eq("id", patches[0].id); } catch { /* keep serving the fixed copy */ }
       }
+      metaCache = { info: rows[0], expires: Date.now() + META_TTL_MS };
       return rows[0];
     }
   }

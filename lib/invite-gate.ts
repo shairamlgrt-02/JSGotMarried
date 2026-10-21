@@ -42,15 +42,30 @@ export async function matchCode(db: Db, input: string): Promise<CodeMatch> {
   return { kind: "found", code: hits[0], rows: (one.data ?? []) as Guest[] };
 }
 
+const issuedCodeCache = new Map<string, { ok: boolean; expires: number }>();
+const CODE_CACHE_TTL_MS = 60_000;
+
+export function invalidateIssuedCodeCache() {
+  issuedCodeCache.clear();
+}
+
 /** Is this string a code the couple actually issued? (used to unlock the private pages) */
 export async function codeIsIssued(db: Db, input: string): Promise<boolean> {
   const raw = cleanCode(input);
   if (!raw) return false;
   if (raw === DEMO_CODE) return true;
+  const cached = issuedCodeCache.get(raw);
+  if (cached && Date.now() < cached.expires) return cached.ok;
+
   const { data } = await db.from("guests").select("code").in("code", codeCandidates(raw));
-  if ((data ?? []).length) return true;
+  if ((data ?? []).length) {
+    issuedCodeCache.set(raw, { ok: true, expires: Date.now() + CODE_CACHE_TTL_MS });
+    return true;
+  }
   const all = await db.from("guests").select("code");
-  return ((all.data ?? []) as { code?: string }[]).some((r) => codeMatches(r.code || "", raw));
+  const ok = ((all.data ?? []) as { code?: string }[]).some((r) => codeMatches(r.code || "", raw));
+  issuedCodeCache.set(raw, { ok, expires: Date.now() + CODE_CACHE_TTL_MS });
+  return ok;
 }
 
 /**

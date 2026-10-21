@@ -21,7 +21,15 @@ export default function Admin() {
   const [tab, setTab] = useState<Tab>("overview");
   const [mode, setMode] = useState("…");
   const [menu, setMenu] = useState(false);
-  useEffect(() => { getMode().then(setMode); const h = location.hash.slice(1) as Tab; if (TABS.some((t) => t[0] === h)) setTab(h); }, []);
+  const [printReady, setPrintReady] = useState(false);
+  useEffect(() => {
+    getMode().then(setMode);
+    const h = location.hash.slice(1) as Tab;
+    if (TABS.some((t) => t[0] === h)) setTab(h);
+    const onBeforePrint = () => setPrintReady(true);
+    window.addEventListener("beforeprint", onBeforePrint);
+    return () => window.removeEventListener("beforeprint", onBeforePrint);
+  }, []);
   const go = (t: string) => { setTab(t as Tab); setMenu(false); history.replaceState(null, "", `#${t}`); window.scrollTo({ top: 0 }); };
 
   return (
@@ -80,7 +88,7 @@ export default function Admin() {
           </AnimatePresence>
         </main>
       </div>
-      <PrintBinder />
+      {(tab === "settings" || printReady) && <PrintBinder />}
     </>
   );
 }

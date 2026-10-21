@@ -90,6 +90,21 @@ create table if not exists bridesmaid_cards (
 );
 -- the line of Scripture under the jewel ("She is far more precious than jewels" — Proverbs 31:10)
 alter table bridesmaid_cards add column if not exists verse text default '';
+-- Messaging module (binder → Compose / Templates / Tracker): reusable templates and the sent-message log.
+create table if not exists message_templates (
+  id text primary key default gen_random_uuid()::text,
+  name text default '', label text default '', body text default '', categories text default '',
+  created_at timestamptz default now()
+);
+create table if not exists messages (
+  id text primary key default gen_random_uuid()::text,
+  template_id text default '', template_name text default '',
+  original_body text default '', body text default '',
+  recipient_id text default '', recipient_name text default '', recipient_phone text default '',
+  category text default '',
+  sent boolean default false, responded boolean default false, link_opens int default 0,
+  sent_at timestamptz, created_at timestamptz default now()
+);
 
 -- ── anonymous audio guestbook ─────────────────────────────────────────────────────────────────────
 -- Audio itself lives in a private Storage bucket. This table contains no guest name, invite code,
@@ -141,6 +156,25 @@ alter table entourage enable row level security;
 alter table faq enable row level security;
 alter table story enable row level security;
 alter table bridesmaid_cards enable row level security;
+alter table message_templates enable row level security;
+alter table messages enable row level security;
+
+-- Explicit table grants (required for any new table created after Supabase's 2026-10-30 Data API
+-- default-grants cutover): only the server's service_role key talks to these tables via PostgREST;
+-- anon and authenticated never touch them directly.
+revoke all on table
+  public.wedding_info, public.schedule, public.budget, public.guests,
+  public.vendors, public.checklist, public.attire, public.entourage,
+  public.faq, public.story, public.bridesmaid_cards,
+  public.message_templates, public.messages
+from anon, authenticated;
+
+grant all on table
+  public.wedding_info, public.schedule, public.budget, public.guests,
+  public.vendors, public.checklist, public.attire, public.entourage,
+  public.faq, public.story, public.bridesmaid_cards,
+  public.message_templates, public.messages
+to service_role;
 
 -- ── one-off rename: the second wedding hashtag is now #JSSayIDo (was #JSWeDo) ──────────────────
 -- A project seeded before the rename still carries the old tag in its rows, and the site reads the

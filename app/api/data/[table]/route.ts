@@ -2,11 +2,27 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { COOKIE, isAuthed } from "@/lib/auth";
 import { fixRows } from "@/lib/content-fix";
-import { codeIsIssued, redactSealed } from "@/lib/invite-gate";
+import { codeIsIssued, invalidateIssuedCodeCache, redactSealed, SEALED_EMPTY_TABLES } from "@/lib/invite-gate";
+import { invalidateSiteMetaCache } from "@/lib/site-meta";
 import { serverSupabase } from "@/lib/supabase-server";
 import { PUBLIC_TABLES, TABLES, TableName } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Short-lived server-side cache for the public display tables (wedding_info, schedule, attire,
+ * entourage, faq, story). Guests opening invitations read from memory instead of re-downloading
+ * multi-megabyte base64 photo rows from Supabase on every page load; any POST/DELETE from the
+ * binder invalidates the table immediately so edits still go live right away.
+ */
+const publicTableCache = new Map<string, { rows: { id?: string }[]; expires: number }>();
+const PUBLIC_CACHE_TTL_MS = 60_000;
+
+function invalidateTableCache(table: string) {
+  publicTableCache.delete(table);
+  if (table === "wedding_info") invalidateSiteMetaCache();
+  if (table === "guests") invalidateIssuedCodeCache();
+}
 
 async function guard(table: string, write: boolean) {
   if (!TABLES.includes(table as TableName)) return NextResponse.json({ error: "unknown table" }, { status: 404 });
@@ -36,20 +52,39 @@ async function sealed(req: NextRequest, db: ReturnType<typeof serverSupabase>): 
 export async function GET(req: NextRequest, { params }: { params: { table: string } }) {
   const db = await guard(params.table, false);
   if (db instanceof NextResponse) return db;
-  const { data, error } = await db.from(params.table).select("*");
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  const rows = (data ?? []) as { id?: string }[];
+  const isSealed = await sealed(req, db);
+  // Sealed visitors receive [] for schedule and faq — skip the database query entirely.
+  if (isSealed && (SEALED_EMPTY_TABLES as readonly string[]).includes(params.table)) {
+    return NextResponse.json([]);
+  }
+
+  const isPublicTable = PUBLIC_TABLES.includes(params.table as TableName);
+  const cached = isPublicTable ? publicTableCache.get(params.table) : undefined;
+  let fixed: { id?: string }[];
+
+  if (cached && Date.now() < cached.expires) {
+    fixed = cached.rows;
+  } else {
+    const { data, error } = await db.from(params.table).select("*");
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    const rows = (data ?? []) as { id?: string }[];
+    // Wording renamed in the code (#JSWeDo → #JSSayIDo) is repaired on the way out and saved back
+    // once, so a project seeded before the rename catches up without anyone opening the SQL editor.
+    const repaired = fixRows(params.table as TableName, rows);
+    fixed = repaired.rows;
+    if (repaired.patches.length) {
+      try {
+        await Promise.all(repaired.patches.map((p) => db.from(params.table).update(p.fields).eq("id", p.id)));
+      } catch { /* the fixed copy is still what we serve */ }
+    }
+    if (isPublicTable) {
+      publicTableCache.set(params.table, { rows: fixed, expires: Date.now() + PUBLIC_CACHE_TTL_MS });
+    }
+  }
+
   // A sealed visitor sees no venue, no programme and no FAQ — the pages a code unlocks. Answered
   // straight from the fetched rows: nothing of a redacted read is ever written back to the table.
-  if (await sealed(req, db)) return NextResponse.json(redactSealed(params.table, rows as Record<string, unknown>[]));
-  // Wording renamed in the code (#JSWeDo → #JSSayIDo) is repaired on the way out and saved back
-  // once, so a project seeded before the rename catches up without anyone opening the SQL editor.
-  const { rows: fixed, patches } = fixRows(params.table as TableName, rows);
-  if (patches.length) {
-    try {
-      await Promise.all(patches.map((p) => db.from(params.table).update(p.fields).eq("id", p.id)));
-    } catch { /* the fixed copy is still what we serve */ }
-  }
+  if (isSealed) return NextResponse.json(redactSealed(params.table, fixed as Record<string, unknown>[]));
   return NextResponse.json(fixed);
 }
 
@@ -58,8 +93,11 @@ export async function POST(req: NextRequest, { params }: { params: { table: stri
   const db = await guard(params.table, true);
   if (db instanceof NextResponse) return db;
   const body = await req.json();
-  let result = await db.from(params.table).upsert(body).select();
-  if (!result.error) return NextResponse.json(result.data);
+  let result = await db.from(params.table).upsert(body);
+  if (!result.error) {
+    invalidateTableCache(params.table);
+    return NextResponse.json({ ok: true });
+  }
 
   // Sent/opened timestamps are nice-to-have on older databases; retry without just those. Never
   // silently drop `greet` or `note`: they're couple-entered data, and doing so made the editor look
@@ -75,8 +113,11 @@ export async function POST(req: NextRequest, { params }: { params: { table: stri
         for (const column of timestampColumns) delete copy[column];
         return copy;
       });
-      result = await db.from(params.table).upsert(Array.isArray(body) ? lite : lite[0]).select();
-      if (!result.error) return NextResponse.json(result.data);
+      result = await db.from(params.table).upsert(Array.isArray(body) ? lite : lite[0]);
+      if (!result.error) {
+        invalidateTableCache(params.table);
+        return NextResponse.json({ ok: true });
+      }
     }
 
     const finalError = result.error;
@@ -128,5 +169,6 @@ export async function DELETE(req: NextRequest, { params }: { params: { table: st
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
   const { error } = await db.from(params.table).delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  invalidateTableCache(params.table);
   return NextResponse.json({ ok: true });
 }

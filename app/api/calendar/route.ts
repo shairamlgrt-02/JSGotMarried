@@ -21,15 +21,18 @@ export const dynamic = "force-dynamic";
  * only for a code the couple issued (or the binder's cookie), exactly like /api/data. A sealed or
  * preview visitor saves the date, nothing more.
  */
+const CALENDAR_COLS = "id, date, bride, groom, venue_name, venue_address, venue_map_link, hashtags, total_budget";
+
 async function weddingInfo(req: NextRequest, code: string): Promise<WeddingInfo> {
   const fallback = SEED.wedding_info[0] as WeddingInfo;
   const db = serverSupabase();
   // Local mode (no Supabase keys) has no database to ask, so the seeded invitation — the same one
   // the site itself renders — answers instead, and only the binder or the perpetual demo invite
   // unseals it. No keys, no leaked venue.
-  const row = db
-    ? (((await db.from("wedding_info").select("*").limit(1)).data ?? [])[0] as WeddingInfo | undefined) ?? fallback
-    : fallback;
+  const fetched = db
+    ? (((await db.from("wedding_info").select(CALENDAR_COLS).limit(1)).data ?? [])[0] as Partial<WeddingInfo> | undefined)
+    : undefined;
+  const row = fetched ? { ...fallback, ...fetched } : fallback;
 
   const authed = await isAuthed(cookies().get(COOKIE)?.value);
   const issued = db ? await codeIsIssued(db as never, code) : code === DEMO_CODE;

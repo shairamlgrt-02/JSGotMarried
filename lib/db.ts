@@ -10,11 +10,20 @@ import type { Guest, TableMap, TableName } from "./types";
  * - Local mode (no Supabase env): data lives in this browser's localStorage, seeded with SEED.
  */
 export type Mode = "supabase" | "local";
-let modePromise: Promise<Mode> | null = null;
+let sessionPromise: Promise<{ mode: Mode; admin: boolean }> | null = null;
+function getSession(): Promise<{ mode: Mode; admin: boolean }> {
+  if (!sessionPromise)
+    sessionPromise = fetch("/api/mode")
+      .then((r) => r.json())
+      .then((j) => ({ mode: (j.mode as Mode) || "local", admin: Boolean(j.admin) }))
+      .catch(() => ({ mode: "local" as Mode, admin: false }));
+  return sessionPromise;
+}
 export function getMode(): Promise<Mode> {
-  if (!modePromise)
-    modePromise = fetch("/api/mode").then((r) => r.json()).then((j) => j.mode as Mode).catch(() => "local");
-  return modePromise;
+  return getSession().then((s) => s.mode);
+}
+export function getAdmin(): Promise<boolean> {
+  return getSession().then((s) => s.admin);
 }
 
 const KEY = (t: TableName) => `jsos:${t}`;
@@ -42,39 +51,119 @@ function localWrite<T extends TableName>(t: T, rows: TableMap[T][]) {
   window.dispatchEvent(new CustomEvent(EVT, { detail: t }));
 }
 
+/**
+ * In-memory cache + in-flight request deduplication for remote tables.
+ * Prevents duplicate multi-megabyte fetches (e.g. PrintBinder + active tab mounting together,
+ * switching tabs in the Binder, or jsos:change reloading after an upsert).
+ */
+const remoteCache = new Map<string, unknown[]>();
+const inflight = new Map<string, Promise<unknown[]>>();
+
+const isMissingTableError = (msg: string) =>
+  /Could not find the table|relation .* does not exist|schema cache/i.test(msg);
+
+function saveLocalRows<T extends TableName>(t: T, incoming: TableMap[T][]): TableMap[T][] {
+  const cur = localRead(t) as (TableMap[T] & { id: string })[];
+  for (const r of incoming as (TableMap[T] & { id: string })[]) {
+    const i = cur.findIndex((x) => x.id === r.id);
+    if (i >= 0) cur[i] = r; else cur.push(r);
+  }
+  localStorage.setItem(KEY(t), JSON.stringify(cur));
+  return cur;
+}
+
+function clearTableCache(t: TableName) {
+  for (const k of Array.from(remoteCache.keys())) {
+    if (k === t || k.startsWith(`${t}:`)) remoteCache.delete(k);
+  }
+}
+
 export async function list<T extends TableName>(t: T, code = ""): Promise<TableMap[T][]> {
   // The public site passes the guest's invitation code along: the server answers with the
   // private pages (venue, programme, FAQ) only for a code it actually issued. The binder
   // doesn't need it — its cookie already says who you are.
+  const cacheKey = `${t}:${code}`;
+  if (remoteCache.has(cacheKey)) return remoteCache.get(cacheKey) as TableMap[T][];
+  if (inflight.has(cacheKey)) return inflight.get(cacheKey) as Promise<TableMap[T][]>;
+
   const q = code ? `?code=${encodeURIComponent(code)}` : "";
-  // Probe the mode AND request the rows at the same time — a fresh tab would otherwise
-  // wait for /api/mode before the data request even starts (two serial round trips).
-  // In local mode the stray request 503s quietly on the server; the browser never throws.
-  const remote = fetch(`/api/data/${t}${q}`, { cache: "no-store" }).then(
-    async (r) => ({ ok: r.ok, data: await r.json().catch(() => ({})) }),
-    () => ({ ok: false, data: {} }),
-  );
-  if ((await getMode()) === "local") return localRead(t);
-  const r = await remote;
-  if (!r.ok) throw new Error((r.data as { error?: string }).error || "failed to load");
-  const rows = r.data as TableMap[T][];
-  // Empty remote table on first run → fall back to seed for public display tables
-  return rows.length || t === "guests" ? rows : (SEED[t] as TableMap[T][]);
+  const task = (async () => {
+    // Probe the mode AND request the rows at the same time — a fresh tab would otherwise
+    // wait for /api/mode before the data request even starts (two serial round trips).
+    // In local mode the stray request 503s quietly on the server; the browser never throws.
+    const remote = fetch(`/api/data/${t}${q}`, { cache: "no-store" }).then(
+      async (r) => ({ ok: r.ok, data: await r.json().catch(() => ({})) }),
+      () => ({ ok: false, data: {} }),
+    );
+    if ((await getMode()) === "local") return localRead(t);
+    const r = await remote;
+    if (!r.ok) {
+      const errMsg = (r.data as { error?: string }).error || "failed to load";
+      // If a newer binder table (e.g. message_templates, messages, bridesmaid_cards) hasn't been
+      // created in Supabase yet, fall back to localStorage so edits still persist across tabs.
+      if (isMissingTableError(errMsg)) {
+        const local = localRead(t);
+        remoteCache.set(cacheKey, local);
+        return local;
+      }
+      throw new Error(errMsg);
+    }
+    const rows = r.data as TableMap[T][];
+    // If the remote table was just created and is empty, carry over any rows saved locally before the SQL ran.
+    if (!rows.length && (t === "message_templates" || t === "messages" || t === "bridesmaid_cards")) {
+      const local = localRead(t);
+      if (local.length) {
+        remoteCache.set(cacheKey, local);
+        void fetch(`/api/data/${t}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(local) }).catch(() => {});
+        return local;
+      }
+    }
+    // Empty remote table on first run → fall back to seed for public display tables
+    const result = rows.length || t === "guests" ? rows : (SEED[t] as TableMap[T][]);
+    remoteCache.set(cacheKey, result);
+    return result;
+  })();
+
+  inflight.set(cacheKey, task);
+  try {
+    return await task;
+  } finally {
+    inflight.delete(cacheKey);
+  }
 }
 
 export async function upsert<T extends TableName>(t: T, row: TableMap[T] | TableMap[T][]) {
   const rows = Array.isArray(row) ? row : [row];
   if ((await getMode()) === "local") {
-    const cur = localRead(t) as (TableMap[T] & { id: string })[];
-    for (const r of rows as (TableMap[T] & { id: string })[]) {
-      const i = cur.findIndex((x) => x.id === r.id);
-      if (i >= 0) cur[i] = r; else cur.push(r);
-    }
+    const cur = saveLocalRows(t, rows);
     localWrite(t, cur);
     return;
   }
   const r = await fetch(`/api/data/${t}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(rows) });
-  if (!r.ok) throw new Error((await r.json()).error || r.statusText);
+  if (!r.ok) {
+    const errMsg = ((await r.json().catch(() => ({}))) as { error?: string }).error || r.statusText;
+    if (isMissingTableError(errMsg)) {
+      const cur = saveLocalRows(t, rows);
+      remoteCache.set(`${t}:`, cur);
+      window.dispatchEvent(new CustomEvent(EVT, { detail: t }));
+      return;
+    }
+    clearTableCache(t);
+    throw new Error(errMsg);
+  }
+  if (t === "message_templates" || t === "messages" || t === "bridesmaid_cards") {
+    saveLocalRows(t, rows);
+  }
+  for (const [k, cached] of Array.from(remoteCache.entries())) {
+    if (k === t || k.startsWith(`${t}:`)) {
+      const cur = [...(cached as (TableMap[T] & { id: string })[])];
+      for (const item of rows as (TableMap[T] & { id: string })[]) {
+        const i = cur.findIndex((x) => x.id === item.id);
+        if (i >= 0) cur[i] = item; else cur.push(item);
+      }
+      remoteCache.set(k, cur);
+    }
+  }
   window.dispatchEvent(new CustomEvent(EVT, { detail: t }));
 }
 
@@ -84,7 +173,27 @@ export async function remove(t: TableName, id: string) {
     return;
   }
   const r = await fetch(`/api/data/${t}?id=${encodeURIComponent(id)}`, { method: "DELETE" });
-  if (!r.ok) throw new Error((await r.json()).error || r.statusText);
+  if (!r.ok) {
+    const errMsg = ((await r.json().catch(() => ({}))) as { error?: string }).error || r.statusText;
+    if (isMissingTableError(errMsg)) {
+      const next = (localRead(t) as { id: string }[]).filter((x) => x.id !== id);
+      localStorage.setItem(KEY(t), JSON.stringify(next));
+      remoteCache.set(`${t}:`, next);
+      window.dispatchEvent(new CustomEvent(EVT, { detail: t }));
+      return;
+    }
+    clearTableCache(t);
+    throw new Error(errMsg);
+  }
+  if (t === "message_templates" || t === "messages" || t === "bridesmaid_cards") {
+    const next = (localRead(t) as { id: string }[]).filter((x) => x.id !== id);
+    localStorage.setItem(KEY(t), JSON.stringify(next));
+  }
+  for (const [k, cached] of Array.from(remoteCache.entries())) {
+    if (k === t || k.startsWith(`${t}:`)) {
+      remoteCache.set(k, (cached as { id: string }[]).filter((x) => x.id !== id));
+    }
+  }
   window.dispatchEvent(new CustomEvent(EVT, { detail: t }));
 }
 
