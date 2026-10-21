@@ -58,6 +58,14 @@ export type Guest = {
    * can filter by and message. Replaces the old single `category`.
    */
   tags?: string;
+  /**
+   * The household's day-of role — the task they are entrusted with on the wedding day ("usher",
+   * "coffee_tea"…, or the couple's own words). One role per household; a preset id from
+   * `DAY_ROLES` (lib/roles.ts) or a custom label, exactly like the tags above.
+   */
+  role?: string;
+  /** A small note on how they'll serve it ("bring the thermos", "handles the espresso machine"). */
+  role_note?: string;
 };
 
 /** The icon a custom (couple-typed) tag is shown with; presets each carry their own. */
@@ -153,7 +161,15 @@ export function sortGuestTagIds(ids: string[]): string[] {
 export type VendorStatus = "quoted" | "contacted" | "booked" | "pending";
 export type Vendor = { id: string; type: string; name: string; quote: number; contact: string; status: VendorStatus; notes: string };
 export type Priority = "critical" | "high" | "medium";
-export type ChecklistItem = { id: string; task: string; category: Priority; due_date: string; completed: boolean };
+export type ChecklistItem = {
+  id: string; task: string; category: Priority; due_date: string; completed: boolean;
+  /** The sheet's "Category" — which part of the wedding this belongs to ("Venue & Catering"). */
+  section?: string;
+  /** The sheet's "Person In-charge" — who owns getting this done ("Tita Lorle"). */
+  owner?: string;
+  /** The sheet's "Details / Notes" — the how, the where, the what-exactly. */
+  details?: string;
+};
 export type AttireGroup = "bride" | "groom" | "shai_family" | "jeg_family" | "bridesmaids" | "groomsmen" | "guests" | "flower_girl" | "ring_bearer";
 export type Attire = { id: string; group: AttireGroup; label: string; colors: { name: string; hex: string; fabric?: string }[]; reserved: boolean; notes: string; swatch_url: string; order: number };
 export type EntourageRole =

@@ -1,16 +1,17 @@
 import type { Guest, WeddingInfo, EntourageMember, Vendor, MessageTemplate, MessageLog } from "./types";
 import { GUEST_TAGS, GUEST_TAG_IDS, guestTagIcon, guestTagLabel, parseGuestTags } from "./types";
+import { DAY_ROLE_IDS, DAY_ROLES, dayRoleIcon, dayRoleLabel } from "./roles";
 
 /* ─── Recipient groups ─── */
 /**
  * Every group the couple can address a message to. Each one resolves to people from one or more
- * data sources — guest tags (from `guests.tags`), RSVP status (also the guests table), entourage
- * roles, or vendors.
+ * data sources — guest tags (from `guests.tags`), RSVP status (also the guests table), day-of
+ * roles (from `guests.role`), entourage roles, or vendors.
  */
 export type RecipientSource =
   | "entourage" | "vendor"
   | "all_guests" | "pending_rsvp" | "opened_no_rsvp" | "confirmed_yes" | "confirmed_no"
-  | "guest_tag";
+  | "guest_tag" | "guest_role";
 
 export interface MessageCategory {
   id: string;
@@ -28,6 +29,9 @@ export interface MessageCategory {
  */
 export const guestTagCategoryId = (tagId: string) => `guest_${tagId}`;
 
+/** A day-of role's group id, in the compose picker and in the Roles tab's "message this team". */
+export const dayRoleCategoryId = (roleId: string) => `drole_${roleId}`;
+
 /** Households with no tag at all — its own bucket, so a chase list is one click away. */
 export const UNGTAGGED_CATEGORY: MessageCategory = {
   id: "guest_untagged", label: "Untagged", icon: "·", source: "guest_tag", filter: "",
@@ -42,6 +46,15 @@ export const GUEST_TAG_CATEGORIES: MessageCategory[] = GUEST_TAG_IDS.map((tagId)
   filter: tagId,
 }));
 
+/** The day-of roles, straight from the shared dictionary — the Roles tab's chips and these are the same list. */
+export const DAY_ROLE_CATEGORIES: MessageCategory[] = DAY_ROLE_IDS.map((roleId) => ({
+  id: dayRoleCategoryId(roleId),
+  label: DAY_ROLES[roleId].label,
+  icon: DAY_ROLES[roleId].icon,
+  source: "guest_role" as RecipientSource,
+  filter: roleId,
+}));
+
 export const MESSAGE_CATEGORIES: MessageCategory[] = [
   // ── Guest tags (guests.tags) — a household can carry several, and appears in each one ──
   ...GUEST_TAG_CATEGORIES,
@@ -51,6 +64,8 @@ export const MESSAGE_CATEGORIES: MessageCategory[] = [
   { id: "opened_no_rsvp",   label: "Opened Link · No Reply", icon: "👀", source: "opened_no_rsvp", filter: "" },
   { id: "confirmed_yes",    label: "Confirmed (Yes)",     icon: "✓", source: "confirmed_yes", filter: "" },
   { id: "confirmed_no",     label: "Declined (No)",       icon: "✗", source: "confirmed_no", filter: "" },
+  // ── Day-of roles (guests.role) — preset ones; a custom role joins the picker the moment it's used ──
+  ...DAY_ROLE_CATEGORIES,
   // ── Entourage roles that are not guest tags (the children in the procession) ──
   { id: "ring_bearer",      label: "Ring Bearer",         icon: "◯", source: "entourage", filter: "ring_bearer" },
   { id: "flower_girl",      label: "Flower Girl",         icon: "❀", source: "entourage", filter: "flower_girl" },
@@ -92,14 +107,20 @@ export const LEGACY_CATEGORY_ALIASES: Record<string, string> = {
 };
 
 /**
- * One group by id — including a custom tag the couple typed in the binder, which is not in
- * `MESSAGE_CATEGORIES` and so gets its entry built here. That is what lets the Guests tab's
- * "📨 Message [tag]" jump address any tag, preset or not.
+ * One group by id — including a custom tag or a custom day-of role the couple typed in the binder,
+ * which are not in `MESSAGE_CATEGORIES` and so get their entries built here. That is what lets the
+ * Guests tab's "📨 Message [tag]" and the Roles tab's "📨 Message this team" jumps address any
+ * group, preset or not.
  */
 export function messageCategoryFor(raw: string): MessageCategory | undefined {
   const id = LEGACY_CATEGORY_ALIASES[raw] ?? raw;
   const known = MESSAGE_CATEGORIES.find((c) => c.id === id);
   if (known) return known;
+  if (id.startsWith("drole_")) {
+    const roleId = id.slice("drole_".length).trim();
+    if (!roleId) return undefined;
+    return { id, label: dayRoleLabel(roleId), icon: dayRoleIcon(roleId), source: "guest_role", filter: roleId };
+  }
   if (!id.startsWith("guest_")) return undefined;
   const tagId = id.slice("guest_".length).trim();
   if (!tagId) return undefined;
@@ -187,7 +208,8 @@ export function resolveRecipients(
       cat.source === "opened_no_rsvp" ||
       cat.source === "confirmed_yes" ||
       cat.source === "confirmed_no" ||
-      cat.source === "guest_tag"
+      cat.source === "guest_tag" ||
+      cat.source === "guest_role"
     ) {
       let filtered: Guest[];
 
@@ -201,6 +223,9 @@ export function resolveRecipients(
         filtered = guests.filter((g) => g.attending === "yes");
       } else if (cat.source === "confirmed_no") {
         filtered = guests.filter((g) => g.attending === "no");
+      } else if (cat.source === "guest_role") {
+        // one role per household — the stored value is the preset id, or the couple's own words
+        filtered = guests.filter((g) => (g.role || "").trim() === cat.filter);
       } else {
         // guest_tag — anyone whose tags contain the one asked for. An empty filter is the
         // untagged bucket: households with no tag at all.
@@ -270,8 +295,10 @@ export const MERGE_TAGS: MergeTag[] = [
   { tag: "{phone}",          label: "Phone Number",     hint: "Their phone number from RSVP" },
   { tag: "{invitation_code}", label: "Invitation Code", hint: "Their personal invitation code" },
   { tag: "{invitation_link}", label: "Invitation Link", hint: "Full link to their personal invitation" },
+  { tag: "{rsvp_link}",       label: "RSVP Link",        hint: "Their invitation link, opened straight on the reply card (…#rsvp)" },
   { tag: "{rsvp_status}",    label: "RSVP Status",      hint: "Their current RSVP status (Confirmed ✓ / Declined ✗ / Pending ⏳)" },
   { tag: "{pax}",            label: "Number of Seats",  hint: "How many seats they have" },
+  { tag: "{seats}",          label: "Seats (readable)", hint: "\"2 seats\" / \"1 seat\" / \"a seat\" — drops straight into a sentence" },
   { tag: "{plus_one}",       label: "Plus-One Name",    hint: "Their plus-one's name" },
   { tag: "{couple_names}",   label: "Couple Names",     hint: "Bride & Groom names" },
   { tag: "{bride_name}",     label: "Bride Name",       hint: "The bride's name" },
@@ -294,6 +321,12 @@ export function applyMergeTags(template: string, recipient: Recipient, info: Wed
     : "October 25, 2026";
   const base = typeof window !== "undefined" ? window.location.origin : "";
   const link = recipient.inviteLink || (recipient.code ? `${base}/${recipient.code}` : "");
+  // The chase messages point here: the guest's own page, landed straight on the reply card.
+  // #rsvp is the site's own deep link (the /rsvp door hands guests over the same way), and the
+  // page smooth-scrolls them down the moment their code is verified.
+  const rsvpLink = link ? `${link}#rsvp` : "";
+  // "2 seats" / "1 seat" / "a seat" — phrased so the template's sentence always reads naturally
+  const seats = recipient.pax && recipient.pax > 0 ? `${recipient.pax} seat${recipient.pax === 1 ? "" : "s"}` : "a seat";
 
   return template
     .replace(/\{full_name\}/g, recipient.name)
@@ -302,8 +335,10 @@ export function applyMergeTags(template: string, recipient: Recipient, info: Wed
     .replace(/\{phone\}/g, recipient.phone)
     .replace(/\{invitation_code\}/g, recipient.code || "")
     .replace(/\{invitation_link\}/g, link)
+    .replace(/\{rsvp_link\}/g, rsvpLink)
     .replace(/\{rsvp_status\}/g, recipient.rsvpStatus || "")
     .replace(/\{pax\}/g, recipient.pax?.toString() || "")
+    .replace(/\{seats\}/g, seats)
     .replace(/\{plus_one\}/g, recipient.plusOne || "")
     .replace(/\{couple_names\}/g, `${info.bride} & ${info.groom}`)
     .replace(/\{bride_name\}/g, info.bride)
@@ -315,3 +350,120 @@ export function applyMergeTags(template: string, recipient: Recipient, info: Wed
     .replace(/\{rsvp_deadline\}/g, rsvpDeadline)
     .replace(/\{hashtag\}/g, info.hashtags[0] || "");
 }
+
+/* ─── Ready-made templates ─── */
+/**
+ * The couple's letters, written once in the code so nobody has to start from a blank box: the
+ * RSVP chase (a gentle reminder, then the kind-but-firm final call before the deadline), the two
+ * thank-yous, and the day-of role briefing. The binder's Templates tab lists them with one-click
+ * "add to my templates" buttons — added copies are ordinary templates, free to edit or delete.
+ *
+ * {first_name}, {seats}, {rsvp_deadline}, {invitation_link}, {wedding_date}, {couple_names} and
+ * {role} fill themselves in per household (see applyMergeTags above). WhatsApp *asterisks* bold.
+ */
+export interface PresetTemplate {
+  id: string;
+  name: string;
+  /** Short label chip — "Reminder", "Final call"… */
+  label: string;
+  /** One line under the name in the picker. */
+  hint: string;
+  /** The recipient groups pre-ticked when the template is added (see MESSAGE_CATEGORIES). */
+  categories: string[];
+  body: string;
+}
+
+export const PRESET_TEMPLATES: PresetTemplate[] = [
+  {
+    id: "preset_rsvp_reminder",
+    name: "RSVP · Gentle Reminder",
+    label: "Reminder",
+    hint: "For guests who haven't replied yet — warm, no pressure, one minute to fill in.",
+    categories: ["pending_rsvp"],
+    body: `Hi {first_name}! 🌸
+
+We hope you've been well! We're counting down the days to our wedding on {wedding_date}, and we wanted to send a gentle little reminder about your RSVP.
+
+We've saved {seats} just for you, and we'd love to know if you can join us. When you have a quiet minute, could you please fill out the short RSVP form here? It only takes a minute — and your reply is how we hold your seat:
+
+{rsvp_link}
+
+Even a "no" helps us plan, so whatever your answer, please tell us there. 😊
+
+If you have any questions at all — transport, timing, anything — just reply to this message. We're always happy to help.
+
+With love,
+{couple_names}`,
+  },
+  {
+    id: "preset_rsvp_final_call",
+    name: "RSVP · Final Check-in (No Reply = Not Coming)",
+    label: "Final call",
+    hint: "For the guests who haven't replied — personal, warm, and clear: no RSVP by the deadline means we count it as a no and release the seats.",
+    categories: ["pending_rsvp"],
+    body: `Hi {first_name}! 🤍
+
+Just checking in — we noticed your RSVP hasn't come in yet. Totally understand, life gets busy!
+
+We'd really love to have you with us on {wedding_date}, so when you get a minute, please fill it out here:
+{rsvp_link}
+
+📌 *One small but important thing:* we finalise our guest list on *{rsvp_deadline}* — if we don't hear from you by then, we'll have to lovingly take that as a "no" and release your {seats}. Either way, just let us know! 😊
+
+Love,
+{couple_names}`,
+  },
+  {
+    id: "preset_rsvp_thank_you_yes",
+    name: "RSVP · Thank You for Your Yes",
+    label: "Thank you",
+    hint: "For confirmed guests — warm thanks, plus the one arrival thing to remember.",
+    categories: ["confirmed_yes"],
+    body: `Hi {first_name}! 🥰
+
+Thank you for confirming — your seats are officially saved! We can't tell you how happy it made us to read your yes.
+
+Your personal invitation link holds everything: the programme, the dress code, the venue and the map:
+
+{invitation_link}
+
+One small thing to remember: the hall is being prepared until 4:00 PM, so everyone gathers at the majlis just outside it first — come a little early, have snacks with us there, and we'll all walk into the hall together. From 5:30 PM, everyone is welcome for the Welcome Toast & Snacks before the reception.
+
+We can't wait to celebrate with you! ❤️
+
+With love,
+{couple_names}`,
+  },
+  {
+    id: "preset_rsvp_thank_you_no",
+    name: "RSVP · Thank You for Letting Us Know",
+    label: "Thank you",
+    hint: "For guests who declined — no guilt, all love, door left open.",
+    categories: ["confirmed_no"],
+    body: `Hi {first_name},
+
+Thank you so much for letting us know — truly. We'll miss you dearly on the day, but we understand completely, and we're grateful you told us so we can plan our seats well. 🤍
+
+Thank you for the love and support you've shown us, from near or far. We'd love to see you before or after the wedding, too — let's find a time for coffee!
+
+With all our love,
+{couple_names}`,
+  },
+  {
+    id: "preset_role_briefing",
+    name: "Day-of Role · We'd Love to Entrust You",
+    label: "Roles",
+    hint: "For a day-of role team (pick the role as the recipient) — {role} fills itself in.",
+    categories: [],
+    body: `Hi {first_name}! 💛
+
+As we prepare for our wedding on {wedding_date}, there's one small role close to our hearts that we'd love to entrust to you: *{role}*.
+
+You'd be such a big help to us — the day truly wouldn't run as smoothly without you. Our coordinators will brief you on all the details before the day. No heavy lifting, we promise — just your kind presence and a willing hand. 😊
+
+Can we count you in? Just reply here to let us know.
+
+With love and gratitude,
+{couple_names}`,
+  },
+];

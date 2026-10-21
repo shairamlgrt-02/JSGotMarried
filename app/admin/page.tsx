@@ -6,10 +6,11 @@ import { InviteCodes } from "@/components/admin/invites";
 import { AudioGuestbook } from "@/components/admin/guestbook";
 import { BridesmaidCards } from "@/components/admin/bridesmaids";
 import { TemplatesTab, ComposeTab, TrackerTab } from "@/components/admin/messaging";
+import { RolesTab } from "@/components/admin/roles";
 
 const TABS = [
   ["overview", "Overview", "◐"], ["details", "Details", "✎"], ["schedule", "Schedule", "◷"], ["checklist", "Checklist", "☑"],
-  ["budget", "Budget", "◎"], ["invites", "Invite Codes", "✦"], ["guests", "Guests & RSVP", "♡"], ["audio", "Audio Guestbook", "☎"],
+  ["budget", "Budget", "◎"], ["invites", "Invite Codes", "✦"], ["guests", "Guests & RSVP", "♡"], ["roles", "Guest Roles", "❁"], ["audio", "Audio Guestbook", "☎"],
   ["messaging-compose", "📨 Compose", "✉"], ["messaging-templates", "📋 Templates", "▤"], ["messaging-tracker", "📊 Tracker", "◈"],
   ["vendors", "Vendors", "◇"], ["attire", "Attire & Colors", "◉"], ["bridesmaids", "Bridesmaid Cards", "✿"],
   ["content", "Content", "▣"], ["settings", "Settings", "⚙"],
@@ -65,6 +66,7 @@ export default function Admin() {
               {tab === "budget" && <Budget />}
               {tab === "invites" && <InviteCodes go={go} />}
               {tab === "guests" && <Guests go={go} />}
+              {tab === "roles" && <RolesTab go={go} />}
               {tab === "audio" && <AudioGuestbook />}
               {tab === "messaging-compose" && <ComposeTab />}
               {tab === "messaging-templates" && <TemplatesTab />}

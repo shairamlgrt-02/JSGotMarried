@@ -61,7 +61,7 @@ export function weddingEvent(info: WeddingInfo, inviteUrl = ""): WeddingEvent {
     `${couple} are getting married — ${eventDateLong(info.date)}.`,
     "",
     `The ceremony begins at ${ceremonyAt}${where ? ` at ${where}` : ""}, and we celebrate into the evening.`,
-    `Wish to witness the vows? Please be seated before ${ceremonyAt} — the doors close as the procession begins. Everyone is welcome from ${ALL_WELCOME_FROM} for the Welcome Toast & Snacks, then the reception.`,
+    `Wish to witness the vows? The hall is being prepared until ${ceremonyAt}, so please come straight to the majlis just outside it — our coordinators will gather everyone there, and we all walk into the hall together (the doors close as the procession begins). Everyone is welcome from ${ALL_WELCOME_FROM} for the Welcome Toast & Snacks, then the reception.`,
   ];
   if (info.venue_map_link) lines.push(`Directions: ${info.venue_map_link}`);
   if (inviteUrl) lines.push(`Your invitation: ${inviteUrl}`);

@@ -53,11 +53,24 @@ alter table guests add column if not exists greet text default '';
 -- binder still had a single-category picker are copied across on the first read (lib/content-fix.ts),
 -- so this one line is all the SQL a live project needs.
 alter table guests add column if not exists tags text default '';
+-- Day-of role (binder → Guest Roles): the small job this household is entrusted with on the day —
+-- a preset id from lib/roles.ts ("usher", "coffee_tea"…) or the couple's own words — plus a short
+-- note on how they'll serve. One role per household; each role is also a recipient group in the
+-- messaging module. Both columns optional: an older project gets a clear migration message
+-- instead of a silently failed save.
+alter table guests add column if not exists role text default '';
+alter table guests add column if not exists role_note text default '';
 -- one personal code per household: lookups by code (opening a link, the /rsvp gate) stay cheap
 create index if not exists guests_code_idx on guests (upper(code));
 
 create table if not exists vendors (id text primary key default gen_random_uuid()::text, type text, name text, quote numeric default 0, contact text, status text default 'pending', notes text);
 create table if not exists checklist (id text primary key default gen_random_uuid()::text, task text, category text default 'medium', due_date date, completed boolean default false);
+-- Checklist upgrades (the couple's own sheet, now in the binder): Category → section, Person
+-- In-charge → owner, Details/Notes → details. Optional on every row — the binder drops them
+-- quietly if a project hasn't re-run this file yet.
+alter table checklist add column if not exists section text default '';
+alter table checklist add column if not exists owner text default '';
+alter table checklist add column if not exists details text default '';
 create table if not exists attire (id text primary key default gen_random_uuid()::text, "group" text, label text, colors jsonb default '[]', reserved boolean default false, notes text, swatch_url text default '', "order" int default 0);
 create table if not exists entourage (id text primary key default gen_random_uuid()::text, role text, name text, title text, "order" int default 0);
 create table if not exists faq (id text primary key default gen_random_uuid()::text, question text, answer text, "order" int default 0);

@@ -2,10 +2,13 @@
  * The order of the day — one source for the website's Program section, the guest's downloadable
  * keepsake card and the programme card (lib/program-card.ts), so none of them can drift apart.
  *
- * Two facts matter more than anything else here, so they are written once and shown on every
+ * Three facts matter more than anything else here, so they are written once and shown on every
  * surface (timeline, highlight cards, keepsake, FAQ):
- *   · the ceremony is intimate and closed-door — a guest who wishes to witness it must be seated
- *     before 4:00 PM, because the doors close the moment the procession begins;
+ *   · the hall is closed 2:00 – 4:00 PM while The Heaven's team clean and prepare it — nobody may
+ *     enter before it reopens, so EVERYONE (entourage and guests alike) comes straight to the
+ *     majlis, where our coordinators meet them and snacks & refreshments are served;
+ *   · just before 4:00 PM the whole party walks into the hall together, and the doors close the
+ *     moment the procession begins;
  *   · from 5:30 PM everyone is welcome — the Welcome Toast & Snacks run until the reception at 6:30 PM.
  */
 export type ProgramStop = {
@@ -23,8 +26,13 @@ export type ProgramStop = {
   programmeNote?: string;
 };
 
-/** When the ceremony doors close — as the procession begins. Guests are asked to be seated before this. */
+/** When the ceremony doors close — as the procession begins. Guests are asked to be at the majlis before this. */
 export const CEREMONY_DOORS_CLOSE = "4:00 PM";
+/** The hall is The Heaven's to clean and prepare between these hours — nobody may enter. */
+export const HALL_CLOSED_FROM = "2:00 PM";
+export const HALL_CLOSED_UNTIL = CEREMONY_DOORS_CLOSE;
+/** Where everyone gathers while the hall is being prepared — and again from 5:30 PM. */
+export const GATHERING_PLACE = "the majlis";
 /** From this time on every guest is welcome — no doors, no reserved rows. */
 export const ALL_WELCOME_FROM = "5:30 PM";
 /** The entourage and the wedding team's call time — the first stop of the day, half an hour before the doors close. */
@@ -39,13 +47,14 @@ export const WEDDING_PROGRAM_STOPS: ProgramStop[] = [
     time: ENTOURAGE_CALL_TIME,
     title: "Entourage Arrival",
     tag: "Entourage & wedding team",
-    note: "Our entourage & wedding team only — find your reserved seat and wait for the coordinators' cue.",
+    note: `Our entourage & wedding team only — come straight to the majlis; our coordinators will brief you there.`,
+    programmeNote: `the hall is being prepared until ${CEREMONY_DOORS_CLOSE} — we gather at the majlis first`,
   },
   {
     time: "4:00 PM",
     title: "Wedding Ceremony",
     tag: `Doors close at ${CEREMONY_DOORS_CLOSE}`,
-    note: `Be seated before ${CEREMONY_DOORS_CLOSE} — doors close as the procession begins.`,
+    note: `Everyone walks in together just before ${CEREMONY_DOORS_CLOSE} — the doors close as the procession begins.`,
   },
   { time: "5:00 PM", title: "Wedding Photos" },
   {
@@ -65,9 +74,10 @@ export const WEDDING_PROGRAM_STOPS: ProgramStop[] = [
 
 /* ─────────── Who arrives when — the programme card's two notes ───────────
    The card a guest saves says, before anything else, that nobody needs to be there at 4:00 PM:
-   the entourage and the wedding team have a call time and a job (reserved seats, wait for the
-   coordinators' cue); everyone else is expected at 5:30 PM at the majlis — and if they arrive at
-   some other hour, GUEST_ARRIVAL_GUIDE tells them where to go. Written once, here. */
+   whoever arrives — entourage, wedding team or an early guest — goes straight to the majlis while
+   the hall is being prepared; the entourage & wedding team have a call time (3:30) and are briefed
+   there by our coordinators, and everyone else is expected at 5:30 PM. If a guest arrives at some
+   other hour, GUEST_ARRIVAL_GUIDE tells them where to go. Written once, here. */
 
 /** The sentence at the top of the programme card — the one thing every guest must read. */
 export const PROGRAM_HEADLINE = `You don't need to be there at ${CEREMONY_DOORS_CLOSE}.`;
@@ -77,7 +87,8 @@ export const PROGRAM_HEADLINE = `You don't need to be there at ${CEREMONY_DOORS_
  */
 export const PROGRAM_HEADLINE_DETAIL =
   `Our ${CEREMONY_DOORS_CLOSE} ceremony is small and intimate — our families, our entourage and a few honoured guests. ` +
-  `If your heart wishes to witness it, you are more than welcome; just be seated before ${CEREMONY_DOORS_CLOSE}, as the doors close the moment the procession begins.`;
+  `If your heart wishes to witness it, you are more than welcome; just come to the majlis before ${CEREMONY_DOORS_CLOSE}. ` +
+  `The hall is being prepared until then, so everyone gathers at the majlis first and walks in together — and the doors close the moment the procession begins.`;
 
 export type ArrivalNote = {
   /** Who the note is for — its heading. */
@@ -97,10 +108,11 @@ export const ARRIVAL_NOTES: { entourage: ArrivalNote; guests: ArrivalNote } = {
   entourage: {
     who: "Entourage & wedding team",
     time: ENTOURAGE_CALL_TIME,
-    where: "The hall",
-    brief: "Find your reserved seat in the hall, then wait for the coordinators' cue.",
+    where: "The majlis",
+    brief: "Straight to the majlis — our coordinators will meet & brief you there; snacks & refreshments served.",
     detail:
-      "Please come straight into the hall and find your reserved seat. Settle in and stay close by — our coordinators will give you the cue for the procession, so kindly wait for it.",
+      `The hall is being cleaned and prepared until ${CEREMONY_DOORS_CLOSE}, so please come straight to the majlis, just outside it. ` +
+      `Our coordinators will meet you there for your briefing, with snacks and refreshments ready — and a few minutes before ${CEREMONY_DOORS_CLOSE}, we will all walk into the hall together.`,
   },
   guests: {
     who: "All other guests",
@@ -108,7 +120,8 @@ export const ARRIVAL_NOTES: { entourage: ArrivalNote; guests: ArrivalNote } = {
     where: "The majlis",
     brief: `The majlis — welcome toast, snacks & photos; the reception at ${RECEPTION_AT}.`,
     detail:
-      `Please join us at the majlis, just outside the hall, for the welcome toast, snacks and photos. At ${RECEPTION_AT} the hall opens for the reception — dinner, our film, games and dancing until the send-off.`,
+      `Please join us at the majlis, just outside the hall, for the welcome toast, snacks and photos — then the reception at ${RECEPTION_AT} in the hall. ` +
+      `Wishing to witness the ceremony? Come to the majlis before ${CEREMONY_DOORS_CLOSE} instead; everyone walks in together.`,
   },
 };
 
@@ -130,13 +143,13 @@ export type ArrivalWindow = {
 export const GUEST_ARRIVAL_GUIDE: ArrivalWindow[] = [
   {
     when: `Before ${CEREMONY_DOORS_CLOSE}`,
-    where: "The hall",
-    detail: `Wish to witness the ceremony? Take an open seat around the reserved rows and be seated before ${CEREMONY_DOORS_CLOSE} — the doors close the moment the procession begins.`,
+    where: "The majlis",
+    detail: `The hall rests until ${CEREMONY_DOORS_CLOSE} while The Heaven's team clean and prepare it — so please come straight to the majlis, just outside the hall. Our coordinators will gather everyone there, and we will all walk into the hall together a few minutes before the procession; the doors close as it begins.`,
   },
   {
     when: `${CEREMONY_DOORS_CLOSE.replace(/\s*PM$/, "")} – ${ALL_WELCOME_FROM}`,
     where: "The majlis",
-    detail: "The ceremony is under way behind closed doors. Make yourself at home at the majlis, just outside the hall — we will come and find you.",
+    detail: "The ceremony is under way behind closed doors. Make yourself at home at the majlis, just outside the hall — snacks and refreshments are waiting, and we will come and find you.",
   },
 ];
 
@@ -158,7 +171,7 @@ export const WEDDING_PROGRAM_HIGHLIGHTS: ProgramMoment[] = [
     time: "4:00 PM",
     span: "4:00 – 5:00 PM",
     title: "The Ceremony",
-    detail: `We chose to keep our ceremony *intimate* — our families, our entourage and a few honoured guests. If your heart wishes to be there as we say “I do”, you are *more than welcome to join us*. Just please be seated before *${CEREMONY_DOORS_CLOSE}*, as the *doors close the moment the procession begins*.`,
+    detail: `We chose to keep our ceremony *intimate* — our families, our entourage and a few honoured guests. If your heart wishes to be there as we say “I do”, you are *more than welcome to join us*! Just come to the *majlis before ${CEREMONY_DOORS_CLOSE}* — the hall is being prepared until then, so *everyone walks in together*, and the *doors close the moment the procession begins*.`,
   },
   {
     time: "5:30 PM",

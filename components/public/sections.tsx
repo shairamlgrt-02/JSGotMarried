@@ -5,6 +5,7 @@ import { submitRsvp, type InviteState } from "@/lib/db";
 import { entourageHeading } from "@/lib/entourage";
 import { useCountdown } from "@/lib/hooks";
 import { downloadKeepsake } from "@/lib/keepsake";
+import { downloadFaqCard, type FaqCardData } from "@/lib/faq-card";
 import { downloadProgramCard, type ProgramCardData } from "@/lib/program-card";
 import { ALL_WELCOME_FROM, ARRIVAL_NOTES, CEREMONY_DOORS_CLOSE, WEDDING_PROGRAM_HIGHLIGHTS, WEDDING_PROGRAM_STOPS } from "@/lib/program";
 import type { Attire, EntourageMember, Faq, StoryChapter, WeddingInfo } from "@/lib/types";
@@ -1112,7 +1113,46 @@ export function SignOff({ info }: { info: WeddingInfo }) {
   );
 }
 
-export function FaqSection({ faqs }: { faqs: Faq[] }) {
+/** Everything the FAQ card prints — the questions exactly as the section above shows them. */
+export function faqCardData(faqs: Faq[], info: WeddingInfo): FaqCardData {
+  return {
+    groom: info.groom,
+    bride: info.bride,
+    dateISO: info.date,
+    venue: info.venue_name,
+    faqs: [...faqs].sort((a, b) => a.order - b.order).map((f) => ({ question: f.question, answer: f.answer })),
+    hashtags: info.hashtags,
+  };
+}
+
+/**
+ * The "Download the FAQ card" offer — one tap draws every question and answer into one paper PNG
+ * in the guest's own browser, a sister to the invitation keepsake and the programme card: the
+ * whole little rulebook of the day, kept on a phone instead of scrolled.
+ */
+function FaqCardOffer({ data }: { data: FaqCardData }) {
+  const [status, setStatus] = useState<"idle" | "working" | "done" | "error">("idle");
+  const save = async () => {
+    if (status === "working") return;
+    setStatus("working");
+    const ok = await downloadFaqCard(data).catch(() => false);
+    setStatus(ok ? "done" : "error");
+  };
+  return (
+    <div className="mt-9 flex flex-col items-center text-center" aria-live="polite">
+      <motion.button type="button" whileTap={{ scale: 0.97 }} disabled={status === "working"} onClick={save}
+        aria-label="Download the FAQ card as a PNG image"
+        className="micro tracking-[0.12em] rounded-full border border-wine/40 px-7 py-3.5 text-wine transition-colors hover:border-wine hover:bg-wine hover:text-lace disabled:opacity-60">
+        {status === "working" ? "Drawing your card…" : status === "done" ? "FAQ card saved ✓" : status === "error" ? "Could not save · try again" : "Download the FAQ card"}
+      </motion.button>
+      <p className="micro text-taupe/80 mt-2.5 max-w-md tracking-[0.08em] text-balance">
+        Every question, answered — one picture to keep beside your invitation card.
+      </p>
+    </div>
+  );
+}
+
+export function FaqSection({ faqs, info }: { faqs: Faq[]; info: WeddingInfo }) {
   const [open, setOpen] = useState<string | null>(null);
   return (
     <section id="faq" className="sec">
@@ -1133,6 +1173,7 @@ export function FaqSection({ faqs }: { faqs: Faq[] }) {
             </AnimatePresence>
           </div>
         ))}
+        {faqs.length > 0 && <FaqCardOffer data={faqCardData(faqs, info)} />}
       </div>
     </section>
   );

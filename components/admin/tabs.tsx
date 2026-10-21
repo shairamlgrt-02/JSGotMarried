@@ -199,13 +199,17 @@ export function ScheduleBuilder() {
 
 /* ═════════════ 4. CHECKLIST ═════════════ */
 export function Checklist() {
-  const { rows, save, del } = useTable("checklist");
+  const { rows, save, del, error } = useTable("checklist");
   const [filter, setFilter] = useState<"open" | "all" | "done" | Priority>("open");
+  /** "all" or one of the sheet's Categories ("Venue & Catering") — the rows' own sections. */
+  const [sectionFilter, setSectionFilter] = useState("all");
   const [newTask, setNewTask] = useState("");
   const today = new Date().toISOString().slice(0, 10);
   const done = rows.filter((r) => r.completed).length;
+  const sections = useMemo(() => Array.from(new Set(rows.map((r) => (r.section || "").trim()).filter(Boolean))).sort(), [rows]);
   const shown = [...rows]
     .filter((r) => filter === "all" ? true : filter === "open" ? !r.completed : filter === "done" ? r.completed : r.category === filter)
+    .filter((r) => sectionFilter === "all" ? true : (r.section || "").trim() === sectionFilter)
     .sort((a, b) => Number(a.completed) - Number(b.completed) || a.due_date.localeCompare(b.due_date));
   const add = (e: React.FormEvent) => {
     e.preventDefault(); if (!newTask.trim()) return;
@@ -215,20 +219,46 @@ export function Checklist() {
     <>
       <PageHead kicker={`${done}/${rows.length} complete`} title="The to-do.">
         {(["open", "all", "done", ...PRIORITY] as const).map((f) => <Btn key={f} variant={filter === f ? "gold" : "ghost"} onClick={() => setFilter(f)}>{f}</Btn>)}
+        <Btn variant="ghost" onClick={() => download("checklist.csv", toCsv(rows))}>Export CSV</Btn>
       </PageHead>
+      {error && <p className="mb-4 text-sm text-burgundy">{error}</p>}
       <Card>
         <Progress value={rows.length ? (done / rows.length) * 100 : 0} color="#4A5D23" />
         <form onSubmit={add} className="flex gap-2 mt-6">
           <input value={newTask} onChange={(e) => setNewTask(e.target.value)} placeholder="Add a task and press Enter…" className="flex-1 bg-white/60 rounded-full px-5 py-3 outline-none border border-ink/10 focus:border-wine" />
           <Btn type="submit" variant="dark">Add</Btn>
         </form>
+        {sections.length > 0 && (
+          <div className="flex items-center gap-2 mt-4">
+            <span className="label !text-[10px] text-ink/50">Section</span>
+            <Select
+              value={sectionFilter}
+              options={[{ value: "all", label: "all sections" }, ...sections]}
+              onChange={(v) => setSectionFilter(v)}
+              className="text-sm"
+            />
+            <span className="text-xs text-ink/40">{shown.length} shown</span>
+          </div>
+        )}
         <ul className="mt-4 divide-y divide-ink/10">
           {shown.map((t: ChecklistItem) => (
-            <li key={t.id} className="py-2 flex flex-wrap md:flex-nowrap items-center gap-3 group">
-              <button onClick={() => save({ ...t, completed: !t.completed })} className={`w-6 h-6 shrink-0 rounded-md border-2 grid place-items-center transition-colors ${t.completed ? "bg-moss border-moss text-paper" : "border-ink/25 hover:border-wine"}`}>{t.completed && "✓"}</button>
-              <div className={`flex-1 min-w-[200px] ${t.completed ? "line-through text-ink/40" : ""}`}><EditText value={t.task} onSave={(v) => save({ ...t, task: v })} /></div>
-              <Select value={t.category} options={PRIORITY} onChange={(v) => save({ ...t, category: v })} className="text-sm" />
-              <input type="date" value={t.due_date} onChange={(e) => save({ ...t, due_date: e.target.value })} className={`bg-transparent text-sm border border-ink/10 rounded-md px-2 py-1.5 ${!t.completed && t.due_date < today ? "text-burgundy font-semibold border-burgundy/40" : ""}`} />
+            <li key={t.id} className="py-2.5 flex flex-wrap md:flex-nowrap items-start gap-3 group">
+              <button onClick={() => save({ ...t, completed: !t.completed })} className={`w-6 h-6 shrink-0 mt-1 rounded-md border-2 grid place-items-center transition-colors ${t.completed ? "bg-moss border-moss text-paper" : "border-ink/25 hover:border-wine"}`}>{t.completed && "✓"}</button>
+              <div className={`flex-1 min-w-[240px] ${t.completed ? "line-through text-ink/40" : ""}`}>
+                <EditText value={t.task} onSave={(v) => save({ ...t, task: v })} />
+                <EditText
+                  value={t.details ?? ""}
+                  placeholder="details / notes…"
+                  onSave={(v) => save({ ...t, details: v })}
+                  className="!text-xs text-ink/50"
+                />
+              </div>
+              <div className="w-full md:w-36 shrink-0">
+                <EditText value={t.section ?? ""} placeholder="section…" onSave={(v) => save({ ...t, section: v })} className="!text-xs label !tracking-[0.08em] text-wine" />
+                <EditText value={t.owner ?? ""} placeholder="in charge…" onSave={(v) => save({ ...t, owner: v })} className="!text-xs text-ink/60" />
+              </div>
+              <Select value={t.category} options={PRIORITY} onChange={(v) => save({ ...t, category: v })} className="text-sm shrink-0" />
+              <input type="date" value={t.due_date} onChange={(e) => save({ ...t, due_date: e.target.value })} className={`shrink-0 bg-transparent text-sm border border-ink/10 rounded-md px-2 py-1.5 ${!t.completed && t.due_date < today ? "text-burgundy font-semibold border-burgundy/40" : ""}`} />
               <button onClick={() => del(t.id)} className="text-ink/30 hover:text-burgundy opacity-100 md:opacity-0 group-hover:opacity-100 px-2">✕</button>
             </li>
           ))}
