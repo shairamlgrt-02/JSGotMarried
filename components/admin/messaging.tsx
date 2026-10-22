@@ -734,14 +734,29 @@ export function ComposeTab({ go }: { go?: (tab: string) => void }) {
 
   /** Enriched ledger rows with live status, tracking info, and resolved preview message. */
   const enrichedRows = useMemo(() => {
+    const rsvpLogByGuest = new Map<string, MessageLog>();
+    for (const m of messages) {
+      if (!(Number(m.link_opens) > 0)) continue;
+      const isRsvp =
+        m.id.startsWith("link_rsvp_") || /#rsvp\b/i.test(m.body || "") || /\{rsvp_link\}/i.test(m.original_body || "");
+      if (!isRsvp) continue;
+      const prev = rsvpLogByGuest.get(m.recipient_id);
+      const curTs = m.opened_at ?? m.created_at ?? "";
+      const prevTs = prev ? prev.opened_at ?? prev.created_at ?? "" : "";
+      if (!prev || curTs >= prevTs) rsvpLogByGuest.set(m.recipient_id, m);
+    }
+
     return campaignRecipients.map((r) => {
       const existing = findExistingLog(r);
       const guest = r.guestId ? guestById.get(r.guestId) : undefined;
       const trackInfo = messageTrackingInfo(existing, guest);
+      const rsvpLog = r.guestId ? rsvpLogByGuest.get(`gst_${r.guestId}`) : undefined;
+      const rsvpOpenedAt = rsvpLog ? rsvpLog.opened_at ?? rsvpLog.created_at ?? null : null;
+      const rsvpOpens = Number(rsvpLog?.link_opens) || 0;
       const msgId = getTrackingId(r, existing);
       const previewBody = info && customBody.trim() ? applyMergeTags(customBody, r, info, msgId, origin) : "";
       const trackedLink = recipientTrackedLink(r, msgId, origin, prefersRsvpJump);
-      return { r, existing, guest, trackInfo, msgId, previewBody, trackedLink };
+      return { r, existing, guest, trackInfo, rsvpOpenedAt, rsvpOpens, msgId, previewBody, trackedLink };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campaignRecipients, messages, guestById, info, customBody, origin, prefersRsvpJump, activeCampaignId]);
@@ -1061,7 +1076,7 @@ export function ComposeTab({ go }: { go?: (tab: string) => void }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-ink/10">
-                  {filteredRows.map(({ r, existing, guest, trackInfo, previewBody, trackedLink }) => {
+                  {filteredRows.map(({ r, existing, guest, trackInfo, rsvpOpenedAt, rsvpOpens, previewBody, trackedLink }) => {
                     const waUrl = whatsappHref(r.phone, previewBody || customBody);
                     return (
                       <tr key={r.id} className="align-top">
@@ -1092,10 +1107,15 @@ export function ComposeTab({ go }: { go?: (tab: string) => void }) {
                                     flash(`Copied text for ${r.name} ✓ Automatically marked as sent.`);
                                   }
                                 }}
-                                className="mt-2 p-3 max-w-md bg-oat/60 rounded-lg font-mono text-[11px] leading-relaxed whitespace-pre-wrap break-words"
+                                className="mt-2 p-3 max-w-md bg-oat/60 rounded-lg font-mono text-[11px] leading-relaxed whitespace-pre-wrap overflow-x-auto"
                               >
                                 {previewBody}
                               </pre>
+                              {trackedLink && (
+                                <div className="mt-1.5 text-[10px] text-ink/50 font-mono break-all">
+                                  🔗 Tracks open{prefersRsvpJump ? " + jumps to #rsvp" : ""}: {trackedLink}
+                                </div>
+                              )}
                             </details>
                           )}
                         </td>
@@ -1206,19 +1226,31 @@ export function ComposeTab({ go }: { go?: (tab: string) => void }) {
                           </div>
                         </td>
 
-                        <td className="px-2 py-2.5 min-w-[205px]">
+                        <td className="px-2 py-2.5 min-w-[215px]">
                           <MessageStatusTag s={trackInfo.stage} opens={trackInfo.opens} />
                           <div className="text-[11px] text-ink/55 mt-1 leading-snug space-y-0.5">
                             {trackInfo.opens > 0 ? (
                               <div className="text-amethyst font-medium tabular-nums" title={trackInfo.openedAt ? new Date(trackInfo.openedAt).toString() : undefined}>
-                                👀 {trackInfo.openedAt ? formatDateTimeStamp(trackInfo.openedAt) : "opened link"}
+                                👀 {prefersRsvpJump ? "#rsvp opened " : "Opened "}
+                                {trackInfo.openedAt ? formatDateTimeStamp(trackInfo.openedAt) : "link"}
                                 {trackInfo.openedAt && relativeTimeAgo(trackInfo.openedAt) ? ` (${relativeTimeAgo(trackInfo.openedAt)})` : ""}
                                 {trackInfo.opens > 1 ? ` · ${trackInfo.opens}×` : ""}
                               </div>
+                            ) : rsvpOpens > 0 ? (
+                              <div className="text-amethyst font-medium tabular-nums" title={rsvpOpenedAt ? new Date(rsvpOpenedAt).toString() : undefined}>
+                                👀 #rsvp opened {rsvpOpenedAt ? formatDateTimeStamp(rsvpOpenedAt) : "recently"}
+                                {rsvpOpenedAt && relativeTimeAgo(rsvpOpenedAt) ? ` (${relativeTimeAgo(rsvpOpenedAt)})` : ""}
+                                {rsvpOpens > 1 ? ` · ${rsvpOpens}×` : ""}
+                              </div>
                             ) : guest?.viewed_at ? (
-                              <div className="text-amethyst font-medium tabular-nums" title={new Date(guest.viewed_at).toString()}>
-                                👀 Link opened {formatDateTimeStamp(guest.viewed_at)}
-                                {relativeTimeAgo(guest.viewed_at) ? ` (${relativeTimeAgo(guest.viewed_at)})` : ""}
+                              <div className="space-y-0.5 tabular-nums" title={new Date(guest.viewed_at).toString()}>
+                                <div className="text-ink/70 font-medium">
+                                  Invite ({cleanCode(guest.code) ? `/${cleanCode(guest.code)}` : "code"}) opened{" "}
+                                  {formatDateTimeStamp(guest.viewed_at)}
+                                </div>
+                                <div className="text-[10px] text-ink/40">
+                                  {prefersRsvpJump ? "#rsvp follow-up not opened yet" : existing?.sent ? "waiting on new open" : "not re-sent from Compose yet"}
+                                </div>
                               </div>
                             ) : existing?.sent ? (
                               <div>waiting on them to open</div>
@@ -1271,12 +1303,13 @@ export function ComposeTab({ go }: { go?: (tab: string) => void }) {
 }
 
 /* ═══════════ TRACKER TAB ═══════════ */
-type TrackerViewMode = "all" | "links" | "messages";
+type TrackerViewMode = "all" | "rsvp" | "links" | "messages";
 type TrackerSort = "opened_desc" | "opened_asc" | "opens_desc" | "sent_desc" | "name_asc" | "code_asc";
 
 type TrackerEntry = {
   id: string;
   kind: "message" | "household_link";
+  linkKind: "rsvp" | "invite";
   log?: MessageLog;
   guest?: Guest;
   recipientName: string;
@@ -1344,18 +1377,22 @@ export function TrackerTab({ go }: { go?: (tab: string) => void }) {
       const code = cleanCode(guest?.code);
       const inviteUrl = code ? inviteLink(code, origin) : origin;
       const rsvpUrl = code ? `${inviteUrl}#rsvp` : origin ? `${origin}/rsvp` : "/rsvp";
+      const isRsvpLink =
+        m.id.startsWith("link_rsvp_") ||
+        /#rsvp\b/i.test(m.body || "") ||
+        /\{rsvp_link\}/i.test(m.original_body || "");
       const isAutoLink = m.id.startsWith("link_");
+      const baseTarget = isRsvpLink ? rsvpUrl : inviteUrl;
       const trackedUrl = isAutoLink
-        ? m.id.startsWith("link_rsvp_")
-          ? rsvpUrl
-          : inviteUrl
-        : inviteUrl
-          ? attachTrackingParam(inviteUrl, origin, m.id)
+        ? baseTarget
+        : baseTarget
+          ? attachTrackingParam(baseTarget, origin, m.id)
           : "";
       const repliedAt = guest?.source === "RSVP form" && guest.created_at ? guest.created_at : null;
       return {
         id: m.id,
         kind: "message",
+        linkKind: isRsvpLink ? "rsvp" : "invite",
         log: m,
         guest,
         recipientName: m.recipient_name || (guest ? whoIsItFor(guest) || guest.name : ""),
@@ -1379,9 +1416,8 @@ export function TrackerTab({ go }: { go?: (tab: string) => void }) {
   }, [messages, guestByRecipientId, origin]);
 
   /**
-   * Unified generated household links (`guests` with a `code`, e.g. `https://…/JS-RD8P#rsvp`) —
-   * recovers all previously generated and distributed links & their historical `viewed_at` open timestamps
-   * automatically without re-sending anything.
+   * Unified generated household links (`guests` with a `code`) —
+   * distinguishes true `#rsvp` link opens from historical invitation-code (`/{code}`) opens!
    */
   const householdLinkEntries = useMemo<TrackerEntry[]>(() => {
     const logsByGuest = new Map<string, MessageLog[]>();
@@ -1426,13 +1462,19 @@ export function TrackerTab({ go }: { go?: (tab: string) => void }) {
         else stage = "to_send";
 
         const repliedAt = g.source === "RSVP form" && g.created_at ? g.created_at : null;
-        const hasRsvpLinkLog = guestLogs.some((m) => m.id.startsWith("link_rsvp_"));
-        const label = hasRsvpLinkLog ? "RSVP Link (#rsvp)" : "Generated Link (#rsvp)";
-        const letterBody = inviteText ? inviteMessage(code, inviteText, origin) : rsvpUrl;
+        const hasRsvpLinkOpen = guestLogs.some(
+          (m) =>
+            Number(m.link_opens) > 0 &&
+            (m.id.startsWith("link_rsvp_") || /#rsvp\b/i.test(m.body || "") || /\{rsvp_link\}/i.test(m.original_body || "")),
+        );
+        const linkKind: "rsvp" | "invite" = hasRsvpLinkOpen ? "rsvp" : "invite";
+        const label = hasRsvpLinkOpen ? "RSVP Link (#rsvp)" : `Invite Code (/${code})`;
+        const letterBody = inviteText ? inviteMessage(code, inviteText, origin) : inviteUrl;
 
         return {
           id: `household_${g.id}`,
           kind: "household_link" as const,
+          linkKind,
           guest: g,
           recipientName: whoIsItFor(g) || g.name || code,
           recipientPhone: g.phone || "",
@@ -1442,7 +1484,7 @@ export function TrackerTab({ go }: { go?: (tab: string) => void }) {
           body: letterBody,
           inviteUrl,
           rsvpUrl,
-          trackedUrl: rsvpUrl,
+          trackedUrl: hasRsvpLinkOpen ? rsvpUrl : inviteUrl,
           sent,
           sentAt,
           openedAt,
@@ -1454,13 +1496,20 @@ export function TrackerTab({ go }: { go?: (tab: string) => void }) {
       });
   }, [guests, messages, info, origin]);
 
+  const rsvpOnlyEntries = useMemo(
+    () => messageEntries.filter((e) => e.linkKind === "rsvp"),
+    [messageEntries],
+  );
+
   /**
    * Combined view:
-   * - `all`: every logged message + every pre-existing generated household link that has no message rows yet
-   * - `links`: 1 unified row per generated household code (`…/JS-XXXX#rsvp`)
-   * - `messages`: only rows stored in `messages`
+   * - `all`: every logged message + every pre-existing household invite code that has no open message log yet
+   * - `rsvp`: ONLY `#rsvp` follow-up messages & `#rsvp` link opens (excludes historical Oct 6–13 `/JS-XXXX` invite code opens!)
+   * - `links`: 1 unified row per generated household code
+   * - `messages`: all rows stored in `messages`
    */
   const baseEntries = useMemo<TrackerEntry[]>(() => {
+    if (viewMode === "rsvp") return rsvpOnlyEntries;
     if (viewMode === "links") return householdLinkEntries;
     if (viewMode === "messages") return messageEntries;
     const guestIdsWithOpenLog = new Set(
@@ -1474,7 +1523,7 @@ export function TrackerTab({ go }: { go?: (tab: string) => void }) {
       return Boolean(e.guest.viewed_at && !guestIdsWithOpenLog.has(rid));
     });
     return [...messageEntries, ...surfacedHouseholds];
-  }, [viewMode, householdLinkEntries, messageEntries, messages]);
+  }, [viewMode, rsvpOnlyEntries, householdLinkEntries, messageEntries, messages]);
 
   const campaigns = useMemo(() => {
     const counts = new Map<string, { label: string; count: number }>();
@@ -1673,7 +1722,7 @@ export function TrackerTab({ go }: { go?: (tab: string) => void }) {
       </div>
 
       <Card>
-        {/* View mode selector so previously generated /JS-XXXX#rsvp links are immediately inspectable */}
+        {/* View mode selector clearly separating #rsvp links from historical /JS-XXXX invite codes */}
         <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-ink/10">
           <div className="flex flex-wrap gap-1.5 items-center">
             <Btn
@@ -1681,21 +1730,28 @@ export function TrackerTab({ go }: { go?: (tab: string) => void }) {
               onClick={() => { setViewMode("all"); setCampaignFilter("all"); }}
               className="!px-3.5 !py-1.5"
             >
-              All links &amp; messages <span className="opacity-65 ml-1">{messageEntries.length + householdLinkEntries.filter((e) => !e.guest || !messages.some((m) => m.recipient_id === `gst_${e.guest!.id}`)).length}</span>
+              All activity <span className="opacity-65 ml-1">{messageEntries.length + householdLinkEntries.filter((e) => !e.guest || !messages.some((m) => m.recipient_id === `gst_${e.guest!.id}`) || (e.guest.viewed_at && !messageEntries.some((me) => me.opens > 0 && me.log?.recipient_id === `gst_${e.guest!.id}`))).length}</span>
+            </Btn>
+            <Btn
+              variant={viewMode === "rsvp" ? "dark" : "ghost"}
+              onClick={() => { setViewMode("rsvp"); setCampaignFilter("all"); }}
+              className="!px-3.5 !py-1.5"
+            >
+              🎯 #rsvp links &amp; follow-ups <span className="opacity-65 ml-1">{rsvpOnlyEntries.length}</span>
             </Btn>
             <Btn
               variant={viewMode === "links" ? "dark" : "ghost"}
               onClick={() => { setViewMode("links"); setCampaignFilter("all"); }}
               className="!px-3.5 !py-1.5"
             >
-              🔗 Generated #rsvp links <span className="opacity-65 ml-1">{householdLinkEntries.length}</span>
+              🔑 Invite codes (/JS-…) <span className="opacity-65 ml-1">{householdLinkEntries.length}</span>
             </Btn>
             <Btn
               variant={viewMode === "messages" ? "dark" : "ghost"}
               onClick={() => { setViewMode("messages"); setCampaignFilter("all"); }}
               className="!px-3.5 !py-1.5"
             >
-              📨 Logged messages <span className="opacity-65 ml-1">{messageEntries.length}</span>
+              📨 All logged messages <span className="opacity-65 ml-1">{messageEntries.length}</span>
             </Btn>
           </div>
 
@@ -1785,29 +1841,38 @@ export function TrackerTab({ go }: { go?: (tab: string) => void }) {
                             {e.code}
                           </span>
                           <div className="font-mono text-[11px] text-ink/55 break-all">
-                            /{e.code}#rsvp
+                            {e.linkKind === "rsvp" ? `/${e.code}#rsvp` : `/${e.code}`}
                           </div>
                         </div>
                       ) : null}
                     </td>
 
-                    <td className="px-2 py-3 min-w-[175px]">
-                      <div className="font-medium text-ink/90">{e.label}</div>
+                    <td className="px-2 py-3 min-w-[185px]">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span
+                          className={`label !text-[9px] px-2 py-0.5 rounded-full ${
+                            e.linkKind === "rsvp" ? "bg-wine/10 text-wine" : "bg-ink/8 text-ink/65"
+                          }`}
+                        >
+                          {e.linkKind === "rsvp" ? "🎯 #rsvp link" : "🔑 invite code"}
+                        </span>
+                      </div>
+                      <div className="font-medium text-ink/90 mt-1">{e.label}</div>
                       {e.group && <div className="text-xs text-ink/55">{e.group}</div>}
                       {e.body && (
                         <details className="mt-1.5 text-xs">
                           <summary className="cursor-pointer text-ink/55 hover:text-wine select-none">
                             View link / message
                           </summary>
-                          <pre className="mt-2 p-3 max-w-md bg-oat/60 rounded-lg font-mono text-[11px] leading-relaxed whitespace-pre-wrap break-words">
+                          <pre className="mt-2 p-3 max-w-md bg-oat/60 rounded-lg font-mono text-[11px] leading-relaxed whitespace-pre-wrap overflow-x-auto">
                             {e.body}
                           </pre>
                         </details>
                       )}
                     </td>
 
-                    {/* Dedicated Date & Time column showing exact open timestamp */}
-                    <td className="px-2 py-3 min-w-[225px]">
+                    {/* Dedicated Date & Time column showing exact open timestamp & whether #rsvp vs invite code */}
+                    <td className="px-2 py-3 min-w-[235px]">
                       {e.opens > 0 ? (
                         <div className="space-y-0.5">
                           <div
@@ -1818,14 +1883,20 @@ export function TrackerTab({ go }: { go?: (tab: string) => void }) {
                           </div>
                           <div className="text-xs text-ink/55 tabular-nums">
                             {openedRel ? `${openedRel} · ` : ""}
-                            {e.opens} {e.opens === 1 ? "open" : "opens"}
+                            {e.linkKind === "rsvp"
+                              ? `#rsvp link (${e.opens} ${e.opens === 1 ? "open" : "opens"})`
+                              : `Original invite code (/${e.code})`}
                           </div>
                         </div>
                       ) : (
                         <div className="space-y-0.5">
                           <div className="text-xs text-ink/40 font-medium">Not opened yet</div>
                           <div className="text-[11px] text-ink/35">
-                            {e.sent ? "Waiting for recipient to tap link" : "Link generated · not marked sent"}
+                            {e.sent
+                              ? e.linkKind === "rsvp"
+                                ? "Waiting for guest to open #rsvp link"
+                                : "Waiting for guest to open invite"
+                              : "Link generated · not marked sent"}
                           </div>
                         </div>
                       )}

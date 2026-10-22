@@ -192,21 +192,32 @@ export async function markMessageOpened(
       }
     }
     if (guestId) {
-      const { data } = await db.from("messages").select("id, link_opens, sent, created_at").eq("recipient_id", `gst_${guestId}`);
-      const allForGuest = (data ?? []) as { id: string; link_opens?: number; sent?: boolean; created_at?: string }[];
+      const { data } = await db.from("messages").select("*").eq("recipient_id", `gst_${guestId}`);
+      const allForGuest = (data ?? []) as {
+        id: string;
+        body?: string;
+        original_body?: string;
+        link_opens?: number;
+        sent?: boolean;
+        created_at?: string;
+      }[];
       const sentRows = allForGuest
         .filter((r) => r.sent && !r.id.startsWith("link_"))
         .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
-      if (sentRows.length) {
-        const unopened = sentRows.filter((r) => !(Number(r.link_opens) > 0));
-        const targets = unopened.length ? unopened : [sentRows[0]];
+      const matchingKindRows =
+        via === "rsvp"
+          ? sentRows.filter((r) => /#rsvp\b/i.test(r.body || "") || /\{rsvp_link\}/i.test(r.original_body || ""))
+          : sentRows;
+      if (matchingKindRows.length) {
+        const unopened = matchingKindRows.filter((r) => !(Number(r.link_opens) > 0));
+        const targets = unopened.length ? unopened : [matchingKindRows[0]];
         await Promise.all(
           targets.map((r) => updateMessageRow(db, r.id, { link_opens: (Number(r.link_opens) || 0) + 1, opened_at: now })),
         );
         return;
       }
 
-      // No Compose row logged yet — create/update an automatic link-open record for the distributed link!
+      // Create/update an automatic link-open record specifically distinguishing `#rsvp` vs plain `/JS-XXXX`!
       const autoId = `link_${via}_${guestId}`;
       const existingAuto = allForGuest.find((r) => r.id === autoId);
       if (existingAuto) {
@@ -246,7 +257,7 @@ export async function markMessagesResponded(db: Db, guestId: string): Promise<vo
   if (!guestId) return;
   const now = new Date().toISOString();
   try {
-    const { data } = await db.from("messages").select("id, link_opens, responded, opened_at").eq("recipient_id", `gst_${guestId}`);
+    const { data } = await db.from("messages").select("*").eq("recipient_id", `gst_${guestId}`);
     const rows = ((data ?? []) as { id: string; link_opens?: number; responded?: boolean; opened_at?: string | null }[])
       .filter((r) => !r.responded);
     await Promise.all(

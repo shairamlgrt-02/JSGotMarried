@@ -378,9 +378,16 @@ export type InviteResult = { ok: true; found: InviteFound } | { ok: false; error
 
 export async function resolveInvite(code: string, messageId?: string, via?: "rsvp" | "invite"): Promise<InviteResult> {
   const cc = code.trim().toUpperCase();
-  const m = (messageId ?? (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("m") || "" : "")).trim();
+  const hashStr = typeof window !== "undefined" ? window.location.hash : "";
+  const hashMsgMatch = hashStr.match(/[?&]m=([A-Za-z0-9_-]+)/);
+  const m = (
+    messageId ??
+    (typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("m") || (hashMsgMatch ? hashMsgMatch[1] : "")
+      : "")
+  ).trim();
   const entry: "rsvp" | "invite" =
-    via ?? (typeof window !== "undefined" && window.location.hash === "#rsvp" ? "rsvp" : "invite");
+    via ?? (hashStr.toLowerCase().startsWith("#rsvp") ? "rsvp" : "invite");
   if (cc.length < 3) return { ok: false, error: "That code is too short — check the four characters at the end of your link." };
   if (cc === DEMO_CODE) {
     if (m && claimVisitTracking(`msg:${m}`)) {

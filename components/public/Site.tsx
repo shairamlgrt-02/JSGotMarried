@@ -66,7 +66,7 @@ export default function Home({ code = "", variant = "guest" }: { code?: string; 
   const load = useMemo(() => () => {
     if (!activeCode) { setCodeState("none"); return; }
     const via: "rsvp" | "invite" =
-      typeof window !== "undefined" && window.location.hash === "#rsvp" ? "rsvp" : "invite";
+      typeof window !== "undefined" && window.location.hash.toLowerCase().startsWith("#rsvp") ? "rsvp" : "invite";
     // note: no "checking" flash on refetch — unmounting the reply card mid-animation would drop its state
     fetchInvite(activeCode, undefined, via).then((r) => { if (r) { setInvite(r); setCodeState("ok"); } else { setInvite(null); setCodeState("bad"); } });
   }, [activeCode]);
@@ -80,7 +80,7 @@ export default function Home({ code = "", variant = "guest" }: { code?: string; 
   // letter. The reply card only mounts once the invite has been read, and the smooth-scroll layer
   // needs a beat to wake up — so it is nudged twice rather than trusted to one anchor jump.
   useEffect(() => {
-    if (!unlocked || window.location.hash !== "#rsvp") return;
+    if (!unlocked || !window.location.hash.toLowerCase().startsWith("#rsvp")) return;
     const to = (ms: number) => setTimeout(() => {
       const el = document.getElementById("rsvp");
       if (el && el.getBoundingClientRect().top > 8) el.scrollIntoView({ behavior: "smooth", block: "start" });
