@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { serverSupabase } from "@/lib/supabase-server";
 import { sendRsvpEmail } from "@/lib/notify";
 import { cleanCode, isReply, planParty, seatCapFor, whoIsItFor } from "@/lib/guests";
-import { markViewed, matchCode, updateGuest } from "@/lib/invite-gate";
+import { markMessageOpened, markMessagesResponded, markViewed, matchCode, updateGuest } from "@/lib/invite-gate";
 
 const clip = (v: unknown, n: number) => String(v ?? "").trim().slice(0, n);
 
@@ -28,7 +28,21 @@ const shape = (r: Record<string, unknown>) => ({
  * in two are only ever left behind by older builds.
  */
 export async function GET(req: Request) {
-  const code = cleanCode(new URL(req.url).searchParams.get("code") || "");
+  const reqUrl = new URL(req.url);
+  const sp = reqUrl.searchParams;
+  const code = cleanCode(sp.get("code") || "");
+  const messageId = clip(sp.get("m"), 64);
+  const via = sp.get("via") === "rsvp" ? ("rsvp" as const) : ("invite" as const);
+  const track = sp.get("track") !== "0";
+
+  // Standalone message-link tracking (e.g. `/?m=…` or `/preview?m=…` with no invitation code)
+  if (!code && messageId) {
+    const db = serverSupabase();
+    if (!db) return NextResponse.json({ error: "not configured" }, { status: 503 });
+    if (track) await markMessageOpened(db, { messageId });
+    return NextResponse.json({ ok: true, tracked: Boolean(track) });
+  }
+
   if (code.length < 3) return NextResponse.json({ error: "code required" }, { status: 400 });
   const db = serverSupabase();
   if (!db) return NextResponse.json({ error: "not configured" }, { status: 503 });
@@ -43,7 +57,20 @@ export async function GET(req: Request) {
   const reply = rows.find(isReply);
   if (!invite && !reply) return NextResponse.json({ error: "not found" }, { status: 404 });
 
-  await markViewed(db, hit.code, rows);
+  if (track) {
+    const targetGuest = (invite ?? reply)!;
+    await Promise.all([
+      markViewed(db, hit.code, rows),
+      markMessageOpened(db, {
+        messageId,
+        guest: targetGuest,
+        guestId: targetGuest.id,
+        code: hit.code,
+        via,
+        origin: reqUrl.origin,
+      }),
+    ]);
+  }
   return NextResponse.json({
     ok: true,
     code: hit.code,
@@ -117,9 +144,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "RSVP is not reachable right now — please try again." }, { status: 503 });
   }
 
-  await sendRsvpEmail({
-    ...row,
-    approval: approved ? `code ${canonical} — auto-approved (${whoIsItFor(invite)})` : `code ${canonical} — NEEDS REVIEW (party of ${pax})`,
-  });
+  await Promise.all([
+    markMessagesResponded(db, invite.id),
+    sendRsvpEmail({
+      ...row,
+      approval: approved ? `code ${canonical} — auto-approved (${whoIsItFor(invite)})` : `code ${canonical} — NEEDS REVIEW (party of ${pax})`,
+    }),
+  ]);
   return NextResponse.json({ ok: true, saved: true, emailed: true, approved, code: canonical, household: whoIsItFor(invite), paxMax });
 }

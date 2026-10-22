@@ -1,6 +1,119 @@
-import type { Guest, WeddingInfo, EntourageMember, Vendor, MessageTemplate, MessageLog } from "./types";
+import type { Attending, Guest, WeddingInfo, EntourageMember, Vendor, MessageLog } from "./types";
 import { GUEST_TAGS, GUEST_TAG_IDS, guestTagIcon, guestTagLabel, parseGuestTags } from "./types";
 import { DAY_ROLE_IDS, DAY_ROLES, dayRoleIcon, dayRoleLabel } from "./roles";
+import { cleanCode } from "./guests";
+
+/* ─── Short tracking IDs & tracked links ─── */
+const MSG_ID_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
+
+/**
+ * Compact 7-character message tracking id (`m` + 6 URL-safe characters, e.g. `mk7p3m9`).
+ * Doubles as `messages.id` and the `?m=…` query parameter on links in that message, keeping
+ * WhatsApp links short and tidy while tracking opens per recipient and per message.
+ */
+export function genMessageId(): string {
+  const bytes =
+    typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function"
+      ? Array.from(crypto.getRandomValues(new Uint8Array(6)))
+      : Array.from({ length: 6 }, () => Math.floor(Math.random() * 256));
+  return `m${bytes.map((b) => MSG_ID_ALPHABET[b % MSG_ID_ALPHABET.length]).join("")}`;
+}
+
+/**
+ * Append `?m=<messageId>` cleanly BEFORE any `#hash` fragment (e.g. `…/JS-7KQF?m=mk7p3m9#rsvp`),
+ * so `window.location.hash === "#rsvp"` still smooth-scrolls straight to the reply card.
+ */
+export function attachTrackingParam(rawUrl: string, origin = "", messageId?: string): string {
+  if (!rawUrl || !messageId) return rawUrl;
+  try {
+    const fallbackOrigin = origin || "https://jsgotmarried.local";
+    const u = new URL(rawUrl, fallbackOrigin);
+    if (!u.searchParams.has("m")) u.searchParams.set("m", messageId);
+    if (!origin && !/^https?:\/\//i.test(rawUrl)) {
+      return `${u.pathname}${u.search}${u.hash}`;
+    }
+    return u.toString();
+  } catch {
+    const hashIdx = rawUrl.indexOf("#");
+    const before = hashIdx >= 0 ? rawUrl.slice(0, hashIdx) : rawUrl;
+    const hash = hashIdx >= 0 ? rawUrl.slice(hashIdx) : "";
+    const sep = before.includes("?") ? "&" : "?";
+    return `${before}${sep}m=${encodeURIComponent(messageId)}${hash}`;
+  }
+}
+
+/* ─── Message delivery / tracking statuses (Invite Codes style) ─── */
+export type MessageStage = "to_send" | "sent" | "opened" | "responded" | "declined";
+
+export const MESSAGE_STATUS: Record<
+  MessageStage,
+  { label: string; hint: string; tone: "moss" | "wine" | "ink" | "amethyst" | "burgundy" }
+> = {
+  to_send: { label: "to send", hint: "Ready — copy the message or tap send to share it.", tone: "ink" },
+  sent: { label: "sent", hint: "Copied / shared with the recipient — waiting on them to open.", tone: "wine" },
+  opened: { label: "opened", hint: "They opened the link — waiting on their reply.", tone: "amethyst" },
+  responded: { label: "responded", hint: "They replied on WhatsApp or confirmed their RSVP.", tone: "moss" },
+  declined: { label: "declined", hint: "Declined with love on the RSVP card.", tone: "burgundy" },
+};
+
+export interface MessageTrackingInfo {
+  stage: MessageStage;
+  opens: number;
+  openedAt: string | null;
+  repliedViaRsvp: boolean;
+}
+
+/**
+ * Compute the live Invite-Codes-style status for one message row, combining per-message link
+ * tracking (`link_opens`, `opened_at`, `responded`) with live household state on `guests`.
+ */
+export function messageTrackingInfo(log?: MessageLog | null, guest?: Guest | null): MessageTrackingInfo {
+  if (!log || !log.sent) {
+    // Even if not sent yet, allow manually ticked responded edge case
+    if (log?.responded) {
+      return {
+        stage: "responded",
+        opens: Number(log.link_opens) || 0,
+        openedAt: log.opened_at ?? null,
+        repliedViaRsvp: false,
+      };
+    }
+    return { stage: "to_send", opens: Number(log?.link_opens) || 0, openedAt: log?.opened_at ?? null, repliedViaRsvp: false };
+  }
+
+  const directOpens = Number(log.link_opens) || 0;
+  const isDistributedLinkRow = Boolean(log.id?.startsWith("link_"));
+  const guestViewedAfterSend = Boolean(
+    guest?.viewed_at && (!log.sent_at || guest.viewed_at >= log.sent_at),
+  );
+  const opens = directOpens > 0 ? directOpens : guestViewedAfterSend || log.opened_at ? 1 : 0;
+  const openedAt =
+    log.opened_at ||
+    (isDistributedLinkRow && directOpens > 0 ? log.created_at ?? guest?.viewed_at ?? null : null) ||
+    (guestViewedAfterSend ? guest?.viewed_at ?? null : null);
+
+  const rsvpSubmittedAfterSend = Boolean(
+    guest &&
+      guest.source === "RSVP form" &&
+      guest.attending !== "pending" &&
+      guest.created_at &&
+      (!log.sent_at || guest.created_at >= log.sent_at),
+  );
+
+  if (rsvpSubmittedAfterSend && guest?.attending === "no") {
+    return { stage: "declined", opens: Math.max(opens, 1), openedAt: openedAt || guest.created_at || null, repliedViaRsvp: true };
+  }
+  if (log.responded || rsvpSubmittedAfterSend) {
+    if (guest?.attending === "no" && guest.source === "RSVP form") {
+      return { stage: "declined", opens, openedAt, repliedViaRsvp: true };
+    }
+    return { stage: "responded", opens, openedAt, repliedViaRsvp: rsvpSubmittedAfterSend };
+  }
+  if (opens > 0) {
+    return { stage: "opened", opens, openedAt, repliedViaRsvp: false };
+  }
+  return { stage: "sent", opens: 0, openedAt: null, repliedViaRsvp: false };
+}
 
 /* ─── Recipient groups ─── */
 /**
@@ -131,6 +244,10 @@ export function messageCategoryFor(raw: string): MessageCategory | undefined {
 /** A resolved recipient for the messaging module — one row in the tracker. */
 export interface Recipient {
   id: string;
+  /** Underlying `guests.id` when the recipient belongs to the guest list. */
+  guestId?: string;
+  /** Underlying `vendors.id` when the recipient is a vendor. */
+  vendorId?: string;
   name: string;
   greetName: string;
   phone: string;
@@ -145,6 +262,9 @@ export interface Recipient {
   plusOne?: string;
   /** For guests: RSVP status. */
   rsvpStatus?: string;
+  attending?: Attending;
+  viewedAt?: string | null;
+  sentAt?: string | null;
 }
 
 /** Resolve the recipients for a set of groups from all data sources. */
@@ -153,7 +273,7 @@ export function resolveRecipients(
   entourage: EntourageMember[],
   vendors: Vendor[],
   guests: Guest[],
-  info: WeddingInfo,
+  _info: WeddingInfo,
 ): Recipient[] {
   // Old template ids are followed to where the group lives now, and one group is only worked
   // once however many names pointed at it.
@@ -194,6 +314,7 @@ export function resolveRecipients(
           if (map.has(id)) return;
           map.set(id, {
             id,
+            vendorId: v.id,
             name: v.name,
             greetName: v.name.split(" ")[0],
             phone: v.contact,
@@ -245,18 +366,23 @@ export function resolveRecipients(
           if (!roles.includes(cat.label)) seen.role = [...roles, cat.label].join(" · ");
           return;
         }
+        const code = cleanCode(g.code);
         map.set(id, {
           id,
+          guestId: g.id,
           name: g.greet || g.name || "Guest",
           greetName: (g.greet || g.name || "Guest").split(" ")[0],
           phone: g.phone,
           role: cat.label,
           category: cat.label,
-          code: g.code,
-          inviteLink: g.code ? `${base}/${g.code}` : "",
+          code,
+          inviteLink: code ? `${base}/${code}` : "",
           pax: g.pax,
           plusOne: g.plus_one,
           rsvpStatus: g.attending === "yes" ? "Confirmed ✓" : g.attending === "no" ? "Declined ✗" : "Pending ⏳",
+          attending: g.attending,
+          viewedAt: g.viewed_at ?? null,
+          sentAt: g.sent_at ?? null,
         });
       });
     }
@@ -311,31 +437,59 @@ export const MERGE_TAGS: MergeTag[] = [
   { tag: "{hashtag}",        label: "Hashtag",          hint: "Primary wedding hashtag" },
 ];
 
-/** Replace all merge tags in a template with values for one recipient. */
-export function applyMergeTags(template: string, recipient: Recipient, info: WeddingInfo): string {
+/** Does a message body reference a guest's personal invitation code or personal link? */
+export const templateUsesInviteCode = (body: string) =>
+  /\{(invitation_code|invitation_link|rsvp_link)\}/.test(body);
+
+/** Build a recipient's personal tracked URL (either their invitation page or straight on `#rsvp`). */
+export function recipientTrackedLink(
+  recipient: Recipient,
+  messageId?: string,
+  origin?: string,
+  jumpToRsvp = false,
+): string {
+  const base = origin ?? (typeof window !== "undefined" ? window.location.origin : "");
+  const code = cleanCode(recipient.code);
+  const raw = code
+    ? jumpToRsvp
+      ? `${base}/${code}#rsvp`
+      : `${base}/${code}`
+    : jumpToRsvp
+      ? `${base}/rsvp`
+      : base;
+  return raw ? attachTrackingParam(raw, base, messageId) : "";
+}
+
+/** Replace all merge tags in a template with values for one recipient, attaching per-message tracking. */
+export function applyMergeTags(
+  template: string,
+  recipient: Recipient,
+  info: WeddingInfo,
+  messageId?: string,
+  originOverride?: string,
+): string {
   const weddingDate = new Date(info.date);
   const dateStr = weddingDate.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
   const dayName = weddingDate.toLocaleDateString("en-GB", { weekday: "long" });
   const rsvpDeadline = info.rsvp_deadline
     ? new Date(`${info.rsvp_deadline}T12:00:00+03:00`).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
     : "October 25, 2026";
-  const base = typeof window !== "undefined" ? window.location.origin : "";
-  const link = recipient.inviteLink || (recipient.code ? `${base}/${recipient.code}` : "");
+  const base = originOverride ?? (typeof window !== "undefined" ? window.location.origin : "");
+  const code = cleanCode(recipient.code);
+  const link = recipientTrackedLink(recipient, messageId, base, false);
   // The chase messages point here: the guest's own page, landed straight on the reply card.
-  // #rsvp is the site's own deep link (the /rsvp door hands guests over the same way), and the
-  // page smooth-scrolls them down the moment their code is verified.
-  const rsvpLink = link ? `${link}#rsvp` : "";
+  // `?m=…` sits cleanly before `#rsvp` so smooth-scroll still lands right on the reply card.
+  const rsvpLink = recipientTrackedLink(recipient, messageId, base, true);
   // "2 seats" / "1 seat" / "a seat" — phrased so the template's sentence always reads naturally
   const seats = recipient.pax && recipient.pax > 0 ? `${recipient.pax} seat${recipient.pax === 1 ? "" : "s"}` : "a seat";
 
-  return template
+  let resolved = template
     .replace(/\{full_name\}/g, recipient.name)
     .replace(/\{first_name\}/g, recipient.greetName)
     .replace(/\{role\}/g, recipient.role)
     .replace(/\{phone\}/g, recipient.phone)
-    .replace(/\{invitation_code\}/g, recipient.code || "")
+    .replace(/\{invitation_code\}/g, code)
     .replace(/\{invitation_link\}/g, link)
-    .replace(/\{rsvp_link\}/g, rsvpLink)
     .replace(/\{rsvp_status\}/g, recipient.rsvpStatus || "")
     .replace(/\{pax\}/g, recipient.pax?.toString() || "")
     .replace(/\{seats\}/g, seats)
@@ -348,7 +502,28 @@ export function applyMergeTags(template: string, recipient: Recipient, info: Wed
     .replace(/\{wedding_venue\}/g, info.venue_name)
     .replace(/\{venue_address\}/g, info.venue_address)
     .replace(/\{rsvp_deadline\}/g, rsvpDeadline)
-    .replace(/\{hashtag\}/g, info.hashtags[0] || "");
+    .replace(/\{hashtag\}/g, info.hashtags[0] || "")
+    .replace(/\{rsvp_link\}/g, rsvpLink);
+
+  // Also attach `?m=<messageId>` to any hand-pasted link pointing to this wedding site so
+  // custom messages track opens even without using a `{…_link}` merge tag.
+  if (messageId && base) {
+    try {
+      const host = new URL(base).host;
+      resolved = resolved.replace(/https?:\/\/[^\s<>"')]+/gi, (match) => {
+        try {
+          const u = new URL(match);
+          if (u.host === host && !u.searchParams.has("m")) {
+            u.searchParams.set("m", messageId);
+            return u.toString();
+          }
+        } catch { /* leave untouched */ }
+        return match;
+      });
+    } catch { /* ignore invalid base */ }
+  }
+
+  return resolved;
 }
 
 /* ─── Ready-made templates ─── */

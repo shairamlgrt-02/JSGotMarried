@@ -78,6 +78,30 @@ function clearTableCache(t: TableName) {
   }
 }
 
+/** Force a live reload of one or more tables from the backing store (e.g. fresh link opens & RSVPs). */
+export function refreshTables(...tables: TableName[]) {
+  if (!tables.length) return;
+  for (const t of tables) clearTableCache(t);
+  if (typeof window !== "undefined") {
+    for (const t of tables) window.dispatchEvent(new CustomEvent(EVT, { detail: t }));
+  }
+}
+
+if (typeof window !== "undefined") {
+  let lastFocusRefresh = 0;
+  const onFocusOrVisible = () => {
+    if (document.visibilityState === "hidden") return;
+    const now = Date.now();
+    if (now - lastFocusRefresh < 4000) return;
+    lastFocusRefresh = now;
+    void getSession().then((s) => {
+      if (s.admin) refreshTables("messages", "guests");
+    });
+  };
+  window.addEventListener("focus", onFocusOrVisible);
+  document.addEventListener("visibilitychange", onFocusOrVisible);
+}
+
 export async function list<T extends TableName>(t: T, code = ""): Promise<TableMap[T][]> {
   // The public site passes the guest's invitation code along: the server answers with the
   // private pages (venue, programme, FAQ) only for a code it actually issued. The binder
@@ -220,12 +244,127 @@ export type InviteState = { name: string; pax: number; reply: InviteReply | null
  * Supabase and never e-mail the couple.
  */
 import { DEMO_CODE, codeMatches, hasReplied, isReply, MAX_RSVP_SEATS, planParty, seatCapFor, whoIsItFor } from "./guests";
+import type { MessageLog } from "./types";
 export { DEMO_CODE, isReply };
 const DEMO_HOUSEHOLD = "The Demo Household";
 const demoReplyKey = "jsos:demo-reply";
 const readDemoReply = (): InviteReply | null => {
   try { return JSON.parse(localStorage.getItem(demoReplyKey) || "null"); } catch { return null; }
 };
+
+const VISIT_DEDUP_MS = 5 * 60_000;
+function claimVisitTracking(key: string): boolean {
+  if (!key || typeof window === "undefined") return false;
+  try {
+    const sk = `jsos:visit:${key}`;
+    const prev = Number(sessionStorage.getItem(sk) || 0);
+    if (prev && Date.now() - prev < VISIT_DEDUP_MS) return false;
+    sessionStorage.setItem(sk, String(Date.now()));
+  } catch { /* private mode without sessionStorage — allow once */ }
+  return true;
+}
+
+function recordLocalMessageOpen(opts: {
+  messageId?: string;
+  guest?: Guest;
+  guestId?: string;
+  code?: string;
+  via?: "rsvp" | "invite";
+}) {
+  const msgId = (opts.messageId || "").trim();
+  const guest = opts.guest;
+  const guestId = (opts.guestId || guest?.id || "").trim();
+  const via = opts.via === "rsvp" ? "rsvp" : "invite";
+  const now = new Date().toISOString();
+  const msgs = localRead("messages") as MessageLog[];
+  let changed = false;
+  if (msgId) {
+    const next = msgs.map((m) => {
+      if (m.id !== msgId) return m;
+      changed = true;
+      return { ...m, link_opens: (Number(m.link_opens) || 0) + 1, opened_at: now };
+    });
+    if (changed) {
+      localWrite("messages", next);
+      return;
+    }
+  }
+  if (guestId) {
+    const matching = msgs
+      .filter((m) => m.recipient_id === `gst_${guestId}` && m.sent && !m.id.startsWith("link_"))
+      .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
+    if (matching.length) {
+      const unopened = matching.filter((m) => !(Number(m.link_opens) > 0));
+      const targetIds = new Set((unopened.length ? unopened : [matching[0]]).map((m) => m.id));
+      localWrite(
+        "messages",
+        msgs.map((m) => (targetIds.has(m.id) ? { ...m, link_opens: (Number(m.link_opens) || 0) + 1, opened_at: now } : m)),
+      );
+      return;
+    }
+    const autoId = `link_${via}_${guestId}`;
+    const existingAuto = msgs.find((m) => m.id === autoId);
+    if (existingAuto) {
+      localWrite(
+        "messages",
+        msgs.map((m) => (m.id === autoId ? { ...m, link_opens: (Number(m.link_opens) || 0) + 1, opened_at: now, created_at: now } : m)),
+      );
+    } else if (guest) {
+      const canonical = (opts.code || guest.code || "").trim().toUpperCase();
+      const base = typeof window !== "undefined" ? window.location.origin : "";
+      const fullLink = canonical ? `${base}/${canonical}${via === "rsvp" ? "#rsvp" : ""}` : base;
+      localWrite("messages", [
+        ...msgs,
+        {
+          id: autoId,
+          template_id: via === "rsvp" ? "distributed_rsvp_link" : "distributed_invite_link",
+          template_name: via === "rsvp" ? "RSVP Link (#rsvp)" : "Invitation Link",
+          original_body: "",
+          body: fullLink,
+          recipient_id: `gst_${guestId}`,
+          recipient_name: whoIsItFor(guest) || guest.name || canonical,
+          recipient_phone: guest.phone || "",
+          category: via === "rsvp" ? "RSVP Link (#rsvp)" : "Invitation Link",
+          sent: true,
+          responded: isReply(guest) || guest.attending !== "pending",
+          link_opens: 1,
+          opened_at: now,
+          sent_at: guest.sent_at || guest.created_at || now,
+          created_at: now,
+        },
+      ]);
+    }
+  }
+}
+
+/**
+ * Record an open when a recipient opens a link carrying `?m=<messageId>` on any public page
+ * (e.g. `/?m=…`, `/preview?m=…` or `/rsvp?m=…`). Works identically in Supabase and Local modes.
+ */
+export function trackMessageLinkVisit(messageId?: string | null) {
+  if (typeof window === "undefined") return;
+  const m = (messageId ?? new URLSearchParams(window.location.search).get("m") ?? "").trim();
+  if (!m) return;
+  const run = async () => {
+    if (!claimVisitTracking(`msg:${m}`)) return;
+    try {
+      const r = await fetch(`/api/rsvp?m=${encodeURIComponent(m)}&track=1`, { cache: "no-store" });
+      if (r.ok) return;
+    } catch { /* fall through to local mode */ }
+    recordLocalMessageOpen({ messageId: m });
+  };
+  if (document.visibilityState === "visible") {
+    void run();
+  } else {
+    const onVis = () => {
+      if (document.visibilityState === "visible") {
+        document.removeEventListener("visibilitychange", onVis);
+        void run();
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+  }
+}
 
 /**
  * Open a personal invitation link. The server answers for Supabase projects; local
@@ -237,19 +376,39 @@ const readDemoReply = (): InviteReply | null => {
 export type InviteFound = { state: InviteState; code: string };
 export type InviteResult = { ok: true; found: InviteFound } | { ok: false; error: string };
 
-export async function resolveInvite(code: string): Promise<InviteResult> {
+export async function resolveInvite(code: string, messageId?: string, via?: "rsvp" | "invite"): Promise<InviteResult> {
   const cc = code.trim().toUpperCase();
+  const m = (messageId ?? (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("m") || "" : "")).trim();
+  const entry: "rsvp" | "invite" =
+    via ?? (typeof window !== "undefined" && window.location.hash === "#rsvp" ? "rsvp" : "invite");
   if (cc.length < 3) return { ok: false, error: "That code is too short — check the four characters at the end of your link." };
   if (cc === DEMO_CODE) {
+    if (m && claimVisitTracking(`msg:${m}`)) {
+      fetch(`/api/rsvp?m=${encodeURIComponent(m)}&track=1`, { cache: "no-store" }).catch(() => {});
+      recordLocalMessageOpen({ messageId: m });
+    }
     const reply = readDemoReply();
     // the test household is invited with the card's full range, so the couple can rehearse 3 and 4 seats
     return { ok: true, found: { code: DEMO_CODE, state: { name: DEMO_HOUSEHOLD, label: DEMO_HOUSEHOLD, pax: MAX_RSVP_SEATS, reply, code: DEMO_CODE, demo: true } } };
   }
+  const shouldTrack = claimVisitTracking(m ? `msg:${m}` : `code:${cc}:${entry}`);
+  if (shouldTrack) {
+    // Also mark both plain & entry code keys so `/rsvp` → `/JS-XXXX#rsvp` never double-counts
+    claimVisitTracking(`code:${cc}:rsvp`);
+    claimVisitTracking(`code:${cc}:invite`);
+  }
   try {
-    const r = await fetch(`/api/rsvp?code=${encodeURIComponent(cc)}`, { cache: "no-store" });
+    const params = new URLSearchParams({ code: cc, via: entry, track: shouldTrack ? "1" : "0" });
+    if (m) params.set("m", m);
+    const r = await fetch(`/api/rsvp?${params.toString()}`, { cache: "no-store" });
     const j = await r.json().catch(() => ({}));
-    if (r.ok && j.ok)
+    if (r.ok && j.ok) {
+      if (j.code) {
+        claimVisitTracking(`code:${String(j.code).toUpperCase()}:rsvp`);
+        claimVisitTracking(`code:${String(j.code).toUpperCase()}:invite`);
+      }
       return { ok: true, found: { code: (j.code as string) || cc, state: { name: j.name as string, label: (j.label as string) || (j.name as string) || "", pax: seatCapFor(j.pax), reply: (j.reply as InviteReply) || null, code: (j.code as string) || cc } } };
+    }
     if (j.ambiguous) return { ok: false, error: "That code belongs to more than one invitation — open the personal link the couple sent you." };
     if (r.status !== 503) return { ok: false, error: "We couldn't match that code to an invitation. Try the full code from your link (it looks like JS-7KQF), or ask the couple for it." };
   } catch { /* offline — fall through to the list saved in this browser */ }
@@ -260,6 +419,14 @@ export async function resolveInvite(code: string): Promise<InviteResult> {
   const invite = same.find((g) => !isReply(g));
   const reply = same.find(isReply);
   if (!invite && !reply) return { ok: false, error: "We couldn't match that code to an invitation on this device. Codes issued here start with JS-." };
+  const target = invite ?? reply!;
+  claimVisitTracking(`code:${hits[0]}:rsvp`);
+  claimVisitTracking(`code:${hits[0]}:invite`);
+  if (shouldTrack) {
+    const now = new Date().toISOString();
+    localWrite("guests", rows.map((g) => (g.id === target.id ? { ...g, viewed_at: now } : g)));
+    recordLocalMessageOpen({ messageId: m, guest: target, guestId: target.id, code: hits[0], via: entry });
+  }
   return {
     ok: true,
     found: {
@@ -278,23 +445,10 @@ export async function resolveInvite(code: string): Promise<InviteResult> {
   };
 }
 
-if (typeof window !== "undefined") {
-  // opening the link is the "they looked at it" signal in local mode too (the server stamps it
-  // on its side); written once, quietly.
-  window.addEventListener("jsos:invite-opened", ((e: CustomEvent) => {
-    const cc = String(e.detail || "");
-    const rows = localRead("guests") as Guest[];
-    const hit = rows.find((g) => codeMatches(g.code || "", cc) && !hasReplied(g) && !g.viewed_at);
-    if (!hit) return;
-    localWrite("guests", rows.map((g) => (g.id === hit.id ? { ...g, viewed_at: new Date().toISOString() } : g)));
-  }) as EventListener);
-}
-
 /** The invitation a personal link unlocks — `null` when the code isn't one the couple issued. */
-export async function fetchInvite(code: string): Promise<InviteState | null> {
-  const r = await resolveInvite(code);
+export async function fetchInvite(code: string, messageId?: string, via?: "rsvp" | "invite"): Promise<InviteState | null> {
+  const r = await resolveInvite(code, messageId, via);
   if (!r.ok) return null;
-  if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("jsos:invite-opened", { detail: code }));
   return r.found.state;
 }
 
@@ -328,10 +482,24 @@ export async function submitRsvp(g: Omit<Guest, "id" | "source" | "created_at"> 
   const party = planParty(g.pax, invite?.pax, g.plus_one, declined);
   if (party.missingNames > 0) throw new Error(`Please add a name for each of your ${party.needed} guest${party.needed === 1 ? "" : "s"}.`);
   const { pax, approved } = party;
-  const row: Guest = { ...g, pax, plus_one: party.plusOne, id: invite?.id ?? crypto.randomUUID(), code: canonical, source: "RSVP form", created_at: new Date().toISOString(), viewed_at: invite?.viewed_at ?? new Date().toISOString(), approved } as Guest;
+  const nowIso = new Date().toISOString();
+  const row: Guest = { ...invite, ...g, pax, plus_one: party.plusOne, id: invite?.id ?? crypto.randomUUID(), code: canonical, source: "RSVP form", created_at: nowIso, viewed_at: invite?.viewed_at ?? nowIso, approved } as Guest;
   const i = cur.findIndex((x) => x.id === row.id);
   if (i >= 0) cur[i] = row; else cur.push(row);
   localWrite("guests", cur);
+  if (invite?.id) {
+    const msgs = localRead("messages") as MessageLog[];
+    if (msgs.some((m) => m.recipient_id === `gst_${invite.id}` && !m.responded)) {
+      localWrite(
+        "messages",
+        msgs.map((m) =>
+          m.recipient_id === `gst_${invite.id}`
+            ? { ...m, responded: true, link_opens: Math.max(1, Number(m.link_opens) || 0), opened_at: m.opened_at || nowIso }
+            : m,
+        ),
+      );
+    }
+  }
   return { approved, already: false };
 }
 

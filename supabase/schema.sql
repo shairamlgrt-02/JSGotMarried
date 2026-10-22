@@ -103,8 +103,10 @@ create table if not exists messages (
   recipient_id text default '', recipient_name text default '', recipient_phone text default '',
   category text default '',
   sent boolean default false, responded boolean default false, link_opens int default 0,
+  opened_at timestamptz,
   sent_at timestamptz, created_at timestamptz default now()
 );
+alter table messages add column if not exists opened_at timestamptz;
 
 -- ── anonymous audio guestbook ─────────────────────────────────────────────────────────────────────
 -- Audio itself lives in a private Storage bucket. This table contains no guest name, invite code,

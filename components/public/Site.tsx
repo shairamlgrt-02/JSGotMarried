@@ -9,7 +9,7 @@ import { CountdownSection, DressCode, ElevenEleven, Entourage, FaqSection, Follo
 import { Moments, MusicButton, SidePolaroids } from "@/components/public/photos";
 import VoiceGuestbook from "@/components/public/VoiceGuestbook";
 import { Postcard, Postmark, Stamp, StickOn, Sticker } from "@/components/public/stickers";
-import { fetchInvite, getAdmin, type InviteState } from "@/lib/db";
+import { fetchInvite, getAdmin, trackMessageLinkVisit, type InviteState } from "@/lib/db";
 
 /** Places a sticker/stamp in a section's top padding (never over the text). */
 const Deco = ({ children, at, rotate, className = "" }: { children: React.ReactNode; at: "tl" | "tr"; rotate: number; className?: string }) => (
@@ -54,6 +54,7 @@ export default function Home({ code = "", variant = "guest" }: { code?: string; 
   const [preview, setPreview] = useState(false);
   useEffect(() => {
     if (activeCode) return;
+    trackMessageLinkVisit();
     getAdmin().then((signedIn) => {
       setAdmin(signedIn);
       // …/preview stays the sealed guest view even for the binder; the couple opts into the
@@ -64,8 +65,10 @@ export default function Home({ code = "", variant = "guest" }: { code?: string; 
   }, [activeCode]);
   const load = useMemo(() => () => {
     if (!activeCode) { setCodeState("none"); return; }
+    const via: "rsvp" | "invite" =
+      typeof window !== "undefined" && window.location.hash === "#rsvp" ? "rsvp" : "invite";
     // note: no "checking" flash on refetch — unmounting the reply card mid-animation would drop its state
-    fetchInvite(activeCode).then((r) => { if (r) { setInvite(r); setCodeState("ok"); } else { setInvite(null); setCodeState("bad"); } });
+    fetchInvite(activeCode, undefined, via).then((r) => { if (r) { setInvite(r); setCodeState("ok"); } else { setInvite(null); setCodeState("bad"); } });
   }, [activeCode]);
   useEffect(() => { load(); }, [load]);
   const unlocked = (codeState === "ok" && !!invite) || preview;

@@ -76,9 +76,9 @@ export default function Admin() {
               {tab === "guests" && <Guests go={go} />}
               {tab === "roles" && <RolesTab go={go} />}
               {tab === "audio" && <AudioGuestbook />}
-              {tab === "messaging-compose" && <ComposeTab />}
-              {tab === "messaging-templates" && <TemplatesTab />}
-              {tab === "messaging-tracker" && <TrackerTab />}
+              {tab === "messaging-compose" && <ComposeTab go={go} />}
+              {tab === "messaging-templates" && <TemplatesTab go={go} />}
+              {tab === "messaging-tracker" && <TrackerTab go={go} />}
               {tab === "vendors" && <Vendors />}
               {tab === "attire" && <AttireEditor />}
               {tab === "bridesmaids" && <BridesmaidCards />}

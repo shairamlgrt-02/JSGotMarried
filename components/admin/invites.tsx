@@ -2,8 +2,8 @@
 import { useMemo, useState } from "react";
 import { uid } from "@/lib/db";
 import {
-  STATUS, cleanCode, cleanInviteNote, genCode, inviteHref, inviteLink, inviteMessage, inviteSheet, inviteStatus,
-  MAX_RSVP_SEATS, parseGuestLines, plusOneLabel, previewLink, tallyInvites, whoIsItFor, type InviteStatus, type InviteText,
+  STATUS, cleanCode, cleanInviteNote, formatDateTimeStamp, genCode, inviteHref, inviteLink, inviteMessage, inviteSheet, inviteStatus,
+  MAX_RSVP_SEATS, normalizeLinkSearch, parseGuestLines, plusOneLabel, previewLink, relativeTimeAgo, tallyInvites, whatsappHref, whoIsItFor, type InviteStatus, type InviteText,
 } from "@/lib/guests";
 import { useTable } from "@/lib/hooks";
 import type { Guest } from "@/lib/types";
@@ -50,7 +50,7 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
   const [filter, setFilter] = useState<"all" | InviteStatus>("all");
   const [seatFilter, setSeatFilter] = useState<"all" | "1" | "2">("all");
   const [sortBy, setSortBy] = useState<
-    "latest" | "oldest" | "for_asc" | "for_desc" | "name_asc" | "name_desc" | "pax_desc" | "pax_asc" | "code_asc" | "code_desc" | "status"
+    "latest" | "opened_desc" | "oldest" | "for_asc" | "for_desc" | "name_asc" | "name_desc" | "pax_desc" | "pax_asc" | "code_asc" | "code_desc" | "status"
   >("latest");
   const [q, setQ] = useState("");
   const [msg, setMsg] = useState("");
@@ -86,13 +86,16 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
 
   const ledger = useMemo(() => {
     const withStatus = rows.map((g, idx) => ({ g, s: inviteStatus(g), idx }));
+    const needle = normalizeLinkSearch(q);
     const filtered = withStatus
       .filter((x) => filter === "all" || x.s === filter)
       .filter((x) => seatFilter === "all" || (seatFilter === "1" ? Number(x.g.pax) === 1 : Number(x.g.pax) >= 2))
-      .filter((x) => !q || `${x.g.greet ?? ""} ${x.g.name} ${x.g.plus_one ?? ""} ${x.g.phone} ${x.g.code} ${cleanInviteNote(x.g.note)} ${x.g.dietary ?? ""} ${x.g.song_request ?? ""} ${x.g.message ?? ""}`.toLowerCase().includes(q.toLowerCase()))
+      .filter((x) => !needle || `${x.g.greet ?? ""} ${x.g.name} ${x.g.plus_one ?? ""} ${x.g.phone} ${x.g.code} ${cleanInviteNote(x.g.note)} ${x.g.dietary ?? ""} ${x.g.song_request ?? ""} ${x.g.message ?? ""}`.toLowerCase().includes(needle))
       .sort((a, b) => {
         const timeA = a.g.created_at ?? "";
         const timeB = b.g.created_at ?? "";
+        const openA = a.g.viewed_at ?? "";
+        const openB = b.g.viewed_at ?? "";
         const forA = whoIsItFor(a.g);
         const forB = whoIsItFor(b.g);
         const nameA = `${a.g.name || ""} ${a.g.plus_one || ""}`.trim() || forA;
@@ -102,6 +105,8 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
         switch (sortBy) {
           case "latest":
             return timeB.localeCompare(timeA) || b.idx - a.idx;
+          case "opened_desc":
+            return (openB ? 0 : 1) - (openA ? 0 : 1) || openB.localeCompare(openA) || timeB.localeCompare(timeA);
           case "oldest":
             return timeA.localeCompare(timeB) || a.idx - b.idx;
           case "for_asc":
@@ -302,6 +307,7 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
             <span className="label !text-[9px] text-ink/50">Sort</span>
             <select value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)} className="bg-transparent outline-none font-medium text-ink cursor-pointer">
               <option value="latest">Latest to oldest</option>
+              <option value="opened_desc">Link opened: Latest first</option>
               <option value="oldest">Oldest to latest</option>
               <option value="for_asc">Who it&apos;s for: A → Z</option>
               <option value="for_desc">Who it&apos;s for: Z → A</option>
@@ -360,7 +366,7 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
                   </td>
                   <td className="px-1 min-w-[130px]">
                     <EditText value={g.phone} onSave={(v) => save({ ...g, phone: v })} />
-                    {g.phone && <a className="label !text-[9px] text-moss px-2" target="_blank" rel="noreferrer" href={`https://wa.me/${g.phone.replace(/\D/g, "")}`}>message ↗</a>}
+                    {g.phone && <a className="label !text-[9px] text-moss px-2" target="_blank" rel="noreferrer" href={whatsappHref(g.phone)}>message ↗</a>}
                   </td>
                   <td className="px-1">
                     <EditText type="number" value={g.pax} onSave={(v) => save({ ...g, pax: Math.max(0, Math.min(9, Math.round(Number(v) || 0))) })} className="tabular-nums" />
@@ -386,11 +392,16 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
                   </td>
                   <td className="px-2 py-2 whitespace-nowrap">
                     {g.code ? (
-                      <div className="flex flex-wrap gap-x-2.5 gap-y-1 max-w-[190px]">
+                      <div className="flex flex-wrap gap-x-2.5 gap-y-1 max-w-[205px]">
                         <button className="label !text-[9px] text-moss" onClick={() => void copy(g, inviteLink(g.code!, origin), g.id, true)} title={inviteLink(g.code!, origin)}>
                           {copied === g.id ? "copied ✓ sent" : "copy link"}
                         </button>
-                        <button className="label !text-[9px] text-ink/60 hover:text-wine" title="The whole invitation letter, addressed to this household" onClick={() => void copy(g, inviteMessage(g.code!, textFor(g), origin), `${g.id}:msg`, true)}>copy message</button>
+                        <button className="label !text-[9px] text-amethyst hover:underline" onClick={() => void copy(g, `${inviteLink(g.code!, origin)}#rsvp`, `${g.id}:rsvp`, true)} title={`${inviteLink(g.code!, origin)}#rsvp`}>
+                          {copied === `${g.id}:rsvp` ? "copied ✓ sent" : "copy #rsvp"}
+                        </button>
+                        <button className="label !text-[9px] text-ink/60 hover:text-wine" title="The whole invitation letter, addressed to this household" onClick={() => void copy(g, inviteMessage(g.code!, textFor(g), origin), `${g.id}:msg`, true)}>
+                          {copied === `${g.id}:msg` ? "copied ✓ sent" : "copy message"}
+                        </button>
                         <a className="label !text-[9px] text-wine hover:text-burgundy" target="_blank" rel="noreferrer"
                           onClick={() => void save({ ...g, sent_at: g.sent_at ?? new Date().toISOString() })}
                           href={inviteHref(g.code!, g.phone || "", textFor(g), origin)}
@@ -401,11 +412,22 @@ export function InviteCodes({ go }: { go: (tab: string) => void }) {
                       </div>
                     ) : <span className="text-ink/30 text-[11px]">issue a code to get a link</span>}
                   </td>
-                  <td className="px-2 py-2">
+                  <td className="px-2 py-2 min-w-[180px]">
                     <StatusTag s={s} />
-                    <div className="text-[10px] text-ink/45 mt-1 leading-snug">
-                      {g.viewed_at ? `opened ${day(g.viewed_at)}` : g.sent_at ? "waiting on them" : "not shared yet"}
-                      {g.source === "RSVP form" && g.created_at ? ` · replied ${day(g.created_at)}` : ""}
+                    <div className="text-[10px] text-ink/50 mt-1 leading-snug space-y-0.5">
+                      {g.viewed_at ? (
+                        <div className="text-amethyst font-medium" title={new Date(g.viewed_at).toString()}>
+                          👀 opened {formatDateTimeStamp(g.viewed_at)}
+                          {relativeTimeAgo(g.viewed_at) ? ` (${relativeTimeAgo(g.viewed_at)})` : ""}
+                        </div>
+                      ) : g.sent_at ? (
+                        <div>sent {formatDateTimeStamp(g.sent_at)} · waiting</div>
+                      ) : (
+                        <div>not shared yet</div>
+                      )}
+                      {g.source === "RSVP form" && g.created_at && (
+                        <div>replied {formatDateTimeStamp(g.created_at)}</div>
+                      )}
                     </div>
                   </td>
                   <td className="px-2 py-2 max-w-[220px] text-[12px] leading-snug">
