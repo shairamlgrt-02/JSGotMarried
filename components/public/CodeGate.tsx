@@ -5,7 +5,7 @@ import Ambience from "@/components/public/Ambience";
 import { EASE, Reveal, Tilt } from "@/components/public/fx";
 import { Corners, Flourish } from "@/components/public/ornaments";
 import { fullDate } from "@/components/public/Envelope";
-import { resolveInvite } from "@/lib/db";
+import { resolveInvite, trackMessageLinkVisit } from "@/lib/db";
 import { cleanCode } from "@/lib/guests";
 import type { WeddingInfo } from "@/lib/types";
 
@@ -30,7 +30,7 @@ export default function CodeGate({ info, initialCode = "" }: { info: WeddingInfo
     const cc = cleanCode(raw);
     if (cc.length < 3) { setState("bad"); setError("Type the code on your invitation — it looks like JS-7KQF, and the last four characters are enough."); setShake((n) => n + 1); return; }
     setState("checking"); setError("");
-    const r = await resolveInvite(cc);
+    const r = await resolveInvite(cc, undefined, "rsvp");
     if (!r.ok) { setState("bad"); setError(r.error); setShake((n) => n + 1); input.current?.focus(); return; }
     setHousehold(r.found.state.name);
     setState("welcome");
@@ -38,7 +38,11 @@ export default function CodeGate({ info, initialCode = "" }: { info: WeddingInfo
     setTimeout(() => { window.location.replace(`/${r.found.code}#rsvp`); }, 900);
   }
 
-  useEffect(() => { if (initialCode) void open(initialCode); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+  useEffect(() => {
+    if (initialCode) void open(initialCode);
+    else trackMessageLinkVisit();
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, []);
 
   return (
     <>

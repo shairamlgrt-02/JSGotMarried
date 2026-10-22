@@ -288,6 +288,8 @@ export type MessageLog = {
   responded: boolean;
   /** How many times a link in the message was opened. */
   link_opens: number;
+  /** Most recent time the recipient opened a tracked link in this message. */
+  opened_at?: string | null;
   sent_at?: string | null;
   created_at?: string;
 };

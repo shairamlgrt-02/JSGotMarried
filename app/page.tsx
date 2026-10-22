@@ -12,9 +12,10 @@ export const dynamic = "force-dynamic";
  *
  * Links already sent as `…/?rsvp=JS-7KQF` keep working: they land on the household's own page.
  */
-export default async function HomePage({ searchParams }: { searchParams?: { rsvp?: string | string[] } }) {
+export default async function HomePage({ searchParams }: { searchParams?: { rsvp?: string | string[]; m?: string | string[] } }) {
   const raw = Array.isArray(searchParams?.rsvp) ? searchParams.rsvp[0] : searchParams?.rsvp;
+  const m = Array.isArray(searchParams?.m) ? searchParams.m[0] : searchParams?.m;
   const code = cleanCode(raw || "");
-  if (code) redirect(`/${code}`);
+  if (code) redirect(m ? `/${code}?m=${encodeURIComponent(m)}` : `/${code}`);
   return <Hub info={await weddingInfo()} />;
 }

@@ -231,12 +231,90 @@ export function inviteMessage(code: string, t: InviteText, origin = ""): string 
   ].filter(Boolean).join("\n\n");
 }
 
-/** One-tap WhatsApp share, straight to the guest when we have their number. */
-export function inviteHref(code: string, phone: string, t: InviteText, origin = location.origin) {
-  const digits = phone.replace(/\D/g, "");
-  // URLSearchParams encodes the message body as UTF-8, including emoji, for WhatsApp's link handoff.
-  const query = new URLSearchParams({ text: inviteMessage(code, t, origin) });
+/**
+ * Extract the household code or message tracking token when a couple pastes a full link
+ * (e.g. `https://jsgotmarried.vercel.app/JS-RD8P#rsvp` → `js-rd8p`) into any search box.
+ */
+export function normalizeLinkSearch(raw: string): string {
+  const trimmed = String(raw ?? "").trim();
+  if (!trimmed) return "";
+  const urlCode = trimmed.match(/\/(JS-[A-Za-z0-9-]+)(?:[/?#]|$)/i);
+  if (urlCode) return urlCode[1].toLowerCase();
+  const rsvpParam = trimmed.match(/[?&](?:code|rsvp)=([A-Za-z0-9-]+)/i);
+  if (rsvpParam) return rsvpParam[1].toLowerCase();
+  const msgParam = trimmed.match(/[?&]m=([A-Za-z0-9_-]+)/i);
+  if (msgParam) return msgParam[1].toLowerCase();
+  return trimmed.toLowerCase();
+}
+
+/** Full readable date & time stamp in local timezone: `22 Oct 2026, 2:34 PM`. */
+export function formatDateTimeStamp(iso?: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+/** Human-friendly relative recency note (`just now`, `8m ago`, `3h ago`, `yesterday`, `5d ago`). */
+export function relativeTimeAgo(iso?: string | null): string {
+  if (!iso) return "";
+  const ts = new Date(iso).getTime();
+  if (Number.isNaN(ts)) return "";
+  const diffSec = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+  if (diffSec < 60) return "just now";
+  const mins = Math.floor(diffSec / 60);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days === 1) return "yesterday";
+  if (days < 30) return `${days}d ago`;
+  return "";
+}
+
+/**
+ * Normalize a saved phone number for `wa.me/<digits>`:
+ *  · strips spaces, dashes and parentheses;
+ *  · strips international `00` prefix (`00973…` → `973…`);
+ *  · prefixes `973` onto bare 8-digit local Bahrain numbers (`3912 3456` → `97339123456`);
+ *  · converts bare 11-digit Philippine mobile numbers (`0917…` → `63917…`).
+ * Returns `""` when blank so `wa.me/?text=…` opens WhatsApp's contact picker with the message ready.
+ */
+export function whatsappDigits(phone?: string | null): string {
+  const raw = String(phone ?? "").trim();
+  if (!raw) return "";
+  const hasPlus = raw.startsWith("+");
+  let digits = raw.replace(/\D/g, "");
+  if (!digits) return "";
+  if (!hasPlus && digits.startsWith("00")) digits = digits.slice(2);
+  if (!hasPlus && digits.length === 8) return `973${digits}`;
+  if (!hasPlus && /^09\d{9}$/.test(digits)) return `63${digits.slice(1)}`;
+  return digits;
+}
+
+/** One-tap WhatsApp link — straight to the contact when we have a number, or to the contact picker when blank. */
+export function whatsappHref(phone?: string | null, text?: string): string {
+  const digits = whatsappDigits(phone);
+  if (text === undefined) return `https://wa.me/${digits}`;
+  const query = new URLSearchParams({ text });
   return `https://wa.me/${digits}?${query.toString()}`;
+}
+
+/** One-tap WhatsApp share, straight to the guest when we have their number. */
+export function inviteHref(
+  code: string,
+  phone: string,
+  t: InviteText,
+  origin = typeof window !== "undefined" ? window.location.origin : "",
+) {
+  return whatsappHref(phone, inviteMessage(code, t, origin));
 }
 
 /* ─────────── bulk paste → households ─────────── */

@@ -99,10 +99,27 @@ export async function POST(req: NextRequest, { params }: { params: { table: stri
     return NextResponse.json({ ok: true });
   }
 
+  // Optional newer timestamp columns on messages (`opened_at`): drop and retry gracefully on
+  // databases that haven't re-run schema.sql yet, so message saves never fail.
+  const columnError = (message: string) => /column|does not exist|schema cache|Could not find/i.test(message);
+  if (params.table === "messages" && columnError(result.error.message)) {
+    const inputRows = (Array.isArray(body) ? body : [body]) as Record<string, unknown>[];
+    if (inputRows.some((row) => Object.prototype.hasOwnProperty.call(row, "opened_at"))) {
+      const lite = inputRows.map((row) => {
+        const copy = { ...row };
+        delete copy.opened_at;
+        return copy;
+      });
+      result = await db.from(params.table).upsert(Array.isArray(body) ? lite : lite[0]);
+      if (!result.error) {
+        invalidateTableCache(params.table);
+        return NextResponse.json({ ok: true });
+      }
+    }
+  }
   // Sent/opened timestamps are nice-to-have on older databases; retry without just those. Never
   // silently drop `greet` or `note`: they're couple-entered data, and doing so made the editor look
   // like it saved while the next reload restored the old values.
-  const columnError = (message: string) => /column|does not exist|schema cache|Could not find/i.test(message);
   if (params.table === "guests" && columnError(result.error.message)) {
     const inputRows = (Array.isArray(body) ? body : [body]) as Record<string, unknown>[];
     const timestampColumns = ["sent_at", "viewed_at"];

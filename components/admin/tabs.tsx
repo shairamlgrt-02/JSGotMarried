@@ -3,7 +3,7 @@ import { Reorder, useDragControls } from "framer-motion";
 import { useMemo, useState } from "react";
 import { getMode, pushSeedSafely, refreshFaqCopy, refreshStoryCopy, resetLocal, uid } from "@/lib/db";
 import { entourageGroups } from "@/lib/entourage";
-import { STATUS, cleanInviteNote, genCodeFor, inviteHref, inviteLink, inviteMessage, inviteStatus, joinPlusOnes, MAX_RSVP_SEATS, mergeHousehold, planHouseholdMerges, splitPlusOnes, tallyInvites, cleanCode, whoIsItFor, type InviteText } from "@/lib/guests";
+import { STATUS, cleanInviteNote, formatDateTimeStamp, genCodeFor, inviteHref, inviteLink, inviteMessage, inviteStatus, joinPlusOnes, MAX_RSVP_SEATS, mergeHousehold, normalizeLinkSearch, planHouseholdMerges, splitPlusOnes, tallyInvites, cleanCode, whatsappHref, whoIsItFor, type InviteText } from "@/lib/guests";
 import { useCountdown, useTable } from "@/lib/hooks";
 import type { Attending, Attire, BudgetItem, BudgetStatus, ChecklistItem, EntourageMember, Guest, Priority, ScheduleItem, StoryChapter, Vendor, VendorStatus } from "@/lib/types";
 import { ENTOURAGE_ROLES, GUEST_TAG_IDS, TABLES, formatGuestTags, guestTagIcon, guestTagIdFor, guestTagLabel, isPresetGuestTag, parseGuestTags, sortGuestTagIds } from "@/lib/types";
@@ -488,7 +488,7 @@ export function Guests({ go }: { go: (tab: string) => void }) {
    * whole guest table at you.
    */
   const matching = useMemo(() => {
-    const query = q.trim().toLowerCase();
+    const query = normalizeLinkSearch(q);
     return entries
       .filter(({ g }) => {
         if (filter === "all") return true;
@@ -865,7 +865,7 @@ export function Guests({ go }: { go: (tab: string) => void }) {
                     </td>
                     <td className="px-1 min-w-[130px]">
                       <EditText value={g.phone} onSave={(v) => save({ ...g, phone: v })} />
-                      {g.phone && <a className="label !text-[9px] text-moss px-2" target="_blank" rel="noreferrer" href={`https://wa.me/${g.phone.replace(/\D/g, "")}`}>Message ↗</a>}
+                      {g.phone && <a className="label !text-[9px] text-moss px-2" target="_blank" rel="noreferrer" href={whatsappHref(g.phone)}>Message ↗</a>}
                     </td>
                     <td className="px-1">
                       <EditText type="number" value={g.pax} onSave={(v) => save({ ...g, pax: Math.max(0, Math.round(num(v))) })} className="tabular-nums" />

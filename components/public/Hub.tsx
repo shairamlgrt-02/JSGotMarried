@@ -6,6 +6,7 @@ import { EASE_OUT, Reveal, Tilt } from "@/components/public/fx";
 import { Corners, Flourish } from "@/components/public/ornaments";
 import { BAKED_COVER, fullDate } from "@/components/public/Envelope";
 import type { WeddingInfo } from "@/lib/types";
+import { trackMessageLinkVisit } from "@/lib/db";
 
 /**
  * The front door of the site — deliberately almost empty.
@@ -85,6 +86,7 @@ function HubRsvpButton({ info }: { info: WeddingInfo }) {
 
 export default function Hub({ info }: { info: WeddingInfo }) {
   const couple = `${info.groom} & ${info.bride}`;
+  useEffect(() => { trackMessageLinkVisit(); }, []);
   return (
     <>
       <Ambience />
