@@ -85,7 +85,7 @@ function Field({ label, children, className = "" }: { label: string; children: R
 const inputCls =
   "w-full px-3 py-2 text-sm border border-taupe/30 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-wine/40";
 
-export function IgStories() {
+export function IgStories({ embedded = false }: { embedded?: boolean }) {
   const { rows: infoRows } = useTable("wedding_info");
   const info = infoRows[0] as WeddingInfo | undefined;
   const suggested = useMemo(() => igStoryDataFromInfo(info), [info]);
@@ -180,20 +180,22 @@ export function IgStories() {
 
   return (
     <div className="space-y-6">
-      <PageHead kicker="1080 × 1920 · ready to post" title="Instagram story templates.">
-        <Btn onClick={downloadAll} disabled={busy !== null}>
-          {busy === "all" ? "Saving…" : "Download all 3 (PNG)"}
-        </Btn>
-      </PageHead>
-
+      {!embedded && (
+        <>
+          <PageHead kicker="1080 × 1920 · ready to post" title="Instagram story templates.">
+            <Btn onClick={downloadAll} disabled={busy !== null}>
+              {busy === "all" ? "Saving…" : "Download all 3 (PNG)"}
+            </Btn>
+          </PageHead>
+          <p className="text-sm text-ink/60 max-w-3xl -mt-3">
+            Three on-brand story cards drawn straight from your binder details — names, date, handle and hashtags fill themselves in —
+            plus <b>transparent frame PNGs</b>: just your lettering and ornaments, no background, to lay on top of your own photos in
+            Instagram&apos;s story editor. For the bingo &amp; prompt cards, add Instagram&apos;s own <b>Add Yours</b> sticker on top so
+            your guests can join in.
+          </p>
+        </>
+      )}
       {flash && <div className="text-sm bg-moss/10 text-moss rounded-xl px-4 py-3">{flash}</div>}
-
-      <p className="text-sm text-ink/60 max-w-3xl -mt-3">
-        Three on-brand story cards drawn straight from your binder details — names, date, handle and hashtags fill themselves in —
-        plus <b>transparent frame PNGs</b>: just your lettering and ornaments, no background, to lay on top of your own photos in
-        Instagram&apos;s story editor. For the bingo &amp; prompt cards, add Instagram&apos;s own <b>Add Yours</b> sticker on top so
-        your guests can join in.
-      </p>
 
       <div className="grid md:grid-cols-3 gap-5">
         {IG_STORY_IDS.map((id) => (
