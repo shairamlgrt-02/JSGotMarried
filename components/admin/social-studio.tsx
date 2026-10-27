@@ -33,10 +33,16 @@ function TemplateCard({
   const [progress, setProgress] = useState("");
   const total = useMemo(() => socialPageCount(template, ctx), [template, ctx]);
   const cover = useMemo(
-    () => (fontsReady ? socialPreviewUrls(template, ctx, template.format === "post" ? 180 : 170)[0] : ""),
+    () => (fontsReady ? socialPreviewUrls(template, ctx, template.format === "story" ? 170 : 220)[0] : ""),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [fontsReady, template, ctx],
   );
+  const thumbCls =
+    template.format === "story"
+      ? "h-64 w-auto"
+      : template.format === "post"
+        ? "h-72 w-auto aspect-[4/5]"
+        : "w-40 h-40";
 
   useEffect(() => {
     if (!fontsReady || !open) return;
@@ -65,7 +71,9 @@ function TemplateCard({
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-medium">{template.title}</span>
-            <Tag>{template.format === "post" ? "feed · 1080²" : "story · 9:16"}</Tag>
+            <Tag>
+              {template.format === "story" ? "story · 9:16" : template.format === "post" ? "feed · 4:5" : "cover · 1:1"}
+            </Tag>
             {total > 1 && <Tag>{`${total} pages`}</Tag>}
           </div>
           <p className="text-xs text-ink/55 mt-1.5">{template.blurb}</p>
@@ -78,9 +86,7 @@ function TemplateCard({
           <img
             src={cover}
             alt={template.title}
-            className={`rounded-xl border border-taupe/25 shadow-[0_10px_24px_-16px_rgba(61,47,38,.6)] object-contain ${
-              template.format === "post" ? "w-44 h-44" : "h-64 w-auto"
-            }`}
+            className={`rounded-xl border border-taupe/25 shadow-[0_10px_24px_-16px_rgba(61,47,38,.6)] object-contain ${thumbCls}`}
           />
         </button>
       )}
@@ -175,7 +181,8 @@ export function SocialStudio() {
       <p className="text-sm text-ink/60 max-w-3xl -mt-3">
         Your Instagram content desk for the final countdown. Every template is drawn from the live binder — the programme,
         the attire palette, your FAQ, handle and hashtags — in the wedding&apos;s own stationery style. Big topics come as a{" "}
-        <b>story series</b>: download the pages and post them in order. Square downloads are feed posts and highlight covers.
+        <b>story series</b>: download the pages and post them in order. Feed downloads are 4:5 portrait (1080 × 1350, the
+        tallest size the grid accepts); highlight covers stay square for Instagram&apos;s circle crop.
       </p>
 
       {!ctx && <div className="py-16 text-center text-ink/40 font-serif text-2xl italic">Preparing your templates…</div>}

@@ -405,7 +405,8 @@ The FAQ's photo answer and the footer keep pointing at the same handle and hasht
 ## Social Studio (`Social Studio` tab)
 The binder's social desk for the final countdown — every download is drawn on canvas in the
 wedding's paper/wine/Cormorant/Pinyon aesthetic and saved straight to the couple's phone. Two
-formats: **1080 × 1920 stories (9:16)** and **1080 × 1080 feed posts / highlight covers**. Big
+formats: **1080 × 1920 stories (9:16)**, **1080 × 1350 feed posts (4:5 portrait — the tallest
+size the Instagram grid accepts)** and **1080 × 1080 highlight covers (1:1, circle-cropped)**. Big
 topics are *story series* — one template renders several numbered pages, posted in order. The
 library (`lib/social-studio.ts`, registry `SOCIAL_TEMPLATES`) reads the live binder data so an
 edit to the programme, attire palette or FAQ changes the next download:
@@ -418,7 +419,7 @@ edit to the programme, attire palette or FAQ changes the next download:
 | **FAQ** | cover + one story per FAQ row (first eight), text auto-shrinks to fit each page |
 | **Instructions** | 2-story series (arrival rules, livestream & adults-only note · tag + upload-QR page) |
 | **Reminders** | doors-close 4 PM · 5:30 majlis · tomorrow · tag us · adults-only · upload-QR |
-| **Feed posts (1:1)** | save the date · programme · palette · dashed-window photo frame · wine announcement |
+| **Feed posts (4:5, 1080 × 1350)** | save the date · programme · palette · dashed-window photo frame · wine announcement |
 | **Highlight covers** | set of eight circle-safe squares (Programme, Dress Code, Venue, Questions, RSVP, Entourage, Gifts, Moments) |
 
 Below the registry sit the original **Add Yours** cards, the **transparent frame builder** and
@@ -517,7 +518,7 @@ lib/venue-map.ts             the small plan of the venue printed on the programm
 lib/roles.ts                 the day-of roles dictionary (Guest Roles tab, messaging groups)
 lib/messaging.ts             recipient groups, merge tags, ready-made templates (the RSVP chase + broadcasts)
 lib/ig-stories.ts            the 1080×1920 Instagram Story canvas templates (bingo, outfit arch, Add Yours) + transparent overlay frames
-lib/social-studio.ts         the Social Studio registry — story series, square feed posts and highlight covers from live binder data
+lib/social-studio.ts         the Social Studio registry — 9:16 story series, 4:5 feed posts and 1:1 highlight covers from live binder data
 lib/media-upload.ts          the /upload limits, per-guest quota and XHR upload with progress
 lib/qr.ts                    branded QR code + data-URL download helper (the upload table signs)
 lib/card-draw.ts             shared canvas lettering (paper, caps, wrap, pins) for the cards

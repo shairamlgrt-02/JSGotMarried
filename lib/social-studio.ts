@@ -42,6 +42,10 @@ import {
 import type { Attire, Faq, WeddingInfo } from "./types";
 
 export const POST_W = 1080;
+/** Instagram portrait feed format — 4:5, the tallest size the grid accepts without cropping. */
+export const POST_H = 1350;
+/** Highlight covers stay square: Instagram crops them to a circle. */
+export const COVER_SIZE = 1080;
 const LACE = "#F3E8D6";
 const MOSS = "#5E6B3A";
 
@@ -130,7 +134,10 @@ function makeCanvas(w: number, h: number): { canvas: HTMLCanvasElement; g: Ctx }
 }
 
 const storyCanvas = () => makeCanvas(STORY_W, STORY_H);
-const postCanvas = () => makeCanvas(POST_W, POST_W);
+/** 4:5 portrait feed post. */
+const postCanvas = () => makeCanvas(POST_W, POST_H);
+/** 1:1 highlight cover. */
+const coverCanvas = () => makeCanvas(COVER_SIZE, COVER_SIZE);
 
 function wineFill(g: Ctx, w: number, h: number) {
   g.fillStyle = WINE;
@@ -239,11 +246,14 @@ export const SOCIAL_CATEGORIES: SocialCategory[] = [
   "Highlight covers",
 ];
 
+export type SocialFormat = "story" | "post" | "cover";
+
 export type SocialTemplate = {
   id: string;
   title: string;
   category: SocialCategory;
-  format: "story" | "post";
+  /** story = 1080×1920 (9:16) · post = 1080×1350 (4:5 feed) · cover = 1080×1080 (1:1, circle-cropped) */
+  format: SocialFormat;
   blurb: string;
   render: (ctx: SocialContext) => HTMLCanvasElement | HTMLCanvasElement[];
 };
@@ -254,10 +264,12 @@ function pagesOf(t: SocialTemplate, ctx: SocialContext): HTMLCanvasElement[] {
   return Array.isArray(out) ? out : [out];
 }
 
-const slug = (id: string, n: number, total: number, format: "story" | "post") =>
-  format === "post"
-    ? `social-${id}-1080x1080.png`
-    : `social-${id}-${String(n).padStart(2, "0")}-of-${String(total).padStart(2, "0")}-1080x1920.png`;
+const slug = (id: string, n: number, total: number, format: "story" | "post" | "cover") =>
+  format === "story"
+    ? `social-${id}-${String(n).padStart(2, "0")}-of-${String(total).padStart(2, "0")}-1080x1920.png`
+    : format === "post"
+      ? `social-${id}-1080x1350.png`
+      : `social-${id}-1080x1080.png`;
 
 /* ── Announcements ── */
 
@@ -660,57 +672,61 @@ function uploadQrStory(ctx: SocialContext): HTMLCanvasElement {
   return canvas;
 }
 
-/* ── Square feed posts ── */
+/* ── 4:5 portrait feed posts (1080 × 1350) ── */
 
-function postChrome(g: Ctx, ctx: SocialContext, onWine: boolean) {
+/** Handle + hashtags anchored to the bottom of whichever canvas height is passed. */
+function postChrome(g: Ctx, ctx: SocialContext, onWine: boolean, h = POST_H) {
   const main = onWine ? PAPER : WINE;
   const cx = POST_W / 2;
-  caps(g, ctx.handle, cx, 980, 28, main, 0.3);
+  caps(g, ctx.handle, cx, h - 180, 28, main, 0.3);
   g.font = serif(34, "600");
   g.fillStyle = main;
   g.textAlign = "center";
-  if (ctx.hashtags[0]) g.fillText(ctx.hashtags.join("  "), cx, 1030);
+  if (ctx.hashtags[0]) g.fillText(ctx.hashtags.join("  "), cx, h - 115);
 }
 
 function saveTheDatePost(ctx: SocialContext): HTMLCanvasElement[] {
   const { canvas, g } = postCanvas();
-  paper(g, POST_W, POST_W);
+  paper(g, POST_W, POST_H);
   const cx = POST_W / 2;
-  caps(g, "Save the Date", cx, 170, 34, WINE, 0.4);
-  fit(g, ctx.couple, cx, 330, 96, (s) => script(s), WINE, 880);
-  diamondRule(g, cx, 400, 220);
-  g.font = serif(120, "600");
+  caps(g, "Save the Date", cx, 200, 34, WINE, 0.4);
+  fit(g, ctx.couple, cx, 400, 104, (s) => script(s), WINE, 880);
+  diamondRule(g, cx, 480, 220);
+  g.font = serif(128, "600");
   g.fillStyle = INK;
   g.textAlign = "center";
-  g.fillText("11.11.2026", cx, 580);
-  g.font = serif(36, "i400");
+  g.fillText("11.11.2026", cx, 720);
+  g.font = serif(38, "i400");
   g.fillStyle = MOCHA;
-  g.fillText(ctx.fullDateLabel, cx, 660);
-  caps(g, ctx.venueName.toUpperCase(), cx, 760, 30, WINE, 0.34);
+  g.fillText(ctx.fullDateLabel, cx, 808);
+  caps(g, ctx.venueName.toUpperCase(), cx, 930, 30, WINE, 0.34);
+  g.font = sans(26, 400);
+  g.fillStyle = TAUPE;
+  g.fillText("Kingdom of Bahrain", cx, 990);
   postChrome(g, ctx, false);
   return [canvas];
 }
 
 function programmePost(ctx: SocialContext): HTMLCanvasElement[] {
   const { canvas, g } = postCanvas();
-  paper(g, POST_W, POST_W);
+  paper(g, POST_W, POST_H);
   const cx = POST_W / 2;
-  caps(g, "The Programme", cx, 130, 32, WINE, 0.38);
-  fit(g, ctx.couple, cx, 240, 72, (s) => script(s), WINE, 860);
-  let y = 360;
+  caps(g, "The Programme", cx, 160, 32, WINE, 0.38);
+  fit(g, ctx.couple, cx, 280, 76, (s) => script(s), WINE, 860);
+  let y = 420;
   WEDDING_PROGRAM_STOPS.forEach((stop) => {
-    caps(g, stop.time, 200, y, 30, WINE, 0.08, "left");
+    caps(g, stop.time, 150, y, 30, WINE, 0.08, "left");
     g.font = serif(38, "500");
     g.fillStyle = INK;
     g.textAlign = "left";
-    g.fillText(stop.title, 460, y);
+    g.fillText(stop.title, 430, y);
     g.strokeStyle = "rgba(188,169,148,0.5)";
     g.lineWidth = 1;
     g.beginPath();
-    g.moveTo(200, y + 26);
-    g.lineTo(880, y + 26);
+    g.moveTo(150, y + 26);
+    g.lineTo(930, y + 26);
     g.stroke();
-    y += 105;
+    y += 118;
   });
   postChrome(g, ctx, false);
   return [canvas];
@@ -718,11 +734,11 @@ function programmePost(ctx: SocialContext): HTMLCanvasElement[] {
 
 function attirePost(ctx: SocialContext): HTMLCanvasElement[] {
   const { canvas, g } = postCanvas();
-  paper(g, POST_W, POST_W);
+  paper(g, POST_W, POST_H);
   const cx = POST_W / 2;
   const colors = ctx.attire.find((a) => a.group === "guests")?.colors ?? [];
-  caps(g, "What to Wear", cx, 130, 32, WINE, 0.38);
-  fit(g, ctx.couple, cx, 240, 70, (s) => script(s), WINE, 860);
+  caps(g, "What to Wear", cx, 160, 32, WINE, 0.38);
+  fit(g, ctx.couple, cx, 280, 74, (s) => script(s), WINE, 860);
   const perRow = Math.min(4, Math.max(2, colors.length));
   const shown = colors.slice(0, 8);
   const gap = 36;
@@ -730,12 +746,12 @@ function attirePost(ctx: SocialContext): HTMLCanvasElement[] {
   const r = Math.min(95, (gridW - gap * (perRow - 1)) / perRow / 2);
   const rows = Math.ceil(shown.length / perRow);
   const startX = cx - (perRow * (r * 2) + (perRow - 1) * gap) / 2 + r;
-  const startY = 380;
+  const startY = 420;
   shown.forEach((c, i) => {
     const col = i % perRow;
     const row = Math.floor(i / perRow);
     const x = startX + col * (r * 2 + gap);
-    const y = startY + row * (r * 2 + 110);
+    const y = startY + row * (r * 2 + 116);
     g.beginPath();
     g.arc(x, y, r, 0, Math.PI * 2);
     g.fillStyle = c.hex;
@@ -751,18 +767,18 @@ function attirePost(ctx: SocialContext): HTMLCanvasElement[] {
   g.font = serif(30, "i400");
   g.fillStyle = TAUPE;
   g.textAlign = "center";
-  g.fillText("glossy greens & shining browns", cx, startY + rows * (r * 2 + 110) + 10);
+  g.fillText("glossy greens & shining browns", cx, startY + rows * (r * 2 + 116) + 14);
   postChrome(g, ctx, false);
   return [canvas];
 }
 
-/** A paper post with a dashed photo window the couple drops their own picture into. */
+/** A paper post with a dashed 4:5 photo window the couple drops their own picture into. */
 function photoFramePost(ctx: SocialContext): HTMLCanvasElement[] {
   const { canvas, g } = postCanvas();
-  paper(g, POST_W, POST_W);
+  paper(g, POST_W, POST_H);
   const cx = POST_W / 2;
-  // photo window
-  roundRect(g, 130, 110, 820, 620, 26);
+  // photo window — itself a 4:5 rectangle, so a phone picture fills it without cropping
+  roundRect(g, 130, 120, 820, 800, 26);
   g.setLineDash([12, 14]);
   g.strokeStyle = TAUPE;
   g.lineWidth = 2.5;
@@ -771,33 +787,34 @@ function photoFramePost(ctx: SocialContext): HTMLCanvasElement[] {
   g.font = script(64);
   g.fillStyle = WINE;
   g.textAlign = "center";
-  g.fillText("add your photo", cx, 400);
+  g.fillText("add your photo", cx, 480);
   g.font = sans(26, 400);
   g.fillStyle = TAUPE;
-  g.fillText("(place your picture inside this frame)", cx, 450);
-  fit(g, ctx.couple, cx, 840, 78, (s) => script(s), WINE, 880);
-  caps(g, ctx.dateLabel, cx, 920, 28, TAUPE, 0.32);
+  g.fillText("(place your 4:5 picture inside this frame)", cx, 532);
+  fit(g, ctx.couple, cx, 1030, 78, (s) => script(s), WINE, 880);
+  caps(g, ctx.dateLabel, cx, 1100, 28, TAUPE, 0.32);
   postChrome(g, ctx, false);
   return [canvas];
 }
 
 function announcementPost(ctx: SocialContext): HTMLCanvasElement[] {
   const { canvas, g } = postCanvas();
-  wineFill(g, POST_W, POST_W);
+  wineFill(g, POST_W, POST_H);
   const cx = POST_W / 2;
-  caps(g, "We're getting married", cx, 260, 32, LACE, 0.38);
-  fit(g, ctx.couple, cx, 430, 110, (s) => script(s), PAPER, 900);
-  diamondRule(g, cx, 510, 220, "rgba(252,250,245,0.4)");
-  caps(g, ctx.dateLabel, cx, 640, 36, PAPER, 0.34);
+  caps(g, "We're getting married", cx, 330, 32, LACE, 0.38);
+  fit(g, ctx.couple, cx, 540, 116, (s) => script(s), PAPER, 900);
+  diamondRule(g, cx, 630, 220, "rgba(252,250,245,0.4)");
+  caps(g, ctx.dateLabel, cx, 790, 36, PAPER, 0.34);
   g.font = serif(34, "i400");
   g.fillStyle = LACE;
   g.textAlign = "center";
-  g.fillText(ctx.fullDateLabel, cx, 720);
+  g.fillText(ctx.fullDateLabel, cx, 875);
+  caps(g, ctx.venueName.toUpperCase(), cx, 980, 28, LACE, 0.32);
   postChrome(g, ctx, true);
   return [canvas];
 }
 
-/* ── Highlight covers (square; Instagram crops to a circle) ── */
+/* ── Highlight covers (square 1:1; Instagram crops to a circle) ── */
 
 const HIGHLIGHTS: { label: string; glyph: string }[] = [
   { label: "Programme", glyph: "◷" },
@@ -812,9 +829,9 @@ const HIGHLIGHTS: { label: string; glyph: string }[] = [
 
 function highlightCovers(ctx: SocialContext): HTMLCanvasElement[] {
   return HIGHLIGHTS.map(({ label, glyph }) => {
-    const { canvas, g } = postCanvas();
-    wineFill(g, POST_W, POST_W);
-    const cx = POST_W / 2;
+    const { canvas, g } = coverCanvas();
+    wineFill(g, COVER_SIZE, COVER_SIZE);
+    const cx = COVER_SIZE / 2;
     // keep everything inside the centre 70% — Instagram's circle crop
     g.beginPath();
     g.arc(cx, 430, 150, 0, Math.PI * 2);
@@ -851,12 +868,12 @@ export const SOCIAL_TEMPLATES: SocialTemplate[] = [
   { id: "rem-tag", title: "Reminder · Tag Us", category: "Reminders", format: "story", blurb: "Handle and hashtag call-to-action for the day.", render: wineReminder("One tiny favour", ["Tag every moment"], ["Stories, reels, dance-floor clips — we want them all"]) },
   { id: "rem-kids", title: "Reminder · Adults-Only Ceremony", category: "Reminders", format: "story", blurb: "The closed-door ceremony note; little ones join from the reception.", render: wineReminder("A note about little ones", ["Adults-only ceremony"], ["Children are so welcome at the reception — and can watch the ceremony on the majlis livestream with refreshments."]) },
   { id: "rem-upload", title: "Reminder · Upload Your Photos", category: "Reminders", format: "story", blurb: "QR code story for the /upload album (up to 25 files).", render: (ctx) => [uploadQrStory(ctx)] },
-  { id: "post-save-date", title: "Feed · Save the Date", category: "Feed posts", format: "post", blurb: "Square announcement for the grid.", render: saveTheDatePost },
-  { id: "post-programme", title: "Feed · Programme", category: "Feed posts", format: "post", blurb: "The day at a glance, square format.", render: programmePost },
-  { id: "post-attire", title: "Feed · Dress Code Palette", category: "Feed posts", format: "post", blurb: "The guest swatches in one square.", render: attirePost },
-  { id: "post-photo-frame", title: "Feed · Photo Frame (add your picture)", category: "Feed posts", format: "post", blurb: "Paper frame with a dashed window — drop your own photo in.", render: photoFramePost },
-  { id: "post-announcement", title: "Feed · Wedding Announcement", category: "Feed posts", format: "post", blurb: "Wine square with names and date.", render: announcementPost },
-  { id: "highlight-covers", title: "Highlight Covers (set of 8)", category: "Highlight covers", format: "post", blurb: "Programme, Dress Code, Venue, Questions, RSVP, Entourage, Gifts, Moments — circle-safe.", render: highlightCovers },
+  { id: "post-save-date", title: "Feed · Save the Date", category: "Feed posts", format: "post", blurb: "4:5 portrait announcement for the grid.", render: saveTheDatePost },
+  { id: "post-programme", title: "Feed · Programme", category: "Feed posts", format: "post", blurb: "The day at a glance in 4:5 portrait.", render: programmePost },
+  { id: "post-attire", title: "Feed · Dress Code Palette", category: "Feed posts", format: "post", blurb: "The guest swatches in one 4:5 post.", render: attirePost },
+  { id: "post-photo-frame", title: "Feed · Photo Frame (add your picture)", category: "Feed posts", format: "post", blurb: "Paper frame with a dashed 4:5 window — drop your own photo in.", render: photoFramePost },
+  { id: "post-announcement", title: "Feed · Wedding Announcement", category: "Feed posts", format: "post", blurb: "Wine 4:5 post with names and date.", render: announcementPost },
+  { id: "highlight-covers", title: "Highlight Covers (set of 8)", category: "Highlight covers", format: "cover", blurb: "Programme, Dress Code, Venue, Questions, RSVP, Entourage, Gifts, Moments — square, circle-safe.", render: highlightCovers },
 ];
 
 /* ───────────────────────── previews & downloads ───────────────────────── */
