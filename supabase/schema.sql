@@ -23,6 +23,11 @@ alter table wedding_info add column if not exists site_description text default 
 alter table wedding_info add column if not exists share_image text default '';
 alter table wedding_info add column if not exists favicon text default '';
 alter table wedding_info add column if not exists instagram_note text default '';
+-- Note on Gifts (binder → Details): the public "Note on Gifts" card stays hidden until one of
+-- these is filled, so an unfinished field never reaches the invitation site.
+alter table wedding_info add column if not exists gift_note text default '';
+alter table wedding_info add column if not exists benefitpay_number text default '';
+alter table wedding_info add column if not exists benefitpay_iban text default '';
 create table if not exists schedule (id text primary key default gen_random_uuid()::text, time text, title text, detail text, "order" int default 0);
 create table if not exists budget (id text primary key default gen_random_uuid()::text, category text, item text, quoted_cost numeric default 0, paid_cost numeric default 0, status text default 'pending');
 create table if not exists guests (
@@ -133,6 +138,36 @@ on conflict (id) do update set
   public = false,
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
+
+-- ── anonymous guest photo & video uploads (/upload, QR codes on the table cards) ─────────────────
+-- A PRIVATE bucket: guests add memories straight from their phone with the anon key, but no anon
+-- policy lets them list, read or delete — only the service-role key (the binder) can view them.
+-- The bucket's 1 GB file_size_limit is the server-side backstop; the 25-files / 1 GB per-guest
+-- cap is enforced on the device (lib/media-upload.ts) and remembered in localStorage.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'wedding-media',
+  'wedding-media',
+  false,
+  1073741824,
+  array[
+    'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif',
+    'video/mp4', 'video/quicktime', 'video/webm', 'video/x-m4v', 'application/octet-stream'
+  ]
+)
+on conflict (id) do update set
+  name = excluded.name,
+  public = false,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+-- Anon may INSERT only, and only into this bucket. No SELECT/UPDATE/DELETE policy exists, so the
+-- default-deny of RLS keeps every uploaded object invisible to other guests.
+drop policy if exists "anon can insert wedding media" on storage.objects;
+create policy "anon can insert wedding media"
+  on storage.objects for insert
+  to anon
+  with check (bucket_id = 'wedding-media');
 
 -- ── attire palette (round 22): Garnet goes to the Maid of Honor, the Matron of Honor and the bride's
 -- sister-in-law; the four bridesmaids wear Turquoise, Citrine, Sapphire and Ruby (Amethyst retired) ──

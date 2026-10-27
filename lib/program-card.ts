@@ -10,7 +10,7 @@ import { MAP_H, MAP_W, PARKING_NOTE, VENUE_MAP_LEGEND, drawVenueMap } from "./ve
  * leads with the one thing guests keep getting wrong: nobody has to be there at 4:00 PM. In order:
  *   1. one panel to read first — the headline, the ceremony in two sentences, and under a hairline
  *      the two notes side by side: the entourage & wedding team (3:30, reserved seats, wait for the
- *      cue) and every other guest (5:30 at the majlis, reception at 6:30);
+ *      cue) and every other guest (5:30 at the majlis, reception at 7:00);
  *   2. the plan of the venue with its one-line legend, and beside it the wayfinding notes — where to
  *      go if you arrive at another hour (early for the ceremony, or while it is under way) and where
  *      the cars go — so "the majlis" and "the hall" are places, not words;

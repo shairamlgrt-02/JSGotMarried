@@ -25,6 +25,12 @@ export type WeddingInfo = {
   cover_photo?: string;
   music_url?: string;
   rsvp_deadline?: string; // YYYY-MM-DD
+  /** Note on Gifts section (binder → Details): shown on the public site only when a note or account detail exists. */
+  gift_note?: string;
+  /** BenefitPay mobile number / benefit account, as the couple wants it printed. */
+  benefitpay_number?: string;
+  /** IBAN for anyone who prefers a bank transfer. */
+  benefitpay_iban?: string;
 };
 export type ScheduleItem = { id: string; time: string; title: string; detail: string; order: number };
 export type BudgetStatus = "confirmed" | "quoted" | "pending";

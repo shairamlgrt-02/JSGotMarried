@@ -1230,6 +1230,61 @@ export function FaqSection({ faqs, info }: { faqs: Faq[]; info: WeddingInfo }) {
 
 /* ─────────── GALLERY + FOOTER ─────────── */
 /** Horizontal photobooth strip between sections — part of the letter design. */
+/* ─────────── NOTE ON GIFTS (BenefitPay) ─────────── */
+/** One copyable account row — tap to copy, with a tiny "copied ✓" confirmation. */
+function GiftDetail({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false);
+  if (!value.trim()) return null;
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(value.trim());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch { /* clipboard blocked on older browsers — long-press still works */ }
+  };
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      title="Tap to copy"
+      className="w-full text-left rounded-xl border border-taupe/25 bg-white/70 px-5 py-4 hover:border-wine/50 transition-colors group"
+    >
+      <div className="micro text-taupe tracking-[0.16em]">{label}</div>
+      <div className="flex items-center justify-between gap-3 mt-1">
+        <span className="font-serif text-h3 text-mocha break-all leading-snug">{value.trim()}</span>
+        <span className="micro shrink-0 text-wine opacity-80 group-hover:opacity-100">{copied ? "copied ✓" : "tap to copy"}</span>
+      </div>
+    </button>
+  );
+}
+
+export function GiftNote({ info }: { info: WeddingInfo }) {
+  const note = (info.gift_note || "").trim();
+  const benefit = (info.benefitpay_number || "").trim();
+  const iban = (info.benefitpay_iban || "").trim();
+  // The whole section stays hidden until the couple fills something in (binder → Details).
+  if (!note && !benefit && !iban) return null;
+  return (
+    <section id="gifts" className="sec">
+      <Title kicker="with gratitude" title="A note on gifts" />
+      <Reveal className="max-w-xl mx-auto mt-head">
+        <div className="rounded-[22px] border border-taupe/25 bg-[#FCFAF6] p-6 md:p-9 shadow-[0_12px_30px_-18px_rgba(61,47,38,.45)] text-center">
+          <span aria-hidden className="script text-wine text-[40px] leading-none">♡</span>
+          <p className="font-serif italic text-body text-mocha mt-3 text-balance">
+            {note ||
+              "Your presence at our wedding is the only present we could ever need. If you would still like to give, a little something towards our new beginning would be so appreciated — details below, with all our love."}
+          </p>
+          <div className="grid gap-3 mt-7 text-left">
+            {benefit && <GiftDetail label="BenefitPay · mobile number" value={benefit} />}
+            {iban && <GiftDetail label="Bank transfer · IBAN" value={iban} />}
+          </div>
+          <p className="micro text-taupe/80 mt-5">Tap a detail to copy it · thank you, from the both of us ✦</p>
+        </div>
+      </Reveal>
+    </section>
+  );
+}
+
 export function Gallery({ info }: { info: WeddingInfo }) {
   return (
     <section className="sec-sm">

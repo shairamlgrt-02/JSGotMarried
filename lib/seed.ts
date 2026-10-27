@@ -33,10 +33,15 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     cover_photo: "",
     music_url: SONG_URL,
     rsvp_deadline: "2026-10-25",
+    // Note on Gifts — left blank on purpose: the public section appears the moment the couple
+    // fills any of these in (binder → Details → Note on Gifts).
+    gift_note: "",
+    benefitpay_number: "",
+    benefitpay_iban: "",
   }],
   schedule: [
     { id: "s1", time: "4:00 – 5:00 PM", title: "The Ceremony", detail: "An *intimate ceremony*, shared with our families, entourage and a few honoured guests. If your heart wants to witness us say “I do”, you are *warmly welcome to join* — open seating is available around our reserved rows.", order: 1 },
-    { id: "s2", time: "5:00 – 6:30 PM", title: "Cocktail & Mingling Hour", detail: "*Everyone is welcome from 5 PM!* Snacks, refreshments, *photo moments* and little activities at the *majlis*, just outside the hall. This is where we’ll come find you — to hug, laugh and take pictures together.", order: 2 },
+    { id: "s2", time: "5:00 – 7:00 PM", title: "Cocktail & Mingling Hour", detail: "*Everyone is welcome from 5 PM!* Snacks, refreshments, *photo moments* and little activities at the *majlis*, just outside the hall. This is where we’ll come find you — to hug, laugh and take pictures together.", order: 2 },
     { id: "s3", time: "7:00 PM onwards", title: "The Reception", detail: "Doors open for the celebration — *dinner*, our *film on the big screen*, *games and giveaways*, and dancing until the very end.", order: 3 },
   ],
 
@@ -286,13 +291,13 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
   ],
 
   faq: [
-    { id: "f0", question: "Can I watch the ceremony?", answer: "Please do — it would mean the world. We chose to keep our 4 PM ceremony intimate, with our families, our entourage and a few honoured guests — and if your heart wishes to be there as we say “I do”, you are more than welcome to join us. The hall is being cleaned and prepared until 4:00 PM, so please come straight to the majlis, just outside the hall, before 4:00 PM: our coordinators will gather everyone there, snacks and refreshments are served, and a few minutes before the procession we will all walk into the hall together — the doors close the moment it begins. Reserved rows are for our families and entourage, with open seats around them. From 5:30 PM everyone is welcome — join us for the Welcome Toast & Snacks, then the reception at 6:30 PM.", order: 0 },
+    { id: "f0", question: "Can I watch the ceremony?", answer: "Please do — it would mean the world. We chose to keep our 4 PM ceremony intimate, with our families, our entourage and a few honoured guests — and if your heart wishes to be there as we say “I do”, you are more than welcome to join us. The hall is being cleaned and prepared until 4:00 PM, so please come straight to the majlis, just outside the hall, before 4:00 PM: our coordinators will gather everyone there, snacks and refreshments are served, and a few minutes before the procession we will all walk into the hall together — the doors close the moment it begins. Reserved rows are for our families and entourage, with open seats around them. From 5:30 PM everyone is welcome — join us for the Welcome Toast & Snacks, then the reception at 7:00 PM.", order: 0 },
     { id: "f1", question: "Can I bring a plus one?", answer: "Your invitation lists your seats. The RSVP lets you choose 1 or 2 pax only if we've reserved two for you.", order: 1 },
     { id: "f2", question: "What should I wear?", answer: "Black tie, in glossy greens and warm shining browns. Greens: emerald, laurel, jade, scarab, olive, peridot. Warm browns: coffee, smoky topaz, bronze, dark honey, caramel, toffee — every shade is swatched in the Dress Code section above. Kindly avoid black, white, burgundy and copper, which are reserved for our families and entourage. Do bring the shine: satin, velvet, silk, fine suit wool and liquid poly are all welcome, while tulle, chiffon and anything fully matte are best left at home.", order: 2 },
     { id: "f3", question: "Are kids welcome?", answer: "We adore your little ones — they are welcome to join the reception whenever your invitation says so. The ceremony itself is an adults-only celebration, unless they are part of our entourage: our flower girl and ring bearer hold the front row.", order: 3 },
     { id: "f4", question: "Is there parking?", answer: "Yes — though not in the courtyard: parking is in a separate area, and The Heaven's team will tell you where to park when you arrive at the gate. Then walk straight to the majlis — it is where everyone is gathered.", order: 4 },
     { id: "f5", question: "Can I post photos?", answer: "Please! Tag @shaiandjeg and use #JSGotMarried — #JSSayIDo and #JSWishComeTrue work beautifully too. We only ask for an unplugged ceremony.", order: 5 },
-    { id: "f6", question: "Where do I go when I arrive?", answer: "Straight to the majlis — the welcome lounge just outside the hall. The hall itself rests from 2:00 to 4:00 PM while The Heaven's team clean and prepare it, so nobody enters until 4:00. Our coordinators will meet you at the majlis, the entourage is briefed there, and snacks and refreshments are served from the moment you arrive. A few minutes before 4:00 PM we all walk into the hall together for the ceremony — and from 5:30 PM the majlis hosts the Welcome Toast & Snacks until the reception at 6:30 PM.", order: 6 },
+    { id: "f6", question: "Where do I go when I arrive?", answer: "Straight to the majlis — the welcome lounge just outside the hall. The hall itself rests from 2:00 to 4:00 PM while The Heaven's team clean and prepare it, so nobody enters until 4:00. Our coordinators will meet you at the majlis, the entourage is briefed there, and snacks and refreshments are served from the moment you arrive. A few minutes before 4:00 PM we all walk into the hall together for the ceremony — and from 5:30 PM the majlis hosts the Welcome Toast & Snacks until the reception at 7:00 PM.", order: 6 },
   ],
   message_templates: [],
   messages: [],
