@@ -415,7 +415,15 @@ each PNG is saved on the couple's phone, exactly like the keepsake:
 
 Names, date, handle and hashtags seed themselves from **Details**; every word (including the six
 bingo tiles and the prompt) is editable in the tab, and **Reset** restores the suggested wording.
-The same tab renders the **guest-upload QR code** (`https://your-site/upload`) as a downloadable
+
+The same tab's **transparent story frames** export a 1080 × 1920 PNG with *no background* — only
+the chosen elements (J&S monogram seal, couple names in Pinyon script, the Victorian flourish,
+the date, the handle and the hashtags) in wine, paper-white or ink — so it can be overlaid on any
+photo inside Instagram's own story editor. Placement presets are top ribbon, bottom ribbon,
+centred or a compact corner mark (left/right), every element toggles independently, and the
+preview has a checkerboard/dark/light backdrop to check contrast before downloading.
+
+The tab also renders the **guest-upload QR code** (`https://your-site/upload`) as a downloadable
 1024 px PNG — for the twelve double-sided table cards and the two A4 welcome/photo-area signs.
 
 ## Guest photo & video uploads (`/upload`)
@@ -491,7 +499,7 @@ lib/faq-card.ts              the downloadable FAQ card — every question & answ
 lib/venue-map.ts             the small plan of the venue printed on the programme card
 lib/roles.ts                 the day-of roles dictionary (Guest Roles tab, messaging groups)
 lib/messaging.ts             recipient groups, merge tags, ready-made templates (the RSVP chase + broadcasts)
-lib/ig-stories.ts            the 1080×1920 Instagram Story canvas templates (bingo, outfit arch, Add Yours)
+lib/ig-stories.ts            the 1080×1920 Instagram Story canvas templates (bingo, outfit arch, Add Yours) + transparent overlay frames
 lib/media-upload.ts          the /upload limits, per-guest quota and XHR upload with progress
 lib/qr.ts                    branded QR code + data-URL download helper (the upload table signs)
 lib/card-draw.ts             shared canvas lettering (paper, caps, wrap, pins) for the cards

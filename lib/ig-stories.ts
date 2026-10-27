@@ -377,6 +377,225 @@ function drawAddYours(d: IgStoryData): HTMLCanvasElement {
   return canvas;
 }
 
+/* ───────────────────────── transparent story frames ─────────────────────────
+   No paper, no card: just the couple's own typography and ornaments on a fully
+   transparent 1080×1920 PNG, so it can be laid on top of any photo inside
+   Instagram's own story editor. Every element is optional (see IgFrameElements). */
+
+export type IgFrameLayout = "top" | "bottom" | "center" | "corner";
+export type IgFrameSide = "left" | "right";
+export type IgFrameColorName = "wine" | "paper" | "ink";
+
+export const IG_FRAME_LAYOUTS: { id: IgFrameLayout; label: string }[] = [
+  { id: "top", label: "Top ribbon" },
+  { id: "bottom", label: "Bottom ribbon" },
+  { id: "center", label: "Centered" },
+  { id: "corner", label: "Corner mark" },
+];
+
+export const IG_FRAME_COLORS: Record<IgFrameColorName, { label: string; hex: string }> = {
+  wine: { label: "Wine", hex: WINE },
+  paper: { label: "Paper (white)", hex: PAPER },
+  ink: { label: "Ink", hex: INK },
+};
+
+export type IgFrameElements = {
+  monogram: boolean;
+  names: boolean;
+  flourish: boolean;
+  date: boolean;
+  handle: boolean;
+  hashtags: boolean;
+};
+
+export type IgFrameOptions = {
+  layout: IgFrameLayout;
+  /** Corner layout only — which corner the compact mark hugs. */
+  side: IgFrameSide;
+  color: IgFrameColorName;
+  elements: IgFrameElements;
+};
+
+export const DEFAULT_FRAME_OPTIONS: IgFrameOptions = {
+  layout: "bottom",
+  side: "right",
+  color: "wine",
+  elements: { monogram: true, names: true, flourish: true, date: true, handle: true, hashtags: true },
+};
+
+/** The flourish divider from components/public/ornaments.tsx, redrawn on canvas (viewBox 240×40). */
+function flourishOnCanvas(g: Ctx, cx: number, cy: number, width: number, color: string): number {
+  const half =
+    "M4 20 H70 M70 20 C84 20 88 10 98 11 C106 12 106 22 99 23 C94 24 92 18 97 17 M70 20 C80 22 84 30 92 29 M58 20 C62 14 68 13 72 15";
+  const scale = width / 240;
+  g.save();
+  g.translate(cx, cy);
+  g.scale(scale, scale);
+  g.strokeStyle = color;
+  g.fillStyle = color;
+  g.lineWidth = 1;
+  g.lineCap = "round";
+  const path = new Path2D(half);
+  g.stroke(path);
+  g.save();
+  g.scale(-1, 1);
+  g.stroke(path);
+  g.restore();
+  g.stroke(new Path2D("M120 8 L127 20 L120 32 L113 20 Z"));
+  [
+    [120, 20, 2.2],
+    [106, 20, 1.3],
+    [134, 20, 1.3],
+  ].forEach(([x, y, r]) => {
+    g.beginPath();
+    g.arc(x, y, r, 0, Math.PI * 2);
+    g.fill();
+  });
+  g.restore();
+  return 40 * scale;
+}
+
+/** "Jeger & Shaira" → "J&S" (falls back to a plain ampersand mark if names are missing). */
+function coupleInitials(couple: string): string {
+  const parts = couple.split(/\s*&\s*/).map((p) => p.trim()).filter(Boolean);
+  const letters = parts.map((p) => p[0]?.toUpperCase() ?? "").filter(Boolean);
+  return letters.length >= 2 ? letters.join("&") : "J&S";
+}
+
+/** A thin circular monogram seal with the couple's initials. */
+function monogramOnCanvas(g: Ctx, cx: number, cy: number, color: string, initials: string, radius = 86): number {
+  g.save();
+  g.strokeStyle = color;
+  g.lineWidth = 2.4;
+  g.beginPath();
+  g.arc(cx, cy, radius, 0, Math.PI * 2);
+  g.stroke();
+  g.font = script(radius * 1.08);
+  g.fillStyle = color;
+  g.textAlign = "center";
+  g.textBaseline = "middle";
+  g.fillText(initials, cx, cy + radius * 0.08);
+  g.textBaseline = "alphabetic";
+  g.restore();
+  return radius * 2;
+}
+
+type BlockSize = { width: number; height: number };
+
+/**
+ * Draws one stacked, centred block of the chosen elements. Local origin is the
+ * block's top centre, so callers translate/scale it into a ribbon or corner.
+ * Returns the block's unscaled size for layout math.
+ */
+function drawFrameBlock(g: Ctx, d: IgStoryData, options: IgFrameOptions, color: string): BlockSize {
+  const els = options.elements;
+  let y = 0;
+  const widest = 880;
+
+  if (els.monogram) {
+    monogramOnCanvas(g, 0, y + 86, color, coupleInitials(d.couple));
+    y += 172 + 26;
+  }
+  if (els.names) {
+    fit(g, d.couple, 0, y + 104, 118, (s) => script(s), color, widest, "center", 64);
+    y += 104 + 30;
+  }
+  if (els.flourish) {
+    const h = flourishOnCanvas(g, 0, y + 20, 360, color);
+    y += h + 34;
+  }
+  if (els.date) {
+    caps(g, d.dateLabel, 0, y + 40, 42, color, 0.34);
+    y += 40 + 30;
+  }
+  if (els.handle) {
+    g.font = serif(36, "i500");
+    g.fillStyle = color;
+    g.textAlign = "center";
+    g.fillText(d.handle, 0, y + 34);
+    y += 34 + 26;
+  }
+  if (els.hashtags && d.hashtag) {
+    g.font = serif(40, "600");
+    g.fillStyle = color;
+    g.textAlign = "center";
+    g.fillText(d.hashtag, 0, y + 38);
+    y += 38 + 8;
+    if (d.extraHashtags.length) {
+      g.font = sans(28, 400);
+      g.fillText(d.extraHashtags.join("  ·  "), 0, y + 30);
+      y += 30;
+    }
+    y += 24;
+  }
+  return { width: widest, height: Math.max(1, y) };
+}
+
+/**
+ * The transparent overlay: a fresh canvas with NO background fill, so the exported
+ * PNG keeps its alpha channel and drops straight onto a photo in Instagram.
+ */
+export function renderIgFrame(d: IgStoryData, options: IgFrameOptions): HTMLCanvasElement {
+  const { canvas, g } = newCanvas();
+  const color = IG_FRAME_COLORS[options.color].hex;
+  const isCorner = options.layout === "corner";
+  const scale = isCorner ? 0.62 : 1;
+  const margin = 110;
+
+  g.save();
+  if (isCorner) {
+    // Compact mark hugging one top corner; the block is drawn centred on its own origin.
+    const halfWidth = (880 / 2) * scale;
+    const cx = options.side === "right" ? STORY_W - margin - halfWidth : margin + halfWidth;
+    g.translate(cx, 150);
+    g.scale(scale, scale);
+    drawFrameBlock(g, d, options, color);
+  } else {
+    const size = drawFrameBlockSize(g, d, options);
+    let topY: number;
+    if (options.layout === "top") topY = 200;
+    else if (options.layout === "bottom") topY = STORY_H - 200 - size.height;
+    else topY = (STORY_H - size.height) / 2;
+    g.translate(STORY_W / 2, topY);
+    drawFrameBlock(g, d, options, color);
+  }
+  g.restore();
+  return canvas;
+}
+
+/** Measure a block without drawing — needed to centre/bottom-align the ribbons. */
+function drawFrameBlockSize(g: Ctx, d: IgStoryData, options: IgFrameOptions): BlockSize {
+  g.save();
+  g.translate(-99999, -99999);
+  const size = drawFrameBlock(g, d, options, "transparent");
+  g.restore();
+  return size;
+}
+
+export function igFrameFilename(options: IgFrameOptions): string {
+  const corner = options.layout === "corner" ? `-${options.side}` : "";
+  return `ig-frame-${options.layout}${corner}-${options.color}-1080x1920.png`;
+}
+
+/** Scaled transparent PNG for the binder preview. */
+export function igFramePreviewDataUrl(d: IgStoryData, options: IgFrameOptions, previewWidth = 300): string {
+  const full = renderIgFrame(d, options);
+  const scaleP = previewWidth / STORY_W;
+  const preview = document.createElement("canvas");
+  preview.width = previewWidth;
+  preview.height = Math.round(STORY_H * scaleP);
+  const g = preview.getContext("2d");
+  if (!g) return full.toDataURL("image/png");
+  g.drawImage(full, 0, 0, preview.width, preview.height);
+  return preview.toDataURL("image/png");
+}
+
+export async function downloadIgFrame(d: IgStoryData, options: IgFrameOptions): Promise<boolean> {
+  await loadIgFonts();
+  const canvas = renderIgFrame(d, options);
+  return savePng(canvas, igFrameFilename(options));
+}
+
 /* ───────────────────────── public API ───────────────────────── */
 
 export function renderIgStory(id: IgStoryId, data: IgStoryData): HTMLCanvasElement {
