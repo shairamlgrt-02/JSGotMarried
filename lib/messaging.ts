@@ -434,6 +434,10 @@ export const MERGE_TAGS: MergeTag[] = [
   { tag: "{wedding_venue}",  label: "Wedding Venue",    hint: "Venue name" },
   { tag: "{venue_address}",  label: "Venue Address",    hint: "Full venue address" },
   { tag: "{rsvp_deadline}",  label: "RSVP Deadline",    hint: "RSVP deadline date" },
+  { tag: "{instagram}",      label: "Instagram Handle", hint: "Your @handle from Details → Social" },
+  { tag: "{venue_map_link}", label: "Venue Map Link",   hint: "The Google Maps link saved on the venue" },
+  { tag: "{upload_link}",    label: "Photo Upload Link", hint: "The /upload page where guests send their photos & videos" },
+  { tag: "{gift_link}",      label: "Gift List Link",   hint: "The public /gifts registry where guests mark presents bought" },
   { tag: "{hashtag}",        label: "Hashtag",          hint: "Primary wedding hashtag" },
 ];
 
@@ -502,6 +506,10 @@ export function applyMergeTags(
     .replace(/\{wedding_venue\}/g, info.venue_name)
     .replace(/\{venue_address\}/g, info.venue_address)
     .replace(/\{rsvp_deadline\}/g, rsvpDeadline)
+    .replace(/\{instagram\}/g, info.instagram || "")
+    .replace(/\{venue_map_link\}/g, info.venue_map_link || "")
+    .replace(/\{upload_link\}/g, base ? `${base}/upload` : "/upload")
+    .replace(/\{gift_link\}/g, base ? `${base}/gifts` : "/gifts")
     .replace(/\{hashtag\}/g, info.hashtags[0] || "")
     .replace(/\{rsvp_link\}/g, rsvpLink);
 
@@ -529,12 +537,17 @@ export function applyMergeTags(
 /* ─── Ready-made templates ─── */
 /**
  * The couple's letters, written once in the code so nobody has to start from a blank box: the
- * RSVP chase (a gentle reminder, then the kind-but-firm final call before the deadline), the two
- * thank-yous, and the day-of role briefing. The binder's Templates tab lists them with one-click
- * "add to my templates" buttons — added copies are ordinary templates, free to edit or delete.
+ * RSVP chase (a gentle reminder, then the kind-but-firm final call before the deadline), the
+ * thank-yous (one general, plus separate letters for the wedding team's 3:30 PM call time and
+ * the guests' 5:30 PM majlis arrival, each carrying the adults-only ceremony and livestream
+ * notes), the replies for after the deadline (fill-in-your-details, missed-RSVP livestream and
+ * the final guest-list-closed note), and the day-of role briefing. The binder's Templates tab
+ * lists them with one-click "add to my templates" buttons — added copies are ordinary templates,
+ * free to edit or delete.
  *
- * {first_name}, {seats}, {rsvp_deadline}, {invitation_link}, {wedding_date}, {couple_names} and
- * {role} fill themselves in per household (see applyMergeTags above). WhatsApp *asterisks* bold.
+ * {first_name}, {seats}, {rsvp_deadline}, {rsvp_link}, {invitation_link}, {wedding_date},
+ * {couple_names} and {role} fill themselves in per household (see applyMergeTags above).
+ * WhatsApp *asterisks* bold.
  */
 export interface PresetTemplate {
   id: string;
@@ -610,6 +623,65 @@ With love,
 {couple_names}`,
   },
   {
+    id: "preset_thank_yes_wedding_team",
+    name: "RSVP · Thank You, Wedding Team (3:30 PM Call Time)",
+    label: "Thank you",
+    hint: "For the entourage & wedding team who said yes — 3:30 PM call time, doors close 4:00 PM, late friends join the majlis livestream, plus the adults-only ceremony note for their children.",
+    categories: [],
+    body: `Hi {first_name}! 🥰
+
+Thank you for saying YES — not only to celebrating with us, but to standing beside us as part of our wedding team. It means the absolute world to us, and {seats} are saved with so much love.
+
+Here is how our wedding day on {wedding_date} will flow for you:
+
+*🕞 3:30 PM — your call time at the majlis*
+Please come straight to the majlis, just outside the hall. Our coordinators will meet and brief you there, with snacks and refreshments waiting.
+
+*🚪 The doors close at 4:00 PM*
+A few minutes before 4:00 PM we will all walk into the hall together, and the doors close the moment the procession begins — so please make sure to arrive *earlier than 4:00 PM*. If anything ever delays you and you arrive after the doors close, you are still completely welcome to settle in at the majlis and watch the entire ceremony with us there on the livestream, refreshments in hand.
+
+*👶 A gentle note about little ones*
+Our ceremony is an adults-only, closed-door moment. Unless your children are taking part in the wedding ceremony itself, they are very welcome to stay at the majlis and watch along on the livestream, with refreshments served there too — and we cannot wait to hug them at the reception later!
+
+*🥂 After the ceremony*
+Once the vows and photos are done, we will come and join you at the majlis for the welcome toast, snacks, chats and pictures. Then at *7:00 PM*, everyone walks into the hall together and the reception begins! 🎉
+
+Your personal invitation has the full programme, dress code, venue and map:
+{invitation_link}
+
+We truly could not do this without you. Thank you for loving us this well. ❤️
+
+With love,
+{couple_names}`,
+  },
+  {
+    id: "preset_thank_yes_guests",
+    name: "RSVP · Thank You for Your Yes (5:30 PM Majlis · 7 PM Hall)",
+    label: "Thank you",
+    hint: "For confirmed guests — 5:30 PM at the majlis with welcome toasts & snacks, ceremony on the livestream, little ones welcome from the reception, and everyone enters the hall together at 7:00 PM.",
+    categories: ["confirmed_yes"],
+    body: `Hi {first_name}! 🥰
+
+Thank you for confirming — your {seats} are officially saved, and reading your yes made us so happy! We cannot wait to celebrate with you on {wedding_date}.
+
+A few lovely details so you know exactly how the day flows:
+
+*🕠 5:30 PM — welcome to the majlis*
+Please join us at the majlis, just outside the hall, for welcome toasts, snacks and photos. Our ceremony is a small, adults-only, closed-door moment — but you will not miss a thing: it will be shown on the livestream at the majlis, with snacks and refreshments served as you watch.
+
+*👶 Children are welcome at the reception!*
+Because the ceremony itself is adults-only and behind closed doors, we would love your little ones to join us from the reception onwards. Until then, they can watch the ceremony beside you at the majlis on the livestream, with refreshments ready for them too.
+
+*🥂 After the ceremony*
+As soon as the vows are done, we will come and find you at the majlis for the welcome toast, snacks, chats and pictures. Then at *7:00 PM*, all of our guests will walk into the hall together — and the wedding celebrations begin! 🎉
+
+Your personal invitation holds the full programme, dress code, venue and map:
+{invitation_link}
+
+See you very soon — with all our love,
+{couple_names}`,
+  },
+  {
     id: "preset_rsvp_thank_you_no",
     name: "RSVP · Thank You for Letting Us Know",
     label: "Thank you",
@@ -622,6 +694,151 @@ Thank you so much for letting us know — truly. We'll miss you dearly on the da
 Thank you for the love and support you've shown us, from near or far. We'd love to see you before or after the wedding, too — let's find a time for coffee!
 
 With all our love,
+{couple_names}`,
+  },
+  {
+    id: "preset_confirmed_personal_details",
+    name: "RSVP · Confirmed Personally? Please Add Your Details",
+    label: "Action needed",
+    hint: "For guests who said yes in person or by chat but never filled in the form — their greeting is appreciated, their seats are saved, and the link lets them complete their own details; if the link won't open, they can reply with names and a mobile number instead.",
+    categories: [],
+    body: `Hi {first_name}! 🤍
+
+Thank you so much for letting us know personally that you will be with us on our wedding day — truly. Your greeting made us smile, and we have saved {seats} just for you. 🥰
+
+One small favour, if we may: as much as possible, we would love for you to fill in your details personally through our RSVP link. It only takes a quiet minute, and it makes sure everything — your names, your seats, all of it — is exactly right for the day:
+
+{rsvp_link}
+
+*Can't open or access the link?* No worries at all — simply reply to this message with:
+• your *full name*;
+• the *full names of every guest coming with you*; and
+• your *mobile number*.
+
+We will be needing these details for the seating tables, the programme and our final announcements, so it is a huge help to us either way. 😊
+
+Thank you for the love and support you have shown us — we cannot wait to celebrate with you!
+
+With love,
+{couple_names}`,
+  },
+  {
+    id: "preset_rsvp_missed_livestream",
+    name: "RSVP · Missed the Deadline? Join via Livestream",
+    label: "Livestream",
+    hint: "A loving reply for guests whose RSVP arrived too late — the list is locked, but they are welcome at the majlis to watch the ceremony on the livestream with refreshments.",
+    categories: [],
+    body: `Hi {first_name}! 🤍
+
+We are writing with so much love. We noticed your RSVP did not reach us before the deadline, and our final guest list and seating are now locked in, so we are sadly unable to reserve a seat for you at the reception. We truly wish things were different.
+
+The lovely part is that you can still be right there with us: our wedding ceremony will be shown on the livestream at the majlis, where you are warmly welcome to watch along with refreshments — it will feel like you are in the room as we say "I do". 🥹
+
+Thank you for the love and support you have shown us, from near or far. We would love to find a time for coffee soon after the wedding!
+
+With all our love,
+{couple_names}`,
+  },
+  {
+    id: "preset_rsvp_closed_no_reply",
+    name: "RSVP · With Love — the Guest List Is Finalised",
+    label: "Final call",
+    hint: "For guests who never replied — kind but firm: we would love them there, the deadline has passed and the final guest list is now set.",
+    categories: ["pending_rsvp"],
+    body: `Hi {first_name}! 🤍
+
+We would truly love to have you with us on our wedding day, and you have been in our thoughts as we put the final touches on everything.
+
+Sadly, we have now reached the moment where we must give our venue the final number of guests. Our RSVP deadline has passed and our guest list has been finalised, so we are no longer able to add new seats. We completely understand that life gets busy, and there are truly no hard feelings at all.
+
+Thank you for being part of our story, whatever the day looks like for you. Sending you so much love, and we hope we can hug and catch up very soon.
+
+Love always,
+{couple_names}`,
+  },
+  {
+    id: "preset_broadcast_2_weeks",
+    name: "Broadcast · 2 Weeks To Go (Attire · IG · Gifts)",
+    label: "Broadcast",
+    hint: "The first countdown broadcast — Instagram handle, the glossy-greens & shining-browns dress code on the invitation site, and where to find the Note on Gifts.",
+    categories: ["confirmed_yes"],
+    body: `Hi {first_name}! 💌
+
+Only two weeks until we say "I do" — and we cannot wait to celebrate with you on {wedding_date}!
+
+A few little things to get you excited (and ready):
+
+👗 *What to wear* — black tie in glossy greens and warm shining browns. The full palette, fabrics and the colours we'd love you to skip are on your personal invitation:
+{invitation_link}
+
+📸 *Follow along* — find us on Instagram at {instagram} for the countdown, behind-the-scenes peeks and all the wedding-day joy.
+
+🎁 *A note on gifts* — your presence is truly the only present we need. If you would still like to give, our Note on Gifts (including BenefitPay details) is at the bottom of the invitation page above.
+
+See you very soon!
+With love,
+{couple_names}`,
+  },
+  {
+    id: "preset_broadcast_1_week",
+    name: "Broadcast · 1 Week To Go (Map · Arrival Times)",
+    label: "Broadcast",
+    hint: "The week-of broadcast — the Google Maps pin, the 3:30 PM wedding-team call time and the 5:30 PM majlis arrival for everyone else, with the full schedule on the invitation site.",
+    categories: ["confirmed_yes"],
+    body: `Hi {first_name}! 🤍
+
+One week to go — we are down to the final countdown, and our hearts are so full that you will be part of this day.
+
+📍 *Finding us* — the Google Maps pin for {wedding_venue}:
+{venue_map_link}
+
+🕞 *When to arrive*
+· Our entourage & wedding team: please be at the *majlis by 3:30 PM* for your briefing — the ceremony doors close at *4:00 PM*.
+· All other guests: join us at the *majlis from 5:30 PM* for welcome toasts and snacks; after the ceremony we will join you there, and at *7:00 PM* everyone walks into the hall together for the reception.
+
+The full programme, dress code and venue details live on your invitation:
+{invitation_link}
+
+Any questions at all, just reply here. One week! 🎉
+
+Love,
+{couple_names}`,
+  },
+  {
+    id: "preset_broadcast_1_day",
+    name: "Broadcast · Tomorrow! (Tag Us)",
+    label: "Broadcast",
+    hint: "The-eve hype message — tomorrow is the day, with the reminder to tag the couple's handle and hashtag in every photo and story.",
+    categories: ["confirmed_yes"],
+    body: `Hi {first_name}! ✨
+
+Tomorrow. We actually get to marry each other tomorrow, and you get to be there — pinching ourselves! 🥹
+
+One tiny favour as you get ready: take ALL the photos and videos, and tag us so we can keep every moment forever:
+📸 Instagram: {instagram}
+🏷️ Hashtag: {hashtag}
+
+Stories, reels, dance-floor clips — we want them all. See you at the majlis tomorrow!
+
+With all our excitement,
+{couple_names}`,
+  },
+  {
+    id: "preset_broadcast_day_after",
+    name: "Broadcast · The Morning After (Share Your Photos)",
+    label: "Broadcast",
+    hint: "The thank-you broadcast for the day after — warm gratitude and the /upload link so guests send their photos and videos straight to the couple (up to 25 files).",
+    categories: ["confirmed_yes"],
+    body: `Hi {first_name}! 🤍
+
+Thank you. Last night was the best night of our lives, and it was because you were in it — the hugs, the laughter, the dance floor (we saw everything 😄).
+
+Would you do us one last favour? Upload your favourite photos and videos from the day here — up to 25 files, straight from your phone:
+{upload_link}
+
+Every clip is a little keepsake for us, and we cannot wait to relive the day through your eyes. Tag {instagram} and {hashtag} when you post, too!
+
+Forever grateful,
 {couple_names}`,
   },
   {

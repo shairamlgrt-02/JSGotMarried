@@ -9,7 +9,7 @@
  *     majlis, where our coordinators meet them and snacks & refreshments are served;
  *   · just before 4:00 PM the whole party walks into the hall together, and the doors close the
  *     moment the procession begins;
- *   · from 5:30 PM everyone is welcome — the Welcome Toast & Snacks run until the reception at 6:30 PM.
+ *   · from 5:30 PM everyone is welcome — the Welcome Toast & Snacks run until the reception at 7:00 PM.
  */
 export type ProgramStop = {
   time: string;
@@ -38,7 +38,7 @@ export const ALL_WELCOME_FROM = "5:30 PM";
 /** The entourage and the wedding team's call time — the first stop of the day, half an hour before the doors close. */
 export const ENTOURAGE_CALL_TIME = "3:30 PM";
 /** When the hall opens for the reception. */
-export const RECEPTION_AT = "6:30 PM";
+export const RECEPTION_AT = "7:00 PM";
 /** The last stop of the night. */
 export const SEND_OFF_AT = "10:00 PM";
 
@@ -137,7 +137,7 @@ export type ArrivalWindow = {
 /**
  * For guests who are not in the entourage and turn up at some *other* hour — early for the ceremony,
  * or while it is under way behind closed doors: where to go. The expected hours (5:30 at the majlis,
- * 6:30 the reception) are the guests' note above and the `programmeNote`s in the order of the day,
+ * 7:00 the reception) are the guests' note above and the `programmeNote`s in the order of the day,
  * so they are not repeated here. Printed beside the plan of the venue on the programme card.
  */
 export const GUEST_ARRIVAL_GUIDE: ArrivalWindow[] = [
@@ -175,14 +175,14 @@ export const WEDDING_PROGRAM_HIGHLIGHTS: ProgramMoment[] = [
   },
   {
     time: "5:30 PM",
-    span: "5:30 – 6:30 PM",
+    span: "5:30 – 7:00 PM",
     title: "Welcome Toast & Snacks",
-    detail: `From *${ALL_WELCOME_FROM}, everyone is welcome*! Come find us at the majlis just outside the hall for a toast, snacks, photo moments and little activities. This is the hour we get to hug you, laugh with you and take all the pictures — before the reception begins at *6:30 PM*.`,
+    detail: `From *${ALL_WELCOME_FROM}, everyone is welcome*! Come find us at the majlis just outside the hall for a toast, snacks, photo moments and little activities. This is the hour we get to hug you, laugh with you and take all the pictures — before the reception begins at *7:00 PM*.`,
   },
   {
-    time: "6:30 PM",
-    span: "6:30 – 10:00 PM",
+    time: "7:00 PM",
+    span: "7:00 – 10:00 PM",
     title: "The Reception",
-    detail: "Then, the party. At *6:30 PM* we sit down to dinner, watch our film on the big screen, play games, give away a few surprises — and *dance until the very end*. We can’t wait to celebrate with you.",
+    detail: "Then, the party. At *7:00 PM* we sit down to dinner, watch our film on the big screen, play games, give away a few surprises — and *dance until the very end*. We can’t wait to celebrate with you.",
   },
 ];

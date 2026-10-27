@@ -147,7 +147,7 @@ function PresetTemplates({
         <div>
           <h3 className="font-serif text-xl">Ready-made templates ✦</h3>
           <p className="text-sm text-ink/60 mt-1">
-            The RSVP follow-ups, written for you — {PRESET_TEMPLATES.length} letters from a gentle reminder to the final call. Use straight away or save to your templates.
+            Written for you — {PRESET_TEMPLATES.length} letters: the RSVP reminders &amp; final calls, thank-yous for the wedding team and the guests, deadline &amp; livestream notes, and the day-of role briefing. Use straight away or save to your templates.
           </p>
         </div>
         <span className="text-2xl text-wine shrink-0">{open ? "−" : "+"}</span>

@@ -23,6 +23,11 @@ alter table wedding_info add column if not exists site_description text default 
 alter table wedding_info add column if not exists share_image text default '';
 alter table wedding_info add column if not exists favicon text default '';
 alter table wedding_info add column if not exists instagram_note text default '';
+-- Note on Gifts (binder → Details): the public "Note on Gifts" card stays hidden until one of
+-- these is filled, so an unfinished field never reaches the invitation site.
+alter table wedding_info add column if not exists gift_note text default '';
+alter table wedding_info add column if not exists benefitpay_number text default '';
+alter table wedding_info add column if not exists benefitpay_iban text default '';
 create table if not exists schedule (id text primary key default gen_random_uuid()::text, time text, title text, detail text, "order" int default 0);
 create table if not exists budget (id text primary key default gen_random_uuid()::text, category text, item text, quoted_cost numeric default 0, paid_cost numeric default 0, status text default 'pending');
 create table if not exists guests (
@@ -134,6 +139,36 @@ on conflict (id) do update set
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
 
+-- ── anonymous guest photo & video uploads (/upload, QR codes on the table cards) ─────────────────
+-- A PRIVATE bucket: guests add memories straight from their phone with the anon key, but no anon
+-- policy lets them list, read or delete — only the service-role key (the binder) can view them.
+-- The bucket's 1 GB file_size_limit is the server-side backstop; the 25-files / 1 GB per-guest
+-- cap is enforced on the device (lib/media-upload.ts) and remembered in localStorage.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'wedding-media',
+  'wedding-media',
+  false,
+  1073741824,
+  array[
+    'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif',
+    'video/mp4', 'video/quicktime', 'video/webm', 'video/x-m4v', 'application/octet-stream'
+  ]
+)
+on conflict (id) do update set
+  name = excluded.name,
+  public = false,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+-- Anon may INSERT only, and only into this bucket. No SELECT/UPDATE/DELETE policy exists, so the
+-- default-deny of RLS keeps every uploaded object invisible to other guests.
+drop policy if exists "anon can insert wedding media" on storage.objects;
+create policy "anon can insert wedding media"
+  on storage.objects for insert
+  to anon
+  with check (bucket_id = 'wedding-media');
+
 -- ── attire palette (round 22): Garnet goes to the Maid of Honor, the Matron of Honor and the bride's
 -- sister-in-law; the four bridesmaids wear Turquoise, Citrine, Sapphire and Ruby (Amethyst retired) ──
 insert into attire (id, "group", label, colors, reserved, notes, swatch_url, "order") values
@@ -199,6 +234,40 @@ where question like '%JSWeDo%' or answer like '%JSWeDo%';
 -- Seed data is loaded from the admin: Settings → "Push starter data to Supabase" (safe to press any
 -- time: guests are skipped, the attire palette is refreshed from the code, everything else only
 -- fills in rows that are missing — nothing the couple wrote or uploaded is overwritten).
+
+-- ── gift registry: the live wish list on /gifts (Hub tile "Gift list") ────────────────────────
+-- Guests mark items they have bought without an invitation code; every other guest's page then
+-- crosses them off (the app re-reads this table every few seconds). Like the other binder tables,
+-- anon/authenticated hold NO grants: the public reads & claims through /api/gifts with the
+-- service-role key, where claim races are settled by a conditional update.
+create table if not exists public.gift_items (
+  id text primary key default gen_random_uuid()::text,
+  title text not null default '',
+  note text not null default '',
+  claimed boolean not null default false,
+  claimed_by text not null default '',
+  claimed_at timestamptz,
+  "order" int not null default 0
+);
+alter table public.gift_items enable row level security;
+revoke all on public.gift_items from anon, authenticated;
+grant all on public.gift_items to service_role;
+
+-- The public, invite-code-free wording above the list: that a monetary gift is most appreciated.
+-- This column must never carry account details — BenefitPay/IBAN stay in the sealed gift_note
+-- fields, visible only inside a personal invitation link (see lib/invite-gate.ts).
+alter table public.wedding_info add column if not exists registry_note text not null default '';
+
+-- Starter wishes — "push starter data" also fills these if the table is created empty; the
+-- conflict guard means re-running the schema never resurrects an item the couple deleted.
+insert into public.gift_items (id, title, note, claimed, claimed_by, claimed_at, "order") values
+  ('g1', 'Espresso machine',   'For our slow mornings together',                    false, '', null, 0),
+  ('g2', 'Luxury bed linen',   'Crisp cotton, king size',                           false, '', null, 1),
+  ('g3', 'Dinnerware set',     'Twelve settings, for hosting our favourite people', false, '', null, 2),
+  ('g4', 'Stand mixer',        'The baking dream',                                  false, '', null, 3),
+  ('g5', 'Weekend away',       "Towards our first little trip as a married couple", false, '', null, 4),
+  ('g6', 'Smart speaker',      'For dancing in the kitchen',                        false, '', null, 5)
+on conflict (id) do nothing;
 
 -- Tell PostgREST to re-read the schema, so freshly added columns (guests.code, guests.approved,
 -- guests.plus_one …) are usable right away instead of throwing “schema cache” errors.

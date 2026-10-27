@@ -5,7 +5,7 @@ import Ambience from "@/components/public/Ambience";
 import EnvelopeHero, { BAKED_COVER } from "@/components/public/Envelope";
 import Letter from "@/components/public/Letter";
 import { ProgressBar, ScrollContinue, SmoothScroll } from "@/components/public/fx";
-import { CountdownSection, DressCode, ElevenEleven, Entourage, FaqSection, FollowAndTag, Footer, Gallery, PolaroidPair, RsvpNudge, SignOff, Rsvp, Schedule, Story, Venue } from "@/components/public/sections";
+import { CountdownSection, DressCode, ElevenEleven, Entourage, FaqSection, FollowAndTag, Footer, Gallery, GiftNote, PolaroidPair, RsvpNudge, SignOff, Rsvp, Schedule, Story, Venue } from "@/components/public/sections";
 import { Moments, MusicButton, SidePolaroids } from "@/components/public/photos";
 import VoiceGuestbook from "@/components/public/VoiceGuestbook";
 import { Postcard, Postmark, Stamp, StickOn, Sticker } from "@/components/public/stickers";
@@ -146,6 +146,8 @@ export default function Home({ code = "", variant = "guest" }: { code?: string; 
               <Rsvp info={info} invite={rsvpInvite} code={replyCode} onReplied={load} dressNote={dressNote} />
               <ScrollContinue />
               <D deco={<Deco at="tr" rotate={6}><Sticker kind="dance" /></Deco>}><FaqSection faqs={faq} info={info} /></D>
+              <ScrollContinue />
+              <GiftNote info={info} />
             </>}
             <Moments info={info} />
             <ScrollContinue />

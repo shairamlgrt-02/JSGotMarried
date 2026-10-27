@@ -71,11 +71,21 @@ export async function codeIsIssued(db: Db, input: string): Promise<boolean> {
 /**
  * What a sealed visitor may NOT read, even though the table itself is public:
  *  · wedding_info — the venue's name, address and both map links are blanked, and the budget,
- *    so "hiding the venue section" is real at the API and not just CSS;
+ *    so "hiding the venue section" is real at the API and not just CSS; the Note on Gifts
+ *    (BenefitPay number, IBAN and the note itself) is private to invited guests too;
  *  · schedule / faq — the programme and the FAQ are the private pages, so they come back empty.
  * The binder (admin cookie) and any request carrying an issued code skip all of this.
  */
-export const SEALED_BLANK_FIELDS = ["venue_name", "venue_address", "venue_map_link", "venue_map_embed", "total_budget"] as const;
+export const SEALED_BLANK_FIELDS = [
+  "venue_name",
+  "venue_address",
+  "venue_map_link",
+  "venue_map_embed",
+  "total_budget",
+  "gift_note",
+  "benefitpay_number",
+  "benefitpay_iban",
+] as const;
 export const SEALED_EMPTY_TABLES = ["schedule", "faq"] as const;
 
 export function redactSealed(table: string, rows: Record<string, unknown>[]): Record<string, unknown>[] {

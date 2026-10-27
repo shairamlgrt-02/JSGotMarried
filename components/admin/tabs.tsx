@@ -159,6 +159,30 @@ export function Details() {
             <F label="Follow &amp; tag invitation"><EditText value={info.instagram_note ?? ""} multiline rows={3} placeholder="Follow along for the countdown… then tag your photos on the day." onSave={(v) => saveInfo({ instagram_note: v })} className="text-sm" /></F>
           </div>
         </Card>
+        <Card title="Note on Gifts (public site)">
+          <p className="text-sm text-ink/60 mb-4">
+            Shown on the invitation site as its own section — but only once at least one field below is filled, so an empty card never
+            reaches a guest. Leave all three blank to hide the section completely.
+          </p>
+          <div className="grid gap-4">
+            <F label="Your note (the warm words above the account details)">
+              <EditText
+                value={info.gift_note ?? ""}
+                multiline
+                rows={3}
+                placeholder="Your presence is the only present we need — but if you would like to give, here is how…"
+                onSave={(v) => saveInfo({ gift_note: v })}
+                className="text-sm"
+              />
+            </F>
+            <F label="BenefitPay mobile number / benefit account">
+              <EditText value={info.benefitpay_number ?? ""} placeholder="+973 …" onSave={(v) => saveInfo({ benefitpay_number: v })} />
+            </F>
+            <F label="IBAN (optional, for bank transfers)">
+              <EditText value={info.benefitpay_iban ?? ""} placeholder="BH…" onSave={(v) => saveInfo({ benefitpay_iban: v })} />
+            </F>
+          </div>
+        </Card>
       </div>
     </>
   );

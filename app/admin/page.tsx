@@ -7,12 +7,15 @@ import { AudioGuestbook } from "@/components/admin/guestbook";
 import { BridesmaidCards } from "@/components/admin/bridesmaids";
 import { TemplatesTab, ComposeTab, TrackerTab } from "@/components/admin/messaging";
 import { RolesTab } from "@/components/admin/roles";
+import { SocialStudio } from "@/components/admin/social-studio";
+import { GiftRegistry } from "@/components/admin/gifts";
 
 const TABS = [
   ["overview", "Overview", "◐"], ["details", "Details", "✎"], ["schedule", "Schedule", "◷"], ["checklist", "Checklist", "☑"],
   ["budget", "Budget", "◎"], ["invites", "Invite Codes", "✦"], ["guests", "Guests & RSVP", "♡"], ["roles", "Guest Roles", "❁"], ["audio", "Audio Guestbook", "☎"],
   ["messaging-compose", "📨 Compose", "✉"], ["messaging-templates", "📋 Templates", "▤"], ["messaging-tracker", "📊 Tracker", "◈"],
   ["vendors", "Vendors", "◇"], ["attire", "Attire & Colors", "◉"], ["bridesmaids", "Bridesmaid Cards", "✿"],
+  ["gifts", "Gift List", "🎁"], ["ig-stories", "Social Studio", "📱"],
   ["content", "Content", "▣"], ["settings", "Settings", "⚙"],
 ] as const;
 type Tab = (typeof TABS)[number][0];
@@ -82,6 +85,8 @@ export default function Admin() {
               {tab === "vendors" && <Vendors />}
               {tab === "attire" && <AttireEditor />}
               {tab === "bridesmaids" && <BridesmaidCards />}
+              {tab === "gifts" && <GiftRegistry />}
+              {tab === "ig-stories" && <SocialStudio />}
               {tab === "content" && <Content />}
               {tab === "settings" && <Settings mode={mode} onPrint={() => window.print()} go={go} />}
             </motion.div>
