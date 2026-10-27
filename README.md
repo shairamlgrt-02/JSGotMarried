@@ -4,7 +4,7 @@ A digital art piece plus a wedding binder, in one Next.js app.
 
 | Part | URL | What it is |
 |---|---|---|
-| **Front door** | `/` | The hub — deliberately quiet for now: the invitation preview, your code-locked RSVP, and the door reserved for the day-of **games, raffles and giveaways**. Nothing private is on this page. |
+| **Front door** | `/` | The hub — deliberately quiet for now: the invitation preview, your code-locked RSVP, the door reserved for the day-of **games, raffles and giveaways**, and a quiet pill linking guests to the **photo & video upload album** (`/upload`). Nothing private is on this page. |
 | **The invitation preview** | `/preview` | The one-page editorial site in the Midnight Botanical style as the world may see it: loader, hero + countdown, story chapters, 11.11, dress code, entourage, gallery, moments, hashtags. **No venue, no programme, no reply card, no FAQ.** Safe to post anywhere. |
 | **An invitation** | `/JS-7KQF` | The same site, unsealed for one household: the invitation wording, the pinned programme, the venue + map, the postcard, the RSVP card and the FAQ. This is the link you send. |
 | **RSVP** | `/rsvp` | The code door for guests who lost the link: type the **last 4 characters** of your code (or the whole thing) and you're taken to your own reply card. |

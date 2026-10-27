@@ -97,7 +97,13 @@ export default function UploadPage() {
   return (
     <main className="min-h-screen paper-bg text-ink">
       <div className="max-w-2xl mx-auto px-5 py-14 md:py-20">
-        <header className="text-center">
+        <a
+          href="/"
+          className="micro inline-flex items-center gap-2 tracking-[0.18em] text-taupe no-underline transition-colors hover:text-wine focus:outline-none focus-visible:ring-2 focus-visible:ring-wine/60 rounded-full"
+        >
+          <span aria-hidden>←</span> BACK TO THE HOUSE
+        </a>
+        <header className="text-center mt-8">
           <p className="micro tracking-[0.3em] text-taupe">A WEDDING KEEPSAKE</p>
           <h1 className="script text-wine text-[clamp(2.6rem,9vw,4.5rem)] leading-tight mt-3">Share your moments</h1>
           <p className="font-serif font-light tracking-[0.14em] text-mocha mt-3">

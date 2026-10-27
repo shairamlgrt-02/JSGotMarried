@@ -114,6 +114,18 @@ export default function Hub({ info }: { info: WeddingInfo }) {
           <Door kicker="Door three · 11.11.2026" title="Games, raffles & the giveaways" text="On the night we open this door: the raffle numbers, the games and everything you need to join in." cta="Opens on the day" soon delay={0.45} />
         </div>
 
+        {/* the quiet side-door to the guest photo & video album (also printed as a QR on the tables) */}
+        <Reveal delay={0.5}>
+          <a
+            href="/upload"
+            className="mt-9 inline-flex items-center gap-3 rounded-full border border-wine/25 paper-card px-6 py-3 text-wine no-underline transition-colors duration-300 hover:bg-wine/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-wine/60"
+          >
+            <span aria-hidden className="text-[15px] leading-none">📷</span>
+            <span className="micro tracking-[0.18em]">Share your photos &amp; videos</span>
+            <span aria-hidden className="text-[13px]">→</span>
+          </a>
+        </Reveal>
+
         {/* one quiet picture so the page is ours, not a template */}
         <Reveal delay={0.55}>
           <div className="relative mt-14 md:mt-20 w-40 md:w-48">
