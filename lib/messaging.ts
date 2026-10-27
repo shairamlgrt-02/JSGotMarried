@@ -437,6 +437,7 @@ export const MERGE_TAGS: MergeTag[] = [
   { tag: "{instagram}",      label: "Instagram Handle", hint: "Your @handle from Details → Social" },
   { tag: "{venue_map_link}", label: "Venue Map Link",   hint: "The Google Maps link saved on the venue" },
   { tag: "{upload_link}",    label: "Photo Upload Link", hint: "The /upload page where guests send their photos & videos" },
+  { tag: "{gift_link}",      label: "Gift List Link",   hint: "The public /gifts registry where guests mark presents bought" },
   { tag: "{hashtag}",        label: "Hashtag",          hint: "Primary wedding hashtag" },
 ];
 
@@ -508,6 +509,7 @@ export function applyMergeTags(
     .replace(/\{instagram\}/g, info.instagram || "")
     .replace(/\{venue_map_link\}/g, info.venue_map_link || "")
     .replace(/\{upload_link\}/g, base ? `${base}/upload` : "/upload")
+    .replace(/\{gift_link\}/g, base ? `${base}/gifts` : "/gifts")
     .replace(/\{hashtag\}/g, info.hashtags[0] || "")
     .replace(/\{rsvp_link\}/g, rsvpLink);
 

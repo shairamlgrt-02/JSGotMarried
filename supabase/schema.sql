@@ -235,6 +235,40 @@ where question like '%JSWeDo%' or answer like '%JSWeDo%';
 -- time: guests are skipped, the attire palette is refreshed from the code, everything else only
 -- fills in rows that are missing — nothing the couple wrote or uploaded is overwritten).
 
+-- ── gift registry: the live wish list on /gifts (Hub tile "Gift list") ────────────────────────
+-- Guests mark items they have bought without an invitation code; every other guest's page then
+-- crosses them off (the app re-reads this table every few seconds). Like the other binder tables,
+-- anon/authenticated hold NO grants: the public reads & claims through /api/gifts with the
+-- service-role key, where claim races are settled by a conditional update.
+create table if not exists public.gift_items (
+  id text primary key default gen_random_uuid()::text,
+  title text not null default '',
+  note text not null default '',
+  claimed boolean not null default false,
+  claimed_by text not null default '',
+  claimed_at timestamptz,
+  "order" int not null default 0
+);
+alter table public.gift_items enable row level security;
+revoke all on public.gift_items from anon, authenticated;
+grant all on public.gift_items to service_role;
+
+-- The public, invite-code-free wording above the list: that a monetary gift is most appreciated.
+-- This column must never carry account details — BenefitPay/IBAN stay in the sealed gift_note
+-- fields, visible only inside a personal invitation link (see lib/invite-gate.ts).
+alter table public.wedding_info add column if not exists registry_note text not null default '';
+
+-- Starter wishes — "push starter data" also fills these if the table is created empty; the
+-- conflict guard means re-running the schema never resurrects an item the couple deleted.
+insert into public.gift_items (id, title, note, claimed, claimed_by, claimed_at, "order") values
+  ('g1', 'Espresso machine',   'For our slow mornings together',                    false, '', null, 0),
+  ('g2', 'Luxury bed linen',   'Crisp cotton, king size',                           false, '', null, 1),
+  ('g3', 'Dinnerware set',     'Twelve settings, for hosting our favourite people', false, '', null, 2),
+  ('g4', 'Stand mixer',        'The baking dream',                                  false, '', null, 3),
+  ('g5', 'Weekend away',       "Towards our first little trip as a married couple", false, '', null, 4),
+  ('g6', 'Smart speaker',      'For dancing in the kitchen',                        false, '', null, 5)
+on conflict (id) do nothing;
+
 -- Tell PostgREST to re-read the schema, so freshly added columns (guests.code, guests.approved,
 -- guests.plus_one …) are usable right away instead of throwing “schema cache” errors.
 notify pgrst, 'reload schema';

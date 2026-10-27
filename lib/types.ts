@@ -27,6 +27,12 @@ export type WeddingInfo = {
   rsvp_deadline?: string; // YYYY-MM-DD
   /** Note on Gifts section (binder → Details): shown on the public site only when a note or account detail exists. */
   gift_note?: string;
+  /**
+   * The public wording above the gift registry (/gifts and the Hub tile) — invite-code free, so
+   * it must never carry BenefitPay numbers: those stay sealed behind the invitation gate.
+   * Blank falls back to DEFAULT_REGISTRY_NOTE.
+   */
+  registry_note?: string;
   /** BenefitPay mobile number / benefit account, as the couple wants it printed. */
   benefitpay_number?: string;
   /** IBAN for anyone who prefers a bank transfer. */
@@ -256,6 +262,23 @@ export type BridesmaidCard = {
 };
 
 export type Faq = { id: string; question: string; answer: string; order: number };
+
+/**
+ * One line on the couple's gift registry. Guests mark items they have bought from the public
+ * /gifts page (no invitation code needed); everyone else then sees them crossed off live.
+ * The binder owns the list itself — add, edit, reorder, delete and release a mistaken claim.
+ */
+export type GiftItem = {
+  id: string;
+  title: string;
+  /** Optional one-line detail ("king-size, crisp cotton"). */
+  note: string;
+  claimed: boolean;
+  /** What the guest typed as their name — shown in the binder and as "Bought by …" on the page. */
+  claimed_by: string;
+  claimed_at?: string | null;
+  order: number;
+};
 /** One chapter of the couple's story — title + a little paragraph + one photo, swipeable on the site. */
 export type StoryChapter = { id: string; title: string; text: string; photo: string; order: number };
 
@@ -314,8 +337,16 @@ export type TableMap = {
   message_templates: MessageTemplate;
   messages: MessageLog;
   bridesmaid_cards: BridesmaidCard;
+  gift_items: GiftItem;
 };
 export type TableName = keyof TableMap;
-export const TABLES: TableName[] = ["wedding_info", "schedule", "budget", "guests", "vendors", "checklist", "attire", "entourage", "faq", "story", "message_templates", "messages", "bridesmaid_cards"];
+export const TABLES: TableName[] = ["wedding_info", "schedule", "budget", "guests", "vendors", "checklist", "attire", "entourage", "faq", "story", "message_templates", "messages", "bridesmaid_cards", "gift_items"];
 /** Tables the public site may read without logging in. */
 export const PUBLIC_TABLES: TableName[] = ["wedding_info", "schedule", "attire", "entourage", "faq", "story"];
+
+/**
+ * The public wording above /gifts when the couple hasn't written their own. Deliberately carries
+ * no account numbers — the sealed BenefitPay/IBAN fields stay inside personal invitation links.
+ */
+export const DEFAULT_REGISTRY_NOTE =
+  "Most of all, we would be grateful for a monetary gift to help us start our new life together — though your presence, prayers and love are gift enough.";

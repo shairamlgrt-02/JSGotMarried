@@ -4,7 +4,7 @@ A digital art piece plus a wedding binder, in one Next.js app.
 
 | Part | URL | What it is |
 |---|---|---|
-| **Front door** | `/` | The hub — deliberately quiet for now: the invitation preview, your code-locked RSVP, the door reserved for the day-of **games, raffles and giveaways**, and a quiet pill linking guests to the **photo & video upload album** (`/upload`). Nothing private is on this page. |
+| **Front door** | `/` | The compact, phone-first hub: tiles for the **gift list** (`/gifts`), the **photo & video upload album** (`/upload`), the code-locked **RSVP**, **Instagram** and the sealed **games & raffles** door (opens on the day), plus a live countdown pill and a quiet link to the full invitation at the bottom. Nothing private is on this page. |
 | **The invitation preview** | `/preview` | The one-page editorial site in the Midnight Botanical style as the world may see it: loader, hero + countdown, story chapters, 11.11, dress code, entourage, gallery, moments, hashtags. **No venue, no programme, no reply card, no FAQ.** Safe to post anywhere. |
 | **An invitation** | `/JS-7KQF` | The same site, unsealed for one household: the invitation wording, the pinned programme, the venue + map, the postcard, the RSVP card and the FAQ. This is the link you send. |
 | **RSVP** | `/rsvp` | The code door for guests who lost the link: type the **last 4 characters** of your code (or the whole thing) and you're taken to your own reply card. |
@@ -460,6 +460,21 @@ anyone else's; the binder's service-role key keeps full access.
   shows a friendly "album isn't connected yet" note instead of failing.
 * Files land under `YYYY-MM-DD/<guest-id>/<uuid>.<ext>`, so one phone's memories stay grouped.
 
+## Gift registry (`Gift List` tab → public `/gifts`)
+A live, invite-code-free wish list every guest can use from the homepage tile. The couple builds
+the list in the binder (**Gift List** tab): add and word items, reorder, delete, and release a
+claim made by mistake. Guests tap **"I've bought this"** (optionally with their name) and the item
+crosses off everywhere: the page re-reads the server every 8 seconds and on every tab focus, so
+two guests looking at the same list see it update within seconds. The server settles races with a
+conditional `WHERE claimed = false` update — the second guest gets a friendly "just bought by…"
+message instead of a double purchase. A guest can only release a claim made on the same device;
+the binder can release any of them. Above the list sits an editable, **public** note (default:
+monetary gifts are appreciated most to help the couple start their new life) — it must never carry
+account numbers, because the BenefitPay/IBAN details stay sealed behind personal invitation links
+(see the next section). Data lives in the `gift_items` table; `wedding_info.registry_note` holds
+the note — both added by the latest `supabase/schema.sql` (starter rows are included, and
+"push starter data" fills them on an existing project).
+
 ## Note on Gifts (BenefitPay)
 **Details → Note on Gifts** feeds a public section on the invitation site (after the FAQ, unlocked
 guests only): a warm note, a BenefitPay mobile number and an optional IBAN, each row tap-to-copy.
@@ -503,9 +518,13 @@ app/page.tsx                 the front door (hub) + the legacy ?rsvp=… hop
 app/preview/page.tsx         the sealed public preview
 app/rsvp/page.tsx            the code-locked reply door
 app/upload/page.tsx          the public guest photo/video upload page (private Storage bucket)
+app/gifts/page.tsx           the public live gift registry — mark gifts bought, see them cross off live
 app/[code]/page.tsx          a household's own unsealed invitation
 app/admin/…                  binder + login
-app/api/…                    login, data CRUD, rsvp, the calendar .ics
+app/api/…                    login, data CRUD, rsvp, the calendar .ics, gift claims (/api/gifts)
+components/admin/gifts.tsx   the binder's Gift List tab — registry CRUD, reorder, release claims, note
+lib/gifts.ts                 gift-registry client logic — board loading, race-safe claim/release, local mode
+lib/media-upload.ts          the /upload limits, per-guest quota and XHR upload with progress
 lib/guests.ts                codes: matching, statuses, bulk paste, links
 lib/invite-gate.ts           what a sealed visitor may read (server side)
 components/public/…          sections + effects (Lenis, cursor, vines, magnetic, split text)

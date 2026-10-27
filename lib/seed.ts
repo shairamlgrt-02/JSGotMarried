@@ -302,4 +302,15 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
   message_templates: [],
   messages: [],
   bridesmaid_cards: [],
+
+  // The starter wish list for the public /gifts page — the couple edits every line in the
+  // binder's Gift list tab. Claims are never seeded: every guest starts with everything open.
+  gift_items: [
+    { id: "g1", title: "Espresso machine", note: "For our slow mornings together", claimed: false, claimed_by: "", claimed_at: null, order: 0 },
+    { id: "g2", title: "Luxury bed linen", note: "Crisp cotton, king size", claimed: false, claimed_by: "", claimed_at: null, order: 1 },
+    { id: "g3", title: "Dinnerware set", note: "Twelve settings, for hosting our favourite people", claimed: false, claimed_by: "", claimed_at: null, order: 2 },
+    { id: "g4", title: "Stand mixer", note: "The baking dream", claimed: false, claimed_by: "", claimed_at: null, order: 3 },
+    { id: "g5", title: "Weekend away", note: "Towards our first little trip as a married couple", claimed: false, claimed_by: "", claimed_at: null, order: 4 },
+    { id: "g6", title: "Smart speaker", note: "For dancing in the kitchen", claimed: false, claimed_by: "", claimed_at: null, order: 5 },
+  ],
 };
