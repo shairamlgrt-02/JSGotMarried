@@ -8,8 +8,8 @@ import { DEFAULT_REGISTRY_NOTE, type GiftItem } from "@/lib/types";
 const STATE_POLL_MS = 8000; // cheap claim-state ping
 const BOARD_REFRESH_MS = 45000; // full board (notes, pictures) refresh
 
-/** One tap-to-copy transfer row, mirroring the invitation's GiftDetail styling. */
-function CopyRow({ label, value, hint }: { label: string; value: string; hint: string }) {
+/** One compact tap-to-copy transfer cell — two sit side by side in a single row. */
+function CopyCell({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false);
   if (!value) return null;
   const copy = async () => {
@@ -26,14 +26,13 @@ function CopyRow({ label, value, hint }: { label: string; value: string; hint: s
       type="button"
       onClick={copy}
       title="Tap to copy"
-      className="w-full text-left rounded-xl border border-taupe/25 bg-white/70 px-5 py-4 hover:border-wine/50 transition-colors group"
+      className="min-w-0 text-left rounded-xl border border-taupe/25 bg-white/70 px-3.5 py-3 hover:border-wine/50 transition-colors group"
     >
-      <div className="micro text-taupe tracking-[0.16em]">{label}</div>
-      <div className="flex items-center justify-between gap-3 mt-1">
-        <span className="font-serif text-h3 text-mocha break-all leading-snug">{value}</span>
-        <span className="micro shrink-0 text-wine opacity-80 group-hover:opacity-100">{copied ? "copied ✓" : "tap to copy"}</span>
-      </div>
-      <p className="font-serif italic text-[13px] text-taupe mt-1.5 leading-snug">{hint}</p>
+      <div className="micro !text-[9px] text-taupe tracking-[0.14em]">{label}</div>
+      <span className="block font-serif text-sm md:text-base text-mocha break-all leading-snug mt-1">{value}</span>
+      <span className="micro !text-[9px] text-wine opacity-80 group-hover:opacity-100 mt-1 inline-block">
+        {copied ? "copied ✓" : "tap to copy"}
+      </span>
     </button>
   );
 }
@@ -89,11 +88,13 @@ export default function GiftsPage() {
 
   const reload = useCallback(async () => {
     const board = await listGifts();
+    setLoading(false);
+    // A failed refresh must never wipe content the guest is already looking at — keep prior state.
+    if (!board) return;
     setItems(board.items);
     setNote(board.note);
     setBenefit(board.benefit);
     setIban(board.iban);
-    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -179,24 +180,21 @@ export default function GiftsPage() {
           <p className="font-serif italic text-body text-mocha mt-3 leading-relaxed text-balance">{note}</p>
         </section>
 
-        {/* One-tap transfer details — same fields the binder seals inside personal invitations,
-            printed here on purpose so any guest can give without hunting for their link. */}
+        {/* Compact one-row transfer card: number and IBAN side by side, tap to copy,
+            so the gift list starts immediately below as the guest scrolls. */}
         {benefitNo || ibanNo ? (
-          <section className="mt-5 rounded-[22px] border border-taupe/25 bg-[#FCFAF6] p-6 md:p-7 shadow-[0_12px_30px_-18px_rgba(61,47,38,.45)]">
-            <p className="micro text-wine tracking-[0.22em] text-center">PREFER A TRANSFER?</p>
-            <div className="grid gap-3 mt-4">
-              <CopyRow
-                label="BENEFITPAY · MOBILE NUMBER"
-                value={benefitNo}
-                hint="Open BenefitPay, choose Send, then paste this number. The account is named JSGotMarried — please check the name before you confirm."
-              />
-              <CopyRow
-                label="BANK TRANSFER · IBAN"
-                value={ibanNo}
-                hint="For a bank transfer, paste this IBAN into your banking app — account name JSGotMarried."
-              />
+          <section className="mt-5 rounded-[22px] border border-taupe/25 bg-[#FCFAF6] p-4 md:p-5 shadow-[0_12px_30px_-18px_rgba(61,47,38,.45)]">
+            <div className="flex items-center justify-between gap-3">
+              <p className="micro text-wine tracking-[0.2em]">PREFER A TRANSFER?</p>
+              <p className="micro text-taupe/80 tracking-[0.12em]">TAP TO COPY</p>
             </div>
-            <p className="micro text-taupe/80 text-center mt-4 tracking-[0.12em]">TAP A DETAIL TO COPY · THANK YOU, FROM THE BOTH OF US ✦</p>
+            <div className={`grid gap-2.5 mt-3 ${benefitNo && ibanNo ? "grid-cols-2" : "grid-cols-1"}`}>
+              <CopyCell label="BENEFITPAY · NUMBER" value={benefitNo} />
+              <CopyCell label="BANK TRANSFER · IBAN" value={ibanNo} />
+            </div>
+            <p className="micro !text-[9px] text-taupe/80 text-center mt-3 tracking-[0.1em]">
+              BOTH ACCOUNTS ARE NAMED JSGOTMARRIED — PLEASE CHECK THE NAME BEFORE YOU CONFIRM ✦
+            </p>
           </section>
         ) : (
           <p className="micro text-taupe mt-5 text-center tracking-[0.14em]">

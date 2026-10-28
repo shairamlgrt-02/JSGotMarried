@@ -64,7 +64,7 @@ export function GiftRegistry() {
   useEffect(() => {
     let live = true;
     listGifts().then((b) => {
-      if (live) {
+      if (live && b) {
         // The API returns the default when the stored note is blank — show an empty editor instead.
         setNote(b.note === DEFAULT_REGISTRY_NOTE ? "" : b.note);
         setNoteLoaded(true);

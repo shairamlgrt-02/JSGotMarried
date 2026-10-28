@@ -82,8 +82,12 @@ function forgetClaim(id: string) {
   localStorage.setItem(DEVICE_CLAIMS_KEY, JSON.stringify(deviceClaims().filter((x) => x !== id)));
 }
 
-/** The board as guests see it: ordered items plus the public monetary-gift note. */
-export async function listGifts(): Promise<GiftBoard> {
+/**
+ * The board as guests see it: ordered items plus the public monetary-gift note.
+ * Returns null when a Supabase-mode fetch fails, so callers can keep what's already on screen
+ * instead of blanking the transfer card mid-visit. Local/demo mode always resolves a board.
+ */
+export async function listGifts(): Promise<GiftBoard | null> {
   const fallback = (): GiftBoard => ({
     items: readLocalItems(),
     note: readLocalNote() || DEFAULT_REGISTRY_NOTE,
@@ -94,7 +98,7 @@ export async function listGifts(): Promise<GiftBoard> {
   if ((await getMode()) === "local") return fallback();
   try {
     const r = await fetch("/api/gifts", { cache: "no-store" });
-    if (!r.ok) return fallback();
+    if (!r.ok) return null;
     const j = (await r.json()) as { items?: GiftItem[]; note?: string; benefit?: string; iban?: string };
     const items = j.items?.length ? sortGifts(j.items) : readLocalItems();
     return {
@@ -104,7 +108,7 @@ export async function listGifts(): Promise<GiftBoard> {
       iban: (j.iban || "").trim(),
     };
   } catch {
-    return fallback();
+    return null;
   }
 }
 

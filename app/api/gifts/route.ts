@@ -33,18 +33,33 @@ async function readBoard(db: Db) {
   let note = "";
   let benefit = "";
   let iban = "";
-  const infoRes = await db
+  type InfoRow = { registry_note?: string; benefitpay_number?: string; benefitpay_iban?: string };
+  let infoData: InfoRow | null = null;
+  const fullRes = await db
     .from("wedding_info")
     .select("registry_note, benefitpay_number, benefitpay_iban")
     .eq("id", "main")
     .maybeSingle();
-  if (!infoRes.error && infoRes.data) {
-    const d = infoRes.data as { registry_note?: string; benefitpay_number?: string; benefitpay_iban?: string };
-    note = String(d.registry_note || "");
-    benefit = String(d.benefitpay_number || "").trim();
-    iban = String(d.benefitpay_iban || "").trim();
-  } else if (infoRes.error && !isMissingColumn(infoRes.error.message)) {
-    throw infoRes.error;
+  if (!fullRes.error) {
+    infoData = (fullRes.data as InfoRow) ?? null;
+  } else if (isMissingColumn(fullRes.error.message)) {
+    // A database that hasn't re-run schema.sql yet lacks registry_note. Retry with just the
+    // transfer columns so one missing newer column can never blank the saved BenefitPay details
+    // (this is what made the card disappear from the page a few seconds after first paint).
+    const legacyRes = await db
+      .from("wedding_info")
+      .select("benefitpay_number, benefitpay_iban")
+      .eq("id", "main")
+      .maybeSingle();
+    if (!legacyRes.error) infoData = (legacyRes.data as InfoRow) ?? null;
+    else if (!isMissingColumn(legacyRes.error.message)) throw legacyRes.error;
+  } else {
+    throw fullRes.error;
+  }
+  if (infoData) {
+    note = String(infoData.registry_note || "");
+    benefit = String(infoData.benefitpay_number || "").trim();
+    iban = String(infoData.benefitpay_iban || "").trim();
   }
   return { items, note: note || DEFAULT_REGISTRY_NOTE, benefit, iban };
 }
