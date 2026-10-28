@@ -36,8 +36,8 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     // Note on Gifts — left blank on purpose: the public section appears the moment the couple
     // fills any of these in (binder → Details → Note on Gifts).
     gift_note: "",
-    benefitpay_number: "",
-    benefitpay_iban: "",
+    benefitpay_number: "+973 33177332",
+    benefitpay_iban: "BH69BIBB00100003377119",
   }],
   schedule: [
     { id: "s1", time: "4:00 – 5:00 PM", title: "The Ceremony", detail: "An *intimate ceremony*, shared with our families, entourage and a few honoured guests. If your heart wants to witness us say “I do”, you are *warmly welcome to join* — open seating is available around our reserved rows.", order: 1 },
@@ -304,13 +304,26 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
   bridesmaid_cards: [],
 
   // The starter wish list for the public /gifts page — the couple edits every line in the
-  // binder's Gift list tab. Claims are never seeded: every guest starts with everything open.
+  // binder's Gift list tab (including uploading a picture per gift). Claims are never seeded:
+  // every guest starts with everything open. Notes are deliberately specific and warm: the
+  // cookware line is worded as one complete set so a single claim covers the whole set rather
+  // than one pot and one pan, and the bed linen states the king-size fit up front.
   gift_items: [
-    { id: "g1", title: "Espresso machine", note: "For our slow mornings together", claimed: false, claimed_by: "", claimed_at: null, order: 0 },
-    { id: "g2", title: "Luxury bed linen", note: "Crisp cotton, king size", claimed: false, claimed_by: "", claimed_at: null, order: 1 },
-    { id: "g3", title: "Dinnerware set", note: "Twelve settings, for hosting our favourite people", claimed: false, claimed_by: "", claimed_at: null, order: 2 },
-    { id: "g4", title: "Stand mixer", note: "The baking dream", claimed: false, claimed_by: "", claimed_at: null, order: 3 },
-    { id: "g5", title: "Weekend away", note: "Towards our first little trip as a married couple", claimed: false, claimed_by: "", claimed_at: null, order: 4 },
-    { id: "g6", title: "Smart speaker", note: "For dancing in the kitchen", claimed: false, claimed_by: "", claimed_at: null, order: 5 },
+    { id: "g1", title: "Espresso machine", note: "For slow mornings together at home — a compact machine with a milk frother would be lovely.", image_url: "", claimed: false, claimed_by: "", claimed_at: null, order: 0 },
+    { id: "g2", title: "Stand mixer", note: "The baking dream — for cakes, fresh bread and birthday treats in our new kitchen.", image_url: "", claimed: false, claimed_by: "", claimed_at: null, order: 1 },
+    { id: "g3", title: "Blender", note: "A countertop blender for morning smoothies, soups and sauces.", image_url: "", claimed: false, claimed_by: "", claimed_at: null, order: 2 },
+    { id: "g4", title: "Food processor", note: "With its chopping blade and slicing discs, to make everyday prep a little easier.", image_url: "", claimed: false, claimed_by: "", claimed_at: null, order: 3 },
+    { id: "g5", title: "Complete cookware set", note: "For all the meals we hope to cook together — a matching set of pots and pans with their lids for our first kitchen. We would be so touched to receive it as a complete set.", image_url: "", claimed: false, claimed_by: "", claimed_at: null, order: 4 },
+    { id: "g6", title: "Water dispenser", note: "A standing hot-and-cold water dispenser for the dining area.", image_url: "", claimed: false, claimed_by: "", claimed_at: null, order: 5 },
+    { id: "g7", title: "Dinnerware set", note: "Twelve settings for hosting our favourite people — dinner plates, side plates and bowls.", image_url: "", claimed: false, claimed_by: "", claimed_at: null, order: 6 },
+    { id: "g8", title: "King-size bed linen", note: "Crisp cotton bedding made for a king-size bed: a fitted sheet, flat sheet, pillowcases and a duvet cover.", image_url: "", claimed: false, claimed_by: "", claimed_at: null, order: 7 },
+    { id: "g9", title: "Living room carpet", note: "A large rug to anchor the living room — warm, neutral tones to suit a vintage-lace home.", image_url: "", claimed: false, claimed_by: "", claimed_at: null, order: 8 },
+    { id: "g10", title: "TV soundbar", note: "A soundbar or connected home speaker to pair with the television, for film nights and living-room dancing.", image_url: "", claimed: false, claimed_by: "", claimed_at: null, order: 9 },
+    { id: "g11", title: "Smart speaker", note: "A little smart speaker for music, timers and dancing in the kitchen.", image_url: "", claimed: false, claimed_by: "", claimed_at: null, order: 10 },
+    { id: "g12", title: "Home décor bundle", note: "Towards the little touches that make a house a home — decorative vases, table lamps and ornaments. Any single piece from this bundle is welcome.", image_url: "", claimed: false, claimed_by: "", claimed_at: null, order: 11 },
+    { id: "g13", title: "Soft linens bundle", note: "Soft furnishings for the home — bath and table linens, cushions and a throw or two.", image_url: "", claimed: false, claimed_by: "", claimed_at: null, order: 12 },
+    { id: "g14", title: "A night away for two", note: "A peaceful hotel stay for the two of us after the big day — our first little escape as a married couple.", image_url: "", claimed: false, claimed_by: "", claimed_at: null, order: 13 },
+    { id: "g15", title: "Dinner date for two", note: "A reserved table for two at one of our favourite places — dinner, on you.", image_url: "", claimed: false, claimed_by: "", claimed_at: null, order: 14 },
+    { id: "g16", title: "Honeymoon trip", note: "For anyone feeling especially generous — a gift towards our honeymoon, the first big adventure of our married life. It would mean the absolute world to us.", image_url: "", claimed: false, claimed_by: "", claimed_at: null, order: 15 },
   ],
 };

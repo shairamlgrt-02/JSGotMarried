@@ -1272,7 +1272,7 @@ export function GiftNote({ info }: { info: WeddingInfo }) {
           <span aria-hidden className="script text-wine text-[40px] leading-none">♡</span>
           <p className="font-serif italic text-body text-mocha mt-3 text-balance">
             {note ||
-              "Your presence at our wedding is the only present we could ever need. If you would still like to give, a little something towards our new beginning would be so appreciated — details below, with all our love."}
+              "As we begin our new life together, any gift would be a wonderful help and is deeply appreciated. The details are below, with all our love."}
           </p>
           <div className="grid gap-3 mt-7 text-left">
             {benefit && <GiftDetail label="BenefitPay · mobile number" value={benefit} />}

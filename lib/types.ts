@@ -271,8 +271,10 @@ export type Faq = { id: string; question: string; answer: string; order: number 
 export type GiftItem = {
   id: string;
   title: string;
-  /** Optional one-line detail ("king-size, crisp cotton"). */
+  /** Optional one-line detail ("king-size, crisp cotton") — the polite, specific "what's included". */
   note: string;
+  /** Optional picture of the gift: an uploaded data URL (binder) or a pasted hosted image link. */
+  image_url: string;
   claimed: boolean;
   /** What the guest typed as their name — shown in the binder and as "Bought by …" on the page. */
   claimed_by: string;
@@ -349,4 +351,4 @@ export const PUBLIC_TABLES: TableName[] = ["wedding_info", "schedule", "attire",
  * no account numbers — the sealed BenefitPay/IBAN fields stay inside personal invitation links.
  */
 export const DEFAULT_REGISTRY_NOTE =
-  "Most of all, we would be grateful for a monetary gift to help us start our new life together — though your presence, prayers and love are gift enough.";
+  "As we begin our new life together, any gift would be a wonderful help and is deeply appreciated — thank you for supporting us, your newlyweds, as a community.";

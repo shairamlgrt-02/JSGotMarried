@@ -103,10 +103,10 @@ export default function Home({ code = "", variant = "guest" }: { code?: string; 
               <div className="text-center px-6 pt-10 md:pt-14 space-y-4">
                 <p className="micro text-taupe tracking-[0.16em] text-balance">
                   {codeState === "bad"
-                    ? "We couldn't match this link to an invitation — open the personal link the couple sent you to unseal the invitation, venue, programme, FAQ and reply card."
+                    ? "We couldn't match this link to an invitation — open the personal link the couple sent you to unseal the invitation, venue, programme, FAQ, the Note on Gifts and reply card."
                     : variant === "preview"
-                      ? "This is the invitation preview — the day's private pages (the venue, the programme, the FAQ and your reply card) stay sealed until the couple sends them."
-                      : "You're viewing the public preview — the invitation, venue, programme, FAQ and reply card unseal with your personal invitation link."}
+                      ? "This is the invitation preview — the day's private pages (the venue, the programme, the FAQ, the Note on Gifts and your reply card) stay sealed until the couple sends them."
+                      : "You're viewing the public preview — the invitation, venue, programme, FAQ, the Note on Gifts and reply card unseal with your personal invitation link."}
                 </p>
                 <a href="/rsvp" className="inline-block micro bg-wine text-lace rounded-full px-8 py-3.5 hover:bg-mocha transition-colors tracking-[0.18em]">
                   Have an invitation code? Unlock your RSVP →
