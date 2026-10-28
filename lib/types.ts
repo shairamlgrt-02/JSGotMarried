@@ -351,4 +351,4 @@ export const PUBLIC_TABLES: TableName[] = ["wedding_info", "schedule", "attire",
  * no account numbers — the sealed BenefitPay/IBAN fields stay inside personal invitation links.
  */
 export const DEFAULT_REGISTRY_NOTE =
-  "More than anything, a monetary gift would mean so much to us as we begin our new life together and build our first home — though truly, your presence, prayers and love are already the greatest gift of all.";
+  "As we begin our new life together, any gift would be a wonderful help and is deeply appreciated — thank you for supporting us, your newlyweds, as a community.";

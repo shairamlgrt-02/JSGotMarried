@@ -170,7 +170,7 @@ export function Details() {
                 value={info.gift_note ?? ""}
                 multiline
                 rows={3}
-                placeholder="Your presence is the only present we need — but if you would like to give, here is how…"
+                placeholder="As we begin our new life together, any gift would be a wonderful help…"
                 onSave={(v) => saveInfo({ gift_note: v })}
                 className="text-sm"
               />

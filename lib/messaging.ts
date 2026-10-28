@@ -773,7 +773,7 @@ A few little things to get you excited (and ready):
 
 📸 *Follow along* — find us on Instagram at {instagram} for the countdown, behind-the-scenes peeks and all the wedding-day joy.
 
-🎁 *A note on gifts* — your presence is truly the only present we need. If you would still like to give, our Note on Gifts (including BenefitPay details) is at the bottom of the invitation page above.
+🎁 *A note on gifts* — as we begin our new life together, any gift would be a wonderful help and is deeply appreciated. Our Note on Gifts (including BenefitPay details) is at the bottom of the invitation page above.
 
 See you very soon!
 With love,
