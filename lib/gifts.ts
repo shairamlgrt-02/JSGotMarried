@@ -26,6 +26,9 @@ export type GiftBoard = {
   /** Public IBAN for bank transfers, same source of truth as the sealed invitation fields. */
   iban: string;
 };
+
+/** The cheap polling payload — claim state only, never notes or pictures. */
+export type GiftState = Pick<GiftItem, "id" | "claimed" | "claimed_by" | "claimed_at">;
 export type GiftActionResult = { ok: boolean; error?: string };
 
 /** Display order everywhere: the couple's `order`, then title. */
@@ -102,6 +105,29 @@ export async function listGifts(): Promise<GiftBoard> {
     };
   } catch {
     return fallback();
+  }
+}
+
+/**
+ * Lightweight live refresh: claim state only. The page calls this every few seconds so crossed-off
+ * items appear on other guests' phones without re-downloading the (possibly image-heavy) board.
+ */
+export async function pollGiftState(): Promise<GiftState[]> {
+  if ((await getMode()) === "local") {
+    return readLocalItems().map((g) => ({
+      id: g.id,
+      claimed: g.claimed,
+      claimed_by: g.claimed_by,
+      claimed_at: g.claimed_at ?? null,
+    }));
+  }
+  try {
+    const r = await fetch("/api/gifts?light=1", { cache: "no-store" });
+    if (!r.ok) return [];
+    const j = (await r.json()) as { items?: GiftState[] };
+    return j.items ?? [];
+  } catch {
+    return [];
   }
 }
 

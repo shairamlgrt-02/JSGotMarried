@@ -468,7 +468,12 @@ crosses off everywhere: the page re-reads the server every 8 seconds and on ever
 two guests looking at the same list see it update within seconds. The server settles races with a
 conditional `WHERE claimed = false` update — the second guest gets a friendly "just bought by…"
 message instead of a double purchase. A guest can only release a claim made on the same device;
-the binder can release any of them. Above the list sits an editable, **public** note (default:
+the binder can release any of them. Each gift can carry an **uploaded picture (or a hosted image
+link)** shown as a visual guide on the guest page; sets and bundles (the complete cookware set,
+the décor and linen bundles) are single registry items whose detail line spells out everything
+included, so one claim covers the whole bundle. The live poll is a lightweight `?light=1` call
+that returns claim state only — pictures and notes are fetched with the full board, not every few
+seconds. Above the list sits an editable, **public** note (default:
 monetary gifts are appreciated most to help the couple start their new life). When the couple has
 filled the BenefitPay number and/or IBAN in **Details → Note on Gifts**, `/gifts` also renders them
 as **tap-to-copy transfer rows** (with a "check the JSGotMarried account name" prompt): the generic

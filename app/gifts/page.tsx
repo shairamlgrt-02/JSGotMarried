@@ -2,10 +2,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTable } from "@/lib/hooks";
 import { fullDate } from "@/components/public/Envelope";
-import { claimGift, isMyClaim, listGifts, releaseGift } from "@/lib/gifts";
+import { claimGift, isMyClaim, listGifts, pollGiftState, releaseGift } from "@/lib/gifts";
 import { DEFAULT_REGISTRY_NOTE, type GiftItem } from "@/lib/types";
 
-const POLL_MS = 8000;
+const STATE_POLL_MS = 8000; // cheap claim-state ping
+const BOARD_REFRESH_MS = 45000; // full board (notes, pictures) refresh
 
 /** One tap-to-copy transfer row, mirroring the invitation's GiftDetail styling. */
 function CopyRow({ label, value, hint }: { label: string; value: string; hint: string }) {
@@ -37,11 +38,40 @@ function CopyRow({ label, value, hint }: { label: string; value: string; hint: s
   );
 }
 
+/** The picture, or a graceful monogram tile until the couple uploads one. */
+function GiftImage({ gift, claimed }: { gift: GiftItem; claimed: boolean }) {
+  const [failed, setFailed] = useState(false);
+  if (gift.image_url && !failed) {
+    return (
+      <img
+        src={gift.image_url}
+        alt={gift.title}
+        loading="lazy"
+        onError={() => setFailed(true)}
+        className={`w-24 h-24 md:w-28 md:h-28 shrink-0 rounded-xl object-cover border border-taupe/20 bg-oat transition-[filter] duration-500 ${
+          claimed ? "grayscale opacity-60" : "[filter:sepia(.06)_saturate(.96)]"
+        }`}
+      />
+    );
+  }
+  return (
+    <div
+      aria-hidden
+      className={`w-24 h-24 md:w-28 md:h-28 shrink-0 rounded-xl border border-wine/15 bg-[linear-gradient(145deg,#EFE3D3,#FBF8F2)] grid place-items-center script text-wine/70 text-3xl ${
+        claimed ? "opacity-50" : ""
+      }`}
+    >
+      ♡
+    </div>
+  );
+}
+
 /**
  * The public gift registry. No invitation code needed — every guest should be able to mark a
- * present bought. The board re-reads the server every few seconds (and whenever the tab comes
- * back to the foreground), so items other guests take cross off live. A claim made on this
- * device is the only kind this page offers to release; the binder can release any of them.
+ * present bought. Claim state re-polls every few seconds (lightweight, no pictures) so items
+ * other guests take cross off live; the full board refreshes less often and on tab focus.
+ * A claim made on this device is the only kind this page offers to release; the binder can
+ * release any of them.
  */
 export default function GiftsPage() {
   const { rows: infoRows } = useTable("wedding_info");
@@ -56,7 +86,6 @@ export default function GiftsPage() {
   const [askId, setAskId] = useState<string | null>(null);
   const [guestName, setGuestName] = useState("");
   const [notice, setNotice] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
-  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const reload = useCallback(async () => {
     const board = await listGifts();
@@ -69,13 +98,26 @@ export default function GiftsPage() {
 
   useEffect(() => {
     void reload();
-    timer.current = setInterval(() => void reload(), POLL_MS);
+    const boardTimer = setInterval(() => void reload(), BOARD_REFRESH_MS);
+    // Cheap ping: merge only claim fields, keeping the loaded notes and pictures in place.
+    const stateTimer = setInterval(async () => {
+      const states = await pollGiftState();
+      if (!states.length) return;
+      const byId = new Map(states.map((s) => [s.id, s]));
+      setItems((cur) =>
+        cur.map((g) => {
+          const s = byId.get(g.id);
+          return s ? { ...g, claimed: s.claimed, claimed_by: s.claimed_by, claimed_at: s.claimed_at } : g;
+        }),
+      );
+    }, STATE_POLL_MS);
     const onVisible = () => {
       if (document.visibilityState === "visible") void reload();
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => {
-      if (timer.current) clearInterval(timer.current);
+      clearInterval(boardTimer);
+      clearInterval(stateTimer);
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [reload]);
@@ -190,7 +232,7 @@ export default function GiftsPage() {
               {open.map((g) => (
                 <li
                   key={g.id}
-                  className="rounded-2xl border border-taupe/25 bg-[#FCFAF6] px-5 py-4 shadow-[0_8px_22px_-16px_rgba(61,47,38,.5)]"
+                  className="rounded-2xl border border-taupe/25 bg-[#FCFAF6] p-4 md:p-5 shadow-[0_8px_22px_-16px_rgba(61,47,38,.5)]"
                 >
                   {askId === g.id ? (
                     <div className="space-y-3">
@@ -228,49 +270,48 @@ export default function GiftsPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="min-w-0">
-                        <p className="font-serif text-lg text-mocha truncate">{g.title}</p>
-                        {g.note && <p className="font-serif italic text-sm text-taupe truncate">{g.note}</p>}
+                    <div className="flex items-center gap-4">
+                      <GiftImage gift={g} claimed={false} />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-serif text-lg text-mocha leading-snug">{g.title}</p>
+                        {g.note && <p className="font-serif italic text-[13px] md:text-sm text-taupe mt-1 leading-snug">{g.note}</p>}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNotice(null);
+                            setAskId(g.id);
+                          }}
+                          disabled={busyId === g.id}
+                          className="mt-2.5 micro rounded-full border border-wine/35 px-5 py-2.5 text-wine tracking-[0.12em] hover:bg-wine hover:text-lace transition-colors disabled:opacity-50"
+                        >
+                          I&apos;VE BOUGHT THIS
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setNotice(null);
-                          setAskId(g.id);
-                        }}
-                        disabled={busyId === g.id}
-                        className="shrink-0 micro rounded-full border border-wine/35 px-5 py-2.5 text-wine tracking-[0.12em] hover:bg-wine hover:text-lace transition-colors disabled:opacity-50"
-                      >
-                        I&apos;VE BOUGHT THIS
-                      </button>
                     </div>
                   )}
                 </li>
               ))}
 
               {taken.map((g) => (
-                <li
-                  key={g.id}
-                  className="rounded-2xl border border-taupe/15 bg-oat/50 px-5 py-4 opacity-80"
-                >
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="min-w-0">
-                      <p className="font-serif text-lg text-ink/45 line-through truncate">{g.title}</p>
+                <li key={g.id} className="rounded-2xl border border-taupe/15 bg-oat/50 p-4 md:p-5 opacity-85">
+                  <div className="flex items-center gap-4">
+                    <GiftImage gift={g} claimed />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-serif text-lg text-ink/45 line-through leading-snug">{g.title}</p>
                       <p className="micro text-moss tracking-[0.12em] mt-1">
                         {g.claimed_by ? `BOUGHT BY ${g.claimed_by}` : "ALREADY FOUND A HOME ♡"}
                       </p>
+                      {isMyClaim(g.id) && (
+                        <button
+                          type="button"
+                          onClick={() => undo(g.id)}
+                          disabled={busyId === g.id}
+                          className="mt-2 micro rounded-full border border-ink/15 px-4 py-2 text-taupe tracking-[0.1em] hover:bg-ink/5 transition-colors disabled:opacity-50"
+                        >
+                          MADE A MISTAKE? RELEASE
+                        </button>
+                      )}
                     </div>
-                    {isMyClaim(g.id) && (
-                      <button
-                        type="button"
-                        onClick={() => undo(g.id)}
-                        disabled={busyId === g.id}
-                        className="shrink-0 micro rounded-full border border-ink/15 px-4 py-2 text-taupe tracking-[0.1em] hover:bg-ink/5 transition-colors disabled:opacity-50"
-                      >
-                        MADE A MISTAKE? RELEASE
-                      </button>
-                    )}
                   </div>
                 </li>
               ))}

@@ -244,11 +244,14 @@ create table if not exists public.gift_items (
   id text primary key default gen_random_uuid()::text,
   title text not null default '',
   note text not null default '',
+  image_url text not null default '',
   claimed boolean not null default false,
   claimed_by text not null default '',
   claimed_at timestamptz,
   "order" int not null default 0
 );
+-- Added after the first registry shipped; safe on databases that already have the table.
+alter table public.gift_items add column if not exists image_url text not null default '';
 alter table public.gift_items enable row level security;
 revoke all on public.gift_items from anon, authenticated;
 grant all on public.gift_items to service_role;
@@ -259,14 +262,24 @@ grant all on public.gift_items to service_role;
 alter table public.wedding_info add column if not exists registry_note text not null default '';
 
 -- Starter wishes — "push starter data" also fills these if the table is created empty; the
--- conflict guard means re-running the schema never resurrects an item the couple deleted.
-insert into public.gift_items (id, title, note, claimed, claimed_by, claimed_at, "order") values
-  ('g1', 'Espresso machine',   'For our slow mornings together',                    false, '', null, 0),
-  ('g2', 'Luxury bed linen',   'Crisp cotton, king size',                           false, '', null, 1),
-  ('g3', 'Dinnerware set',     'Twelve settings, for hosting our favourite people', false, '', null, 2),
-  ('g4', 'Stand mixer',        'The baking dream',                                  false, '', null, 3),
-  ('g5', 'Weekend away',       "Towards our first little trip as a married couple", false, '', null, 4),
-  ('g6', 'Smart speaker',      'For dancing in the kitchen',                        false, '', null, 5)
+-- conflict guard means re-running the schema never resurrects an item the couple deleted, and
+-- never overwrites wording or pictures they have edited.
+insert into public.gift_items (id, title, note, image_url, claimed, claimed_by, claimed_at, "order") values
+  ('g1',  'Espresso machine',      'For slow mornings together at home — a compact machine with a milk frother would be lovely.',                                                                          '', false, '', null, 0),
+  ('g2',  'Stand mixer',           'The baking dream — for cakes, fresh bread and birthday treats in our new kitchen.',                                                                                      '', false, '', null, 1),
+  ('g3',  'Blender',               'A countertop blender for morning smoothies, soups and sauces.',                                                                                                            '', false, '', null, 2),
+  ('g4',  'Food processor',        'With its chopping blade and slicing discs, to make everyday prep a little easier.',                                                                                       '', false, '', null, 3),
+  ('g5',  'Complete cookware set', 'One matching set of cooking pots and pans with their lids, taken together as a set — so our kitchen starts with everything it needs rather than pieces from different homes.', '', false, '', null, 4),
+  ('g6',  'Water dispenser',       'A standing hot-and-cold water dispenser for the dining area.',                                                                                                            '', false, '', null, 5),
+  ('g7',  'Dinnerware set',        'Twelve settings for hosting our favourite people — dinner plates, side plates and bowls.',                                                                               '', false, '', null, 6),
+  ('g8',  'King-size bed linen',   'Crisp cotton bedding made for a king-size bed: a fitted sheet, flat sheet, pillowcases and a duvet cover.',                                                                '', false, '', null, 7),
+  ('g9',  'Living room carpet',    'A large rug to anchor the living room — warm, neutral tones to suit a vintage-lace home.',                                                                                '', false, '', null, 8),
+  ('g10', 'TV soundbar',           'A soundbar or connected home speaker to pair with the television, for film nights and living-room dancing.',                                                              '', false, '', null, 9),
+  ('g11', 'Smart speaker',         'A little smart speaker for music, timers and dancing in the kitchen.',                                                                                                    '', false, '', null, 10),
+  ('g12', 'Home décor bundle',     'Towards the little touches that make a house a home — decorative vases, table lamps and ornaments. Any single piece from this bundle is welcome.',                          '', false, '', null, 11),
+  ('g13', 'Soft linens bundle',    'Soft furnishings for the home — bath and table linens, cushions and a throw or two.',                                                                                     '', false, '', null, 12),
+  ('g14', 'A night away for two',  'A peaceful hotel stay for the two of us after the big day, breakfast included — our first little escape as a married couple.',                                              '', false, '', null, 13),
+  ('g15', 'Dinner date for two',   'A reserved table for two at one of our favourite places — dinner, on you.',                                                                                                '', false, '', null, 14)
 on conflict (id) do nothing;
 
 -- Tell PostgREST to re-read the schema, so freshly added columns (guests.code, guests.approved,

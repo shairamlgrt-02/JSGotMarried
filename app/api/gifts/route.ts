@@ -49,11 +49,27 @@ async function readBoard(db: Db) {
   return { items, note: note || DEFAULT_REGISTRY_NOTE, benefit, iban };
 }
 
-/** GET /api/gifts — public, invite-code free: the registry is meant for every guest. */
-export async function GET() {
+/**
+ * GET /api/gifts — public, invite-code free: the registry is meant for every guest.
+ * Add ?light=1 for the live polling loop: only claim state comes back (no notes, pictures or
+ * transfer details), so boards with uploaded photos stay cheap to refresh every few seconds.
+ */
+export async function GET(req: Request) {
   const db = serverSupabase();
   if (!db) return NextResponse.json({ error: "not configured" }, { status: 503 });
   try {
+    const light = new URL(req.url).searchParams.get("light") === "1";
+    if (light) {
+      const res = await db
+        .from("gift_items")
+        .select("id, claimed, claimed_by, claimed_at, \"order\"")
+        .order("order", { ascending: true });
+      if (res.error) {
+        if (isMissingTable(res.error.message)) return NextResponse.json({ items: [] });
+        throw res.error;
+      }
+      return NextResponse.json({ items: res.data ?? [] });
+    }
     return NextResponse.json(await readBoard(db));
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });

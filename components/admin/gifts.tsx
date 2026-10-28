@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { Btn, Card, EditText, PageHead, Progress, Tag } from "@/components/admin/ui";
+import { Btn, Card, EditText, PageHead, Progress, Tag, fileToDataUrl } from "@/components/admin/ui";
 import { uid } from "@/lib/db";
 import { useTable } from "@/lib/hooks";
 import { DEFAULT_REGISTRY_NOTE, type GiftItem } from "@/lib/types";
@@ -8,10 +8,50 @@ import { listGifts, saveRegistryNote } from "@/lib/gifts";
 
 const inputCls = "bg-white/60 rounded-full px-5 py-3 outline-none border border-ink/10 focus:border-wine";
 
+/** The binder thumbnail — the uploaded picture, or a monogram placeholder that doubles as the upload control. */
+function GiftThumb({ gift, onPick, onRemove }: { gift: GiftItem; onPick: (f: File) => void; onRemove: () => void }) {
+  return (
+    <div className="shrink-0 w-16 h-16 relative group">
+      <label className="block w-full h-full cursor-pointer rounded-xl overflow-hidden border border-taupe/25 bg-oat">
+        {gift.image_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={gift.image_url} alt={gift.title} className="w-full h-full object-cover" />
+        ) : (
+          <span className="w-full h-full grid place-items-center script text-wine/60 text-2xl bg-[linear-gradient(145deg,#EFE3D3,#FBF8F2)]">♡</span>
+        )}
+        <span className="absolute inset-0 grid place-items-center bg-ink/45 text-lace micro tracking-[0.14em] opacity-0 group-hover:opacity-100 transition-opacity">
+          {gift.image_url ? "REPLACE" : "PHOTO"}
+        </span>
+        <input
+          type="file"
+          accept="image/*"
+          hidden
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) onPick(f);
+            e.target.value = "";
+          }}
+        />
+      </label>
+      {gift.image_url && (
+        <button
+          type="button"
+          onClick={onRemove}
+          className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-burgundy text-lace text-[10px] leading-none grid place-items-center shadow"
+          aria-label="Remove photo"
+        >
+          ✕
+        </button>
+      )}
+    </div>
+  );
+}
+
 /**
  * Binder → Gift list. The couple owns the wish list shown on the public /gifts page (and linked
- * from the Hub): add, word, reorder and remove items, release a claim made by mistake, and edit
- * the invite-code-free note that says monetary gifts are appreciated most.
+ * from the Hub): add and word items, upload a picture per gift, reorder, remove items, release a
+ * claim made by mistake, and edit the invite-code-free note that says monetary gifts are
+ * appreciated most.
  */
 export function GiftRegistry() {
   const { rows, save, del, error } = useTable("gift_items");
@@ -46,7 +86,7 @@ export function GiftRegistry() {
     const t = title.trim();
     if (!t) return;
     const order = items.reduce((m, g) => Math.max(m, g.order), -1) + 1;
-    save({ id: uid(), title: t, note: detail.trim(), claimed: false, claimed_by: "", claimed_at: null, order });
+    save({ id: uid(), title: t, note: detail.trim(), image_url: "", claimed: false, claimed_by: "", claimed_at: null, order });
     setTitle("");
     setDetail("");
   };
@@ -60,6 +100,10 @@ export function GiftRegistry() {
       { ...current, order: swapWith.order },
       { ...swapWith, order: current.order },
     ]);
+  };
+
+  const pickImage = async (g: GiftItem, file: File) => {
+    save({ ...g, image_url: await fileToDataUrl(file, 900) });
   };
 
   const persistNote = async (value: string) => {
@@ -108,7 +152,11 @@ export function GiftRegistry() {
 
       <Card className="mt-6">
         <Progress value={items.length ? ((items.length - open) / items.length) * 100 : 0} color="#4A5D23" />
-        <form onSubmit={add} className="flex flex-col md:flex-row gap-2 mt-6">
+        <p className="text-sm text-ink/50 mt-4">
+          A photo per gift becomes the visual guide guests see on /gifts. For sets (cookware, bundles), describe
+          everything included in the detail line — one claim crosses the whole item off.
+        </p>
+        <form onSubmit={add} className="flex flex-col md:flex-row gap-2 mt-4">
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -118,7 +166,7 @@ export function GiftRegistry() {
           <input
             value={detail}
             onChange={(e) => setDetail(e.target.value)}
-            placeholder="Optional detail (size, colour, shop…)"
+            placeholder="Optional detail (size, colour, what's included…)"
             className={`${inputCls} flex-[2]`}
           />
           <Btn type="submit" variant="dark">
@@ -128,8 +176,8 @@ export function GiftRegistry() {
 
         <ul className="mt-5 divide-y divide-ink/10">
           {items.map((g: GiftItem, i) => (
-            <li key={g.id} className="py-3 flex flex-wrap md:flex-nowrap items-center gap-3">
-              <div className="flex flex-col gap-1 shrink-0">
+            <li key={g.id} className="py-4 flex flex-wrap md:flex-nowrap items-start gap-3">
+              <div className="flex flex-col gap-1 shrink-0 pt-2">
                 <button
                   type="button"
                   aria-label="Move up"
@@ -149,6 +197,7 @@ export function GiftRegistry() {
                   ↓
                 </button>
               </div>
+              <GiftThumb gift={g} onPick={(f) => pickImage(g, f)} onRemove={() => save({ ...g, image_url: "" })} />
               <div className="flex-1 min-w-0">
                 <EditText
                   value={g.title}
@@ -158,9 +207,17 @@ export function GiftRegistry() {
                 />
                 <EditText
                   value={g.note}
-                  placeholder="Add a detail…"
+                  placeholder="Describe what's included — polite and specific…"
+                  multiline
+                  rows={2}
                   onSave={(v) => save({ ...g, note: v.trim() })}
                   className="text-sm text-taupe italic"
+                />
+                <EditText
+                  value={/^https?:/i.test(g.image_url) ? g.image_url : ""}
+                  placeholder="…or paste a link to a hosted photo instead of uploading"
+                  onSave={(v) => v.trim() && save({ ...g, image_url: v.trim() })}
+                  className="text-xs text-ink/50"
                 />
               </div>
               {g.claimed ? (
