@@ -469,11 +469,15 @@ two guests looking at the same list see it update within seconds. The server set
 conditional `WHERE claimed = false` update — the second guest gets a friendly "just bought by…"
 message instead of a double purchase. A guest can only release a claim made on the same device;
 the binder can release any of them. Above the list sits an editable, **public** note (default:
-monetary gifts are appreciated most to help the couple start their new life) — it must never carry
-account numbers, because the BenefitPay/IBAN details stay sealed behind personal invitation links
-(see the next section). Data lives in the `gift_items` table; `wedding_info.registry_note` holds
-the note — both added by the latest `supabase/schema.sql` (starter rows are included, and
-"push starter data" fills them on an existing project).
+monetary gifts are appreciated most to help the couple start their new life). When the couple has
+filled the BenefitPay number and/or IBAN in **Details → Note on Gifts**, `/gifts` also renders them
+as **tap-to-copy transfer rows** (with a "check the JSGotMarried account name" prompt): the generic
+data API still redacts those fields for sealed visitors, but the public `/api/gifts` endpoint
+deliberately serves them, since the couple chooses to print them on the registry. Blank fields hide
+the transfer card and the page instead points guests to their personal invitation link. Data lives
+in the `gift_items` table; `wedding_info.registry_note` holds the note — both added by the latest
+`supabase/schema.sql` (starter rows are included, and "push starter data" fills them on an existing
+project).
 
 ## Note on Gifts (BenefitPay)
 **Details → Note on Gifts** feeds a public section on the invitation site (after the FAQ, unlocked

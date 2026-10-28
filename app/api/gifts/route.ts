@@ -27,14 +27,26 @@ async function readBoard(db: Db) {
     if (!items.length) items = SEED.gift_items as GiftItem[];
   }
 
+  // The transfer details are deliberately served HERE, on the public registry endpoint, even
+  // though the generic data API keeps them sealed (lib/invite-gate.ts): the couple chooses to
+  // print them on /gifts, and this route hands back nothing else from wedding_info.
   let note = "";
+  let benefit = "";
+  let iban = "";
   const infoRes = await db
     .from("wedding_info")
-    .select("registry_note")
+    .select("registry_note, benefitpay_number, benefitpay_iban")
     .eq("id", "main")
     .maybeSingle();
-  if (!infoRes.error) note = String((infoRes.data as { registry_note?: string } | null)?.registry_note || "");
-  return { items, note: note || DEFAULT_REGISTRY_NOTE };
+  if (!infoRes.error && infoRes.data) {
+    const d = infoRes.data as { registry_note?: string; benefitpay_number?: string; benefitpay_iban?: string };
+    note = String(d.registry_note || "");
+    benefit = String(d.benefitpay_number || "").trim();
+    iban = String(d.benefitpay_iban || "").trim();
+  } else if (infoRes.error && !isMissingColumn(infoRes.error.message)) {
+    throw infoRes.error;
+  }
+  return { items, note: note || DEFAULT_REGISTRY_NOTE, benefit, iban };
 }
 
 /** GET /api/gifts — public, invite-code free: the registry is meant for every guest. */

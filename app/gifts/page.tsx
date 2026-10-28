@@ -7,6 +7,36 @@ import { DEFAULT_REGISTRY_NOTE, type GiftItem } from "@/lib/types";
 
 const POLL_MS = 8000;
 
+/** One tap-to-copy transfer row, mirroring the invitation's GiftDetail styling. */
+function CopyRow({ label, value, hint }: { label: string; value: string; hint: string }) {
+  const [copied, setCopied] = useState(false);
+  if (!value) return null;
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(value.replace(/\s+/g, ""));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      /* clipboard blocked on older browsers — long-press still works */
+    }
+  };
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      title="Tap to copy"
+      className="w-full text-left rounded-xl border border-taupe/25 bg-white/70 px-5 py-4 hover:border-wine/50 transition-colors group"
+    >
+      <div className="micro text-taupe tracking-[0.16em]">{label}</div>
+      <div className="flex items-center justify-between gap-3 mt-1">
+        <span className="font-serif text-h3 text-mocha break-all leading-snug">{value}</span>
+        <span className="micro shrink-0 text-wine opacity-80 group-hover:opacity-100">{copied ? "copied ✓" : "tap to copy"}</span>
+      </div>
+      <p className="font-serif italic text-[13px] text-taupe mt-1.5 leading-snug">{hint}</p>
+    </button>
+  );
+}
+
 /**
  * The public gift registry. No invitation code needed — every guest should be able to mark a
  * present bought. The board re-reads the server every few seconds (and whenever the tab comes
@@ -19,6 +49,8 @@ export default function GiftsPage() {
 
   const [items, setItems] = useState<GiftItem[]>([]);
   const [note, setNote] = useState(DEFAULT_REGISTRY_NOTE);
+  const [benefit, setBenefit] = useState("");
+  const [iban, setIban] = useState("");
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [askId, setAskId] = useState<string | null>(null);
@@ -30,6 +62,8 @@ export default function GiftsPage() {
     const board = await listGifts();
     setItems(board.items);
     setNote(board.note);
+    setBenefit(board.benefit);
+    setIban(board.iban);
     setLoading(false);
   }, []);
 
@@ -47,6 +81,9 @@ export default function GiftsPage() {
   }, [reload]);
 
   const couple = info?.bride && info?.groom ? `${info.groom} & ${info.bride}` : "the couple";
+  // In local/demo mode the API board carries no transfer fields — the table read holds the same ones.
+  const benefitNo = benefit || (info?.benefitpay_number || "").trim();
+  const ibanNo = iban || (info?.benefitpay_iban || "").trim();
   const open = items.filter((g) => !g.claimed);
   const taken = items.filter((g) => g.claimed);
   const pct = items.length ? Math.round((taken.length / items.length) * 100) : 0;
@@ -98,10 +135,32 @@ export default function GiftsPage() {
         <section className="mt-10 rounded-[22px] border border-wine/25 bg-wine/[0.05] p-7 md:p-8 text-center shadow-[0_12px_30px_-18px_rgba(110,31,46,.4)]">
           <span aria-hidden className="script text-wine text-3xl leading-none">♡</span>
           <p className="font-serif italic text-body text-mocha mt-3 leading-relaxed text-balance">{note}</p>
-          <p className="micro text-taupe mt-4 tracking-[0.14em]">
+        </section>
+
+        {/* One-tap transfer details — same fields the binder seals inside personal invitations,
+            printed here on purpose so any guest can give without hunting for their link. */}
+        {benefitNo || ibanNo ? (
+          <section className="mt-5 rounded-[22px] border border-taupe/25 bg-[#FCFAF6] p-6 md:p-7 shadow-[0_12px_30px_-18px_rgba(61,47,38,.45)]">
+            <p className="micro text-wine tracking-[0.22em] text-center">PREFER A TRANSFER?</p>
+            <div className="grid gap-3 mt-4">
+              <CopyRow
+                label="BENEFITPAY · MOBILE NUMBER"
+                value={benefitNo}
+                hint="Open BenefitPay, choose Send, then paste this number. The account is named JSGotMarried — please check the name before you confirm."
+              />
+              <CopyRow
+                label="BANK TRANSFER · IBAN"
+                value={ibanNo}
+                hint="For a bank transfer, paste this IBAN into your banking app — account name JSGotMarried."
+              />
+            </div>
+            <p className="micro text-taupe/80 text-center mt-4 tracking-[0.12em]">TAP A DETAIL TO COPY · THANK YOU, FROM THE BOTH OF US ✦</p>
+          </section>
+        ) : (
+          <p className="micro text-taupe mt-5 text-center tracking-[0.14em]">
             PREFER A TRANSFER? THE BENEFITPAY DETAILS ARE IN YOUR PERSONAL INVITATION LINK.
           </p>
-        </section>
+        )}
 
         {loading ? (
           <p className="text-center text-ink/45 font-serif italic mt-12">Opening the gift list…</p>

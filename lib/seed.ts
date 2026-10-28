@@ -36,8 +36,8 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     // Note on Gifts — left blank on purpose: the public section appears the moment the couple
     // fills any of these in (binder → Details → Note on Gifts).
     gift_note: "",
-    benefitpay_number: "",
-    benefitpay_iban: "",
+    benefitpay_number: "+973 33177332",
+    benefitpay_iban: "BH69BIBB00100003377119",
   }],
   schedule: [
     { id: "s1", time: "4:00 – 5:00 PM", title: "The Ceremony", detail: "An *intimate ceremony*, shared with our families, entourage and a few honoured guests. If your heart wants to witness us say “I do”, you are *warmly welcome to join* — open seating is available around our reserved rows.", order: 1 },

@@ -82,10 +82,12 @@ export function GiftRegistry() {
       </PageHead>
       {error && <p className="mb-4 text-sm text-burgundy">{error}</p>}
 
-      <Card title="The note above the list (public — no account numbers here)">
+      <Card title="The note above the list (public — no account numbers in this box)">
         <p className="text-sm text-ink/55 mb-3">
-          Shown to every guest on /gifts and from the homepage. BenefitPay and IBAN details stay private, inside
-          personal invitation links (Details tab).
+          Shown to every guest on /gifts and from the homepage. The BenefitPay number and IBAN are edited in the{" "}
+          <b>Details tab → Note on Gifts</b>; when filled, they also appear on the public /gifts page as tap-to-copy
+          rows, so guests can give without opening their personal link. Leave them blank there to hide the transfer
+          card completely.
         </p>
         {noteLoaded ? (
           <EditText

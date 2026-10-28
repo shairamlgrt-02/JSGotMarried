@@ -18,7 +18,14 @@ const ITEMS_KEY = "jsos:gift_items";
 const NOTE_KEY = "jsos:registry-note";
 const DEVICE_CLAIMS_KEY = "jsos:gift-claims-v1";
 
-export type GiftBoard = { items: GiftItem[]; note: string };
+export type GiftBoard = {
+  items: GiftItem[];
+  note: string;
+  /** Public BenefitPay number/account (mirrors the sealed Details field, served via /api/gifts). */
+  benefit: string;
+  /** Public IBAN for bank transfers, same source of truth as the sealed invitation fields. */
+  iban: string;
+};
 export type GiftActionResult = { ok: boolean; error?: string };
 
 /** Display order everywhere: the couple's `order`, then title. */
@@ -77,14 +84,22 @@ export async function listGifts(): Promise<GiftBoard> {
   const fallback = (): GiftBoard => ({
     items: readLocalItems(),
     note: readLocalNote() || DEFAULT_REGISTRY_NOTE,
+    // In local mode the generic table read (the page's useTable) already carries these fields.
+    benefit: "",
+    iban: "",
   });
   if ((await getMode()) === "local") return fallback();
   try {
     const r = await fetch("/api/gifts", { cache: "no-store" });
     if (!r.ok) return fallback();
-    const j = (await r.json()) as { items?: GiftItem[]; note?: string };
+    const j = (await r.json()) as { items?: GiftItem[]; note?: string; benefit?: string; iban?: string };
     const items = j.items?.length ? sortGifts(j.items) : readLocalItems();
-    return { items, note: j.note || DEFAULT_REGISTRY_NOTE };
+    return {
+      items,
+      note: j.note || DEFAULT_REGISTRY_NOTE,
+      benefit: (j.benefit || "").trim(),
+      iban: (j.iban || "").trim(),
+    };
   } catch {
     return fallback();
   }
