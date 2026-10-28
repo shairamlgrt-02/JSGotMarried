@@ -313,7 +313,7 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     { id: "g2", title: "Stand mixer", note: "The baking dream — for cakes, fresh bread and birthday treats in our new kitchen.", image_url: "", claimed: false, claimed_by: "", claimed_at: null, order: 1 },
     { id: "g3", title: "Blender", note: "A countertop blender for morning smoothies, soups and sauces.", image_url: "", claimed: false, claimed_by: "", claimed_at: null, order: 2 },
     { id: "g4", title: "Food processor", note: "With its chopping blade and slicing discs, to make everyday prep a little easier.", image_url: "", claimed: false, claimed_by: "", claimed_at: null, order: 3 },
-    { id: "g5", title: "Complete cookware set", note: "One matching set of cooking pots and pans with their lids, taken together as a set — so our kitchen starts with everything it needs rather than pieces from different homes.", image_url: "", claimed: false, claimed_by: "", claimed_at: null, order: 4 },
+    { id: "g5", title: "Complete cookware set", note: "For all the meals we hope to cook together — a matching set of pots and pans with their lids for our first kitchen. We would be so touched to receive it as a complete set.", image_url: "", claimed: false, claimed_by: "", claimed_at: null, order: 4 },
     { id: "g6", title: "Water dispenser", note: "A standing hot-and-cold water dispenser for the dining area.", image_url: "", claimed: false, claimed_by: "", claimed_at: null, order: 5 },
     { id: "g7", title: "Dinnerware set", note: "Twelve settings for hosting our favourite people — dinner plates, side plates and bowls.", image_url: "", claimed: false, claimed_by: "", claimed_at: null, order: 6 },
     { id: "g8", title: "King-size bed linen", note: "Crisp cotton bedding made for a king-size bed: a fitted sheet, flat sheet, pillowcases and a duvet cover.", image_url: "", claimed: false, claimed_by: "", claimed_at: null, order: 7 },
@@ -322,7 +322,8 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     { id: "g11", title: "Smart speaker", note: "A little smart speaker for music, timers and dancing in the kitchen.", image_url: "", claimed: false, claimed_by: "", claimed_at: null, order: 10 },
     { id: "g12", title: "Home décor bundle", note: "Towards the little touches that make a house a home — decorative vases, table lamps and ornaments. Any single piece from this bundle is welcome.", image_url: "", claimed: false, claimed_by: "", claimed_at: null, order: 11 },
     { id: "g13", title: "Soft linens bundle", note: "Soft furnishings for the home — bath and table linens, cushions and a throw or two.", image_url: "", claimed: false, claimed_by: "", claimed_at: null, order: 12 },
-    { id: "g14", title: "A night away for two", note: "A peaceful hotel stay for the two of us after the big day, breakfast included — our first little escape as a married couple.", image_url: "", claimed: false, claimed_by: "", claimed_at: null, order: 13 },
+    { id: "g14", title: "A night away for two", note: "A peaceful hotel stay for the two of us after the big day — our first little escape as a married couple.", image_url: "", claimed: false, claimed_by: "", claimed_at: null, order: 13 },
     { id: "g15", title: "Dinner date for two", note: "A reserved table for two at one of our favourite places — dinner, on you.", image_url: "", claimed: false, claimed_by: "", claimed_at: null, order: 14 },
+    { id: "g16", title: "Honeymoon trip", note: "For anyone feeling especially generous — a gift towards our honeymoon, the first big adventure of our married life. It would mean the absolute world to us.", image_url: "", claimed: false, claimed_by: "", claimed_at: null, order: 15 },
   ],
 };

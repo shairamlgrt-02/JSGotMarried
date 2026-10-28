@@ -269,7 +269,7 @@ insert into public.gift_items (id, title, note, image_url, claimed, claimed_by, 
   ('g2',  'Stand mixer',           'The baking dream — for cakes, fresh bread and birthday treats in our new kitchen.',                                                                                      '', false, '', null, 1),
   ('g3',  'Blender',               'A countertop blender for morning smoothies, soups and sauces.',                                                                                                            '', false, '', null, 2),
   ('g4',  'Food processor',        'With its chopping blade and slicing discs, to make everyday prep a little easier.',                                                                                       '', false, '', null, 3),
-  ('g5',  'Complete cookware set', 'One matching set of cooking pots and pans with their lids, taken together as a set — so our kitchen starts with everything it needs rather than pieces from different homes.', '', false, '', null, 4),
+  ('g5',  'Complete cookware set', 'For all the meals we hope to cook together — a matching set of pots and pans with their lids for our first kitchen. We would be so touched to receive it as a complete set.', '', false, '', null, 4),
   ('g6',  'Water dispenser',       'A standing hot-and-cold water dispenser for the dining area.',                                                                                                            '', false, '', null, 5),
   ('g7',  'Dinnerware set',        'Twelve settings for hosting our favourite people — dinner plates, side plates and bowls.',                                                                               '', false, '', null, 6),
   ('g8',  'King-size bed linen',   'Crisp cotton bedding made for a king-size bed: a fitted sheet, flat sheet, pillowcases and a duvet cover.',                                                                '', false, '', null, 7),
@@ -278,8 +278,9 @@ insert into public.gift_items (id, title, note, image_url, claimed, claimed_by, 
   ('g11', 'Smart speaker',         'A little smart speaker for music, timers and dancing in the kitchen.',                                                                                                    '', false, '', null, 10),
   ('g12', 'Home décor bundle',     'Towards the little touches that make a house a home — decorative vases, table lamps and ornaments. Any single piece from this bundle is welcome.',                          '', false, '', null, 11),
   ('g13', 'Soft linens bundle',    'Soft furnishings for the home — bath and table linens, cushions and a throw or two.',                                                                                     '', false, '', null, 12),
-  ('g14', 'A night away for two',  'A peaceful hotel stay for the two of us after the big day, breakfast included — our first little escape as a married couple.',                                              '', false, '', null, 13),
-  ('g15', 'Dinner date for two',   'A reserved table for two at one of our favourite places — dinner, on you.',                                                                                                '', false, '', null, 14)
+  ('g14', 'A night away for two',  'A peaceful hotel stay for the two of us after the big day — our first little escape as a married couple.',                                                                '', false, '', null, 13),
+  ('g15', 'Dinner date for two',   'A reserved table for two at one of our favourite places — dinner, on you.',                                                                                                '', false, '', null, 14),
+  ('g16', 'Honeymoon trip',        'For anyone feeling especially generous — a gift towards our honeymoon, the first big adventure of our married life. It would mean the absolute world to us.',             '', false, '', null, 15)
 on conflict (id) do nothing;
 
 -- Tell PostgREST to re-read the schema, so freshly added columns (guests.code, guests.approved,
