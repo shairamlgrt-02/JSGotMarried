@@ -68,6 +68,13 @@ export type SocialContext = {
   venueName: string;
   /** Whole days remaining — 0 on the day, negative afterwards, null if no date. */
   daysToGo: number | null;
+  /**
+   * Studio override for the Countdown card: when true the big number is left blank (a dashed ring
+   * marks the spot) so the couple can drop Instagram's own live countdown sticker on top.
+   */
+  countdownBlank?: boolean;
+  /** Studio override forcing a specific days-to-go number; null/undefined means "use daysToGo". */
+  countdownNumber?: number | null;
   attire: Attire[];
   faqs: Faq[];
   /** Decoded QR data URL image for the /upload page, preloaded so renderers stay synchronous. */
@@ -302,19 +309,48 @@ function countdownStory(ctx: SocialContext): HTMLCanvasElement {
   const { canvas, g } = storyCanvas();
   wineFill(g, STORY_W, STORY_H);
   const cx = STORY_W / 2;
-  const headline = ctx.daysToGo === null ? "The countdown is on" : ctx.daysToGo > 1 ? `${ctx.daysToGo} days to go` : ctx.daysToGo === 1 ? "One day to go" : ctx.daysToGo === 0 ? "Today is the day" : "Just married";
+  // The studio can blank the number (for Instagram's native sticker) or force one; otherwise it
+  // ticks automatically from the wedding date and the device clock.
+  const blank = ctx.countdownBlank === true;
+  const override =
+    typeof ctx.countdownNumber === "number" && Number.isFinite(ctx.countdownNumber) ? ctx.countdownNumber : null;
+  const value = blank ? null : override ?? ctx.daysToGo;
+  const headline =
+    value === null
+      ? "The countdown is on"
+      : value > 1
+        ? `${value} days to go`
+        : value === 1
+          ? "One day to go"
+          : value === 0
+            ? "Today is the day"
+            : "Just married";
   caps(g, "Counting every moment", cx, 330, 34, "rgba(252,250,245,0.78)", 0.4);
   fit(g, ctx.couple, cx, 500, 104, (s) => script(s), PAPER, 860);
-  if (ctx.daysToGo !== null && ctx.daysToGo > 0) {
+  if (value !== null && value > 0) {
     g.font = serif(360, "600");
     g.fillStyle = PAPER;
     g.textAlign = "center";
-    g.fillText(String(ctx.daysToGo), cx, 1010);
-  } else {
+    g.fillText(String(value), cx, 1010);
+  } else if (value === 0 || (value !== null && value < 0)) {
     g.font = script(220);
     g.fillStyle = PAPER;
     g.textAlign = "center";
-    g.fillText(ctx.daysToGo === 0 ? "today ♡" : "forever ♡", cx, 980);
+    g.fillText(value === 0 ? "today ♡" : "forever ♡", cx, 980);
+  } else {
+    // Blank mode: an elegant dashed ring marks where Instagram's own live countdown sticker goes.
+    g.save();
+    g.strokeStyle = "rgba(252,250,245,0.45)";
+    g.lineWidth = 3;
+    g.setLineDash([14, 16]);
+    g.beginPath();
+    g.arc(cx, 900, 235, 0, Math.PI * 2);
+    g.stroke();
+    g.restore();
+    g.font = script(150);
+    g.fillStyle = "rgba(252,250,245,0.85)";
+    g.textAlign = "center";
+    g.fillText("♡", cx, 952);
   }
   caps(g, headline.toUpperCase(), cx, 1180, 40, LACE, 0.34);
   caps(g, ctx.dateLabel, cx, 1280, 32, "rgba(252,250,245,0.75)", 0.34);
@@ -857,7 +893,7 @@ function highlightCovers(ctx: SocialContext): HTMLCanvasElement[] {
 
 export const SOCIAL_TEMPLATES: SocialTemplate[] = [
   { id: "save-date-story", title: "Save the Date", category: "Announcements", format: "story", blurb: "The classic announcement — names, 11.11, venue.", render: saveTheDateStory },
-  { id: "countdown-story", title: "Countdown", category: "Announcements", format: "story", blurb: "Auto-calculated days-to-go, redrawn every download.", render: countdownStory },
+  { id: "countdown-story", title: "Countdown", category: "Announcements", format: "story", blurb: "Auto-calculated from today's date — or blank it / set your own number in the countdown control above.", render: countdownStory },
   { id: "programme-series", title: "The Programme (3 stories)", category: "Programme", format: "story", blurb: "Cover, the full timeline, and who arrives when.", render: programmeSeries },
   { id: "attire-series", title: "What to Wear (2–3 stories)", category: "Attire", format: "story", blurb: "Cover with the dress note, the guest palette, and reserved family shades.", render: attireSeries },
   { id: "faq-series", title: "Questions Answered (1 + FAQs)", category: "FAQ", format: "story", blurb: "A cover plus one story per FAQ straight from your binder (first eight).", render: faqSeries },

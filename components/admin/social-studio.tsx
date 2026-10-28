@@ -17,6 +17,73 @@ import {
 } from "@/lib/social-studio";
 import type { Attire, Faq, WeddingInfo } from "@/lib/types";
 
+/** The Countdown card's three modes, remembered on this device between binder visits. */
+type CountdownMode = "auto" | "blank" | "custom";
+const CD_MODE_KEY = "jsos:countdown-mode-v1";
+const CD_NUM_KEY = "jsos:countdown-num-v1";
+const readMode = (): CountdownMode => {
+  const m = typeof localStorage !== "undefined" ? localStorage.getItem(CD_MODE_KEY) : null;
+  return m === "blank" || m === "custom" ? m : "auto";
+};
+
+/** Control for the Countdown story: automatic ticking, a blank sticker-ready ring, or a forced number. */
+function CountdownControl({ daysToGo, mode, setMode, num, setNum }: {
+  daysToGo: number | null;
+  mode: CountdownMode;
+  setMode: (m: CountdownMode) => void;
+  num: string;
+  setNum: (v: string) => void;
+}) {
+  const pill = (m: CountdownMode, label: string) => (
+    <button
+      type="button"
+      onClick={() => setMode(m)}
+      className={`label !text-[10px] rounded-full px-4 py-2 border transition-colors ${
+        mode === m ? "bg-wine text-lace border-wine" : "border-ink/15 text-ink/60 hover:border-wine"
+      }`}
+    >
+      {label}
+    </button>
+  );
+  return (
+    <Card title="Countdown card">
+      <div className="flex flex-wrap items-center gap-2">
+        {pill("auto", "Automatic")}
+        {pill("blank", "Blank (IG sticker)")}
+        {pill("custom", "Custom number")}
+        {mode === "custom" && (
+          <input
+            type="number"
+            min={0}
+            value={num}
+            onChange={(e) => setNum(e.target.value)}
+            placeholder={String(daysToGo ?? 0)}
+            className="w-24 bg-white/60 rounded-full px-4 py-2 outline-none border border-ink/10 focus:border-wine text-sm"
+          />
+        )}
+      </div>
+      <p className="text-xs text-ink/55 mt-3 leading-relaxed">
+        {mode === "auto" && (
+          <>
+            Automatic ticks with the calendar — downloaded today it reads{" "}
+            <b>{daysToGo === null ? "the countdown is on" : daysToGo === 0 ? "today is the day" : `${daysToGo} day${daysToGo === 1 ? "" : "s"} to go`}</b>.
+            A saved PNG is a still picture, so re-download this card on each posting day.
+          </>
+        )}
+        {mode === "blank" && (
+          <>
+            Blank leaves a dashed ring with no number — post it, then add Instagram&apos;s own <b>countdown sticker</b> on
+            top in the story editor; that one ticks live for every viewer.
+          </>
+        )}
+        {mode === "custom" && (
+          <>Forces whatever number you type (handy when batching several days of posts ahead of time). Leave it empty to fall back to automatic.</>
+        )}
+      </p>
+    </Card>
+  );
+}
+
 /* One template: cover thumb, page count, download-all, and an expandable page-by-page strip. */
 function TemplateCard({
   template,
@@ -133,6 +200,33 @@ export function SocialStudio() {
   const [ctx, setCtx] = useState<SocialContext | null>(null);
   const [fontsReady, setFontsReady] = useState(false);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
+  const [cdMode, setCdMode] = useState<CountdownMode>("auto");
+  const [cdNum, setCdNum] = useState("");
+
+  // Restore the countdown preference once, then keep localStorage in step with every change.
+  useEffect(() => {
+    setCdMode(readMode());
+    setCdNum(localStorage.getItem(CD_NUM_KEY) ?? "");
+  }, []);
+  const changeMode = (m: CountdownMode) => {
+    setCdMode(m);
+    localStorage.setItem(CD_MODE_KEY, m);
+  };
+  const changeNum = (v: string) => {
+    setCdNum(v);
+    localStorage.setItem(CD_NUM_KEY, v);
+  };
+
+  // The countdown card's context with the studio override applied; every other template is untouched.
+  const studioCtx = useMemo<SocialContext | null>(() => {
+    if (!ctx) return null;
+    const parsed = cdNum.trim() === "" ? null : Number(cdNum);
+    return {
+      ...ctx,
+      countdownBlank: cdMode === "blank",
+      countdownNumber: cdMode === "custom" && parsed !== null && Number.isFinite(parsed) ? parsed : null,
+    };
+  }, [ctx, cdMode, cdNum]);
 
   useEffect(() => {
     let live = true;
@@ -185,10 +279,12 @@ export function SocialStudio() {
         tallest size the grid accepts); highlight covers stay square for Instagram&apos;s circle crop.
       </p>
 
-      {!ctx && <div className="py-16 text-center text-ink/40 font-serif text-2xl italic">Preparing your templates…</div>}
+      {!studioCtx && <div className="py-16 text-center text-ink/40 font-serif text-2xl italic">Preparing your templates…</div>}
 
-      {ctx && (
+      {studioCtx && (
         <>
+          <CountdownControl daysToGo={studioCtx.daysToGo} mode={cdMode} setMode={changeMode} num={cdNum} setNum={changeNum} />
+
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -215,7 +311,7 @@ export function SocialStudio() {
 
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
             {templates.map((t) => (
-              <TemplateCard key={t.id} template={t} ctx={ctx} fontsReady={fontsReady} />
+              <TemplateCard key={t.id} template={t} ctx={studioCtx} fontsReady={fontsReady} />
             ))}
           </div>
         </>
