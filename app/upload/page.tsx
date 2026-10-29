@@ -1,5 +1,5 @@
 "use client";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useTable } from "@/lib/hooks";
@@ -229,6 +229,34 @@ function NamePromptDialog({ mode, initialName, onClose, onSave }: { mode: NamePr
   );
 }
 
+function StoryCardPreview({ media, fallback, tone }: { media: WeddingMoment["media"][number]; fallback: string; tone: ReturnType<typeof posterTone> }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!("IntersectionObserver" in window)) { setInView(true); return; }
+    const observer = new IntersectionObserver(([entry]) => setInView(Boolean(entry?.isIntersecting)), { rootMargin: "60px", threshold: 0.15 });
+    observer.observe(video);
+    return () => observer.disconnect();
+  }, [media.url]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (inView) void video.play().catch(() => undefined);
+    else video.pause();
+  }, [inView]);
+
+  return (
+    <>
+      <span className="absolute inset-0 grid place-items-center font-serif text-4xl" style={{ backgroundColor: tone.wash, color: tone.ink }}>{fallback}</span>
+      <video ref={videoRef} src={inView ? media.url : undefined} muted loop playsInline autoPlay preload="none" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />
+    </>
+  );
+}
+
 type StoryItem = {
   id: string;
   media: WeddingMoment["media"][number];
@@ -241,6 +269,7 @@ type StoryGroup = { key: string; displayName: string; items: StoryItem[]; latest
 
 function StoriesRail({ posts, displayName, onEdit, onDelete, onAddStory, uploadEnabled, uploading, progress }: { posts: WeddingMoment[]; displayName: string; onEdit: (post: WeddingMoment) => void; onDelete: (post: WeddingMoment) => void; onAddStory: () => void; uploadEnabled: boolean; uploading: boolean; progress: number }) {
   const [active, setActive] = useState<{ group: number; item: number } | null>(null);
+  const reduceMotion = useReducedMotion();
   const groups = useMemo(() => {
     const byName = new Map<string, StoryGroup>();
     for (const post of posts) {
@@ -317,30 +346,32 @@ function StoriesRail({ posts, displayName, onEdit, onDelete, onAddStory, uploadE
       </div>
 
       <div className="flex gap-2.5 overflow-x-auto pb-0.5 [scrollbar-width:thin]">
-        <button type="button" onClick={onAddStory} disabled={!uploadEnabled} aria-label="Add a Story"
-          className="relative flex h-[164px] w-[108px] shrink-0 flex-col overflow-hidden rounded-[15px] border border-[#E6D5CE] bg-white text-left shadow-sm transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50">
+        <motion.button type="button" onClick={onAddStory} disabled={!uploadEnabled} aria-label="Add a Story"
+          initial={reduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} whileHover={reduceMotion ? undefined : { y: -3, scale: 1.015 }} whileTap={reduceMotion ? undefined : { scale: 0.975 }} transition={{ duration: 0.22 }}
+          className="relative flex h-[164px] w-[108px] shrink-0 flex-col overflow-hidden rounded-[15px] border border-[#E6D5CE] bg-white text-left shadow-sm disabled:cursor-not-allowed disabled:opacity-50">
           <span className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-[radial-gradient(ellipse_at_35%_20%,#fff8ee_0%,#f5e7e2_54%,#e9d6d1_100%)]">
             <span className="absolute -right-5 -top-6 h-20 w-20 rounded-full border border-[#D4B1A7]/40" />
             <span className="absolute -bottom-8 -left-5 h-24 w-24 rounded-full border border-[#D4B1A7]/40" />
-            <span className="relative grid h-10 w-10 place-items-center rounded-full bg-[#6B1D2A] text-2xl font-light text-white shadow-md">{uploading ? "…" : "+"}</span>
+            <motion.span animate={uploading || reduceMotion ? { scale: 1 } : { scale: [1, 1.08, 1] }} transition={uploading || reduceMotion ? { duration: 0.2 } : { duration: 2.4, repeat: Infinity, ease: "easeInOut" }} className="relative grid h-10 w-10 place-items-center rounded-full bg-[#6B1D2A] text-2xl font-light text-white shadow-md">{uploading ? "…" : "+"}</motion.span>
           </span>
           <span className="flex h-[48px] flex-col justify-center px-2.5">
             <span className="text-[11px] font-semibold leading-tight text-[#46362C]">{uploading ? `Uploading ${progress}%` : "Add to Story"}</span>
             <span className="mt-0.5 text-[9px] leading-tight text-[#8A746E]">Photos &amp; videos</span>
           </span>
-        </button>
+        </motion.button>
 
         {groups.length ? groups.map((group, index) => {
           const first = group.items[0];
           const tone = posterTone(group.displayName);
           const initials = group.displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "♡";
           return (
-            <button key={group.key} type="button" onClick={() => setActive({ group: index, item: 0 })}
-              aria-label={`View ${group.displayName}'s Stories`} className="group relative h-[164px] w-[108px] shrink-0 overflow-hidden rounded-[15px] border border-black/5 bg-[#EDE4DF] text-left shadow-sm transition-transform hover:-translate-y-0.5">
+            <motion.button key={group.key} type="button" onClick={() => setActive({ group: index, item: 0 })}
+              aria-label={`View ${group.displayName}'s Stories`} initial={reduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} whileHover={reduceMotion ? undefined : { y: -3, scale: 1.015 }} whileTap={reduceMotion ? undefined : { scale: 0.975 }} transition={{ duration: 0.22, delay: Math.min(index * 0.045, 0.25) }}
+              className="group relative h-[164px] w-[108px] shrink-0 overflow-hidden rounded-[15px] border border-black/5 bg-[#EDE4DF] text-left shadow-sm">
               {first.media.contentType.startsWith("image/") ? (
-                <img src={first.media.url} alt="" className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" loading="lazy" />
+                <img src={first.media.url} alt="" className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" loading="lazy" />
               ) : (
-                <span className="absolute inset-0 grid place-items-center font-serif text-4xl" style={{ backgroundColor: tone.wash, color: tone.ink }}>{initials}</span>
+                <StoryCardPreview media={first.media} fallback={initials} tone={tone} />
               )}
               <span className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/75" />
               <span className="absolute left-2.5 top-2.5 grid h-8 w-8 place-items-center overflow-hidden rounded-full border-2 border-[#1684FF] bg-white font-serif text-xs font-semibold shadow-md" style={{ color: tone.ink }}>
@@ -348,7 +379,7 @@ function StoriesRail({ posts, displayName, onEdit, onDelete, onAddStory, uploadE
               </span>
               {group.items.some((item) => item.media.contentType.startsWith("video/")) && <span className="absolute right-2 top-2 grid h-6 w-6 place-items-center rounded-full bg-black/45 text-[10px] text-white">▶</span>}
               <span className="absolute inset-x-2 bottom-2.5 line-clamp-2 text-[11px] font-semibold leading-tight text-white drop-shadow">{group.displayName}</span>
-            </button>
+            </motion.button>
           );
         }) : [0, 1].map((placeholder) => (
           <div key={`story-placeholder-${placeholder}`} aria-hidden="true" className={`relative flex h-[164px] w-[108px] shrink-0 flex-col justify-between overflow-hidden rounded-[15px] border border-dashed border-[#D8C7C1] px-2.5 py-2.5 ${placeholder === 0 ? "bg-[#F5EEEA]" : "bg-[#F1F0EB]"}`}>
@@ -845,7 +876,7 @@ export default function UploadPage() {
 
         <StoriesRail posts={storyPosts} displayName={displayName} onEdit={setEditingPost} onDelete={(post) => void removePost(post)} onAddStory={openStoryPicker} uploadEnabled={configured && !posting} uploading={storyUploading} progress={uploadProgress} />
 
-        <section aria-label="Wedding group chat" className="mt-4 overflow-hidden rounded-[22px] border border-[#E3D1CB] bg-[#FFFCF8] shadow-[0_12px_32px_-22px_rgba(107,29,42,.5)]">
+        <section aria-label="Wedding conversation" className="mt-4 overflow-hidden rounded-[22px] border border-[#E3D1CB] bg-[#FFFCF8] shadow-[0_12px_32px_-22px_rgba(107,29,42,.5)]">
           <input ref={storyInput} type="file" accept="image/*,video/*,.heic,.heif,.mov" multiple hidden onChange={(event) => chooseStoryFiles(event.target.files)} />
           <input ref={galleryInput} type="file" accept={UPLOAD_ACCEPT} multiple hidden onChange={(event) => chooseFiles(event.target.files)} />
           <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={(event) => chooseFiles(event.target.files)} />
@@ -853,7 +884,7 @@ export default function UploadPage() {
           <div className="flex items-center justify-between gap-3 border-b border-[#E8DCD7] bg-white/75 px-4 py-3">
             <div className="flex min-w-0 items-center gap-2.5">
               <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#E9F2E7] text-lg text-[#526B56]" aria-hidden>♡</span>
-              <div className="min-w-0"><h2 className="font-serif text-xl leading-tight text-[#46362C]">Wedding group chat</h2><p className="text-[11px] text-taupe">Messages, photos, videos &amp; voice notes</p></div>
+              <div className="min-w-0"><h2 className="font-serif text-xl leading-tight text-[#46362C]">Wedding conversation</h2><p className="text-[11px] text-taupe">Chat, share updates &amp; relive the night</p></div>
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
               <button type="button" onClick={() => setNamePromptMode("edit")} title={displayName.trim() ? `Edit name: ${displayName}` : "Add your name"} aria-label={displayName.trim() ? `Edit your name, currently ${displayName}` : "Add your name"} className="flex max-w-[88px] items-center gap-1 truncate rounded-full border border-[#E3D1CB] bg-white/80 px-2 py-1 text-[9px] font-medium text-[#70434A] hover:bg-[#F7ECE9] sm:max-w-[120px] sm:text-[10px]">
@@ -873,7 +904,7 @@ export default function UploadPage() {
                 {posts.map((post) => <MomentCard key={post.id} post={post} expanded={expandedIds.has(post.id)} onExpand={() => setExpandedIds((current) => new Set(current).add(post.id))} onEdit={setEditingPost} onDelete={(item) => void removePost(item)} />)}
               </AnimatePresence>
             ) : !error ? (
-              <div className="m-auto max-w-sm py-6 text-center"><div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-full border border-[#D8C7C1] bg-white text-2xl text-[#9A604E]">✦</div><p className="font-serif text-xl text-[#6B1D2A]">Say hello to everyone</p><p className="mt-1 text-xs leading-relaxed text-ink/60">This is our wedding group chat. Send a note, share a photo or video, or leave a voice message.</p></div>
+              <div className="m-auto max-w-sm py-6 text-center"><div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-full border border-[#D8C7C1] bg-white text-2xl text-[#9A604E]">✦</div><p className="font-serif text-xl text-[#6B1D2A]">Say hello to everyone</p><p className="mt-1 text-xs leading-relaxed text-ink/60">Chat with everyone, share updates and keep the night’s memories together.</p></div>
             ) : <p className="m-auto rounded-xl bg-white/75 p-4 text-center text-sm text-ink/55">The group chat is getting ready. Please try refreshing in a moment.</p>}
             {unreadCount > 0 && <button type="button" onClick={() => { if (chatScroll.current) chatScroll.current.scrollTop = chatScroll.current.scrollHeight; setUnreadCount(0); }} className="sticky bottom-1 mx-auto rounded-full bg-[#6B1D2A] px-4 py-2 text-xs font-medium text-white shadow-lg">{unreadCount} new {unreadCount === 1 ? "message" : "messages"} ↓</button>}
           </div>
