@@ -70,7 +70,6 @@ export default function Hub({ info }: { info: WeddingInfo }) {
   const pages: PageTile[] = [
     { href: "/gifts", icon: "🎁", title: "Gift list", text: "Browse the wish list and mark a gift you have chosen.", label: "OPEN GIFTS", tone: "bg-[linear-gradient(145deg,#F5EBD6,#EDE0C8)] text-[#51432F]" },
     { href: "/upload", icon: "💬", title: "Upload Wedding Photos & Messages", text: "Post wedding photos, write messages and share voice notes with everyone.", label: "UPLOAD & POST", tone: "bg-[linear-gradient(145deg,#F5E4E1,#EBD6D3)] text-[#572F35]" },
-    { href: "/rsvp", icon: "💌", title: "Send your reply", text: "Let us know if you can celebrate with us. Your invite code is on your card.", label: "REPLY WITH MY CODE", tone: "bg-[linear-gradient(145deg,#762A3B,#551724)] text-[#FFF9F4]" },
     { href: "/preview", icon: "✉️", title: "Wedding invitation", text: "Revisit the full invitation, details and the story of our day.", label: "VIEW INVITATION", tone: "bg-[linear-gradient(145deg,#E9EEE5,#DDE7DA)] text-[#34463A]" },
     { href: "/games", icon: "🎟️", title: "Games & raffles", text: "Raffle numbers and party games will be here on the wedding day.", label: "OPENS NOVEMBER 11", tone: "bg-[linear-gradient(145deg,#EEE7F0,#E5DCE9)] text-[#51415A]" },
     ...(handle ? [{ href: `https://instagram.com/${handle}`, external: true, icon: "◎", title: "Follow along", text: `Countdown moments and behind-the-scenes from @${handle}.`, label: "OPEN INSTAGRAM", tone: "bg-[linear-gradient(145deg,#F4E3D9,#EED8C8)] text-[#654438]" }] : []),
