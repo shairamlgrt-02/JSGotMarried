@@ -53,6 +53,25 @@ const MOCHA = "#46362C";
 const sans = (size: number, weight: 300 | 400 | 500 = 400) => `${weight} ${size}px Jost, system-ui, sans-serif`;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** Calendar-day difference in Bahrain, not elapsed 24-hour blocks. */
+function bahrainDayOrdinal(date: Date): number {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Bahrain",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const value = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((p) => p.type === type)?.value);
+  return Date.UTC(value("year"), value("month") - 1, value("day")) / 86_400_000;
+}
+
+/** Exposed for deterministic countdown tests and preview tools. */
+export function daysUntilBahrainDate(target: string, now = new Date()): number | null {
+  const wedding = new Date(target);
+  if (!Number.isFinite(wedding.getTime())) return null;
+  return bahrainDayOrdinal(wedding) - bahrainDayOrdinal(now);
+}
+
 /* ───────────────────────── context ───────────────────────── */
 
 export type SocialContext = {
@@ -102,14 +121,19 @@ export async function buildSocialContext(
   let daysToGo: number | null = null;
   let fullDateLabel = "";
   if (info?.date) {
-    daysToGo = Math.ceil((new Date(info.date).getTime() - Date.now()) / 86_400_000);
-    fullDateLabel = new Date(info.date).toLocaleDateString("en-GB", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-      timeZone: "Asia/Bahrain",
-    });
+    const weddingDate = new Date(info.date);
+    if (Number.isFinite(weddingDate.getTime())) {
+      // Guests count calendar dates in Bahrain. A ceil of elapsed 24-hour blocks made Oct 29
+      // show 14 even though Nov 11 is 13 calendar days away; timezone + event-hour skew caused it.
+      daysToGo = daysUntilBahrainDate(info.date);
+      fullDateLabel = weddingDate.toLocaleDateString("en-GB", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        timeZone: "Asia/Bahrain",
+      });
+    }
   }
   return {
     couple: `${groom} & ${bride}`,

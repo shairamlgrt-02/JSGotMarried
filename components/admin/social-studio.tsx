@@ -202,6 +202,7 @@ export function SocialStudio() {
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [cdMode, setCdMode] = useState<CountdownMode>("auto");
   const [cdNum, setCdNum] = useState("");
+  const [calendarDayTick, setCalendarDayTick] = useState(0);
 
   // Restore the countdown preference once, then keep localStorage in step with every change.
   useEffect(() => {
@@ -216,6 +217,37 @@ export function SocialStudio() {
     setCdNum(v);
     localStorage.setItem(CD_NUM_KEY, v);
   };
+
+  // Rebuild the countdown at Bahrain midnight while the studio stays open, and when a sleeping
+  // tab becomes visible again. It is a calendar-day count, not a rolling 24-hour timer.
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    const scheduleMidnightRefresh = () => {
+      const now = new Date();
+      const parts = new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Asia/Bahrain",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).formatToParts(now);
+      const value = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((p) => p.type === type)?.value);
+      // Bahrain is UTC+3 year-round. A new Bahrain calendar day begins at 21:00 UTC.
+      const nextMidnight = Date.UTC(value("year"), value("month") - 1, value("day") + 1) - 3 * 60 * 60 * 1000;
+      timer = setTimeout(() => {
+        setCalendarDayTick(Date.now());
+        scheduleMidnightRefresh();
+      }, Math.max(1000, nextMidnight - now.getTime() + 250));
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") setCalendarDayTick(Date.now());
+    };
+    scheduleMidnightRefresh();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, []);
 
   // The countdown card's context with the studio override applied; every other template is untouched.
   const studioCtx = useMemo<SocialContext | null>(() => {
@@ -253,7 +285,7 @@ export function SocialStudio() {
     return () => {
       live = false;
     };
-  }, [info, attire, faqs, qrUrl]);
+  }, [info, attire, faqs, qrUrl, calendarDayTick]);
 
   const templates = useMemo(
     () => (category === "all" ? SOCIAL_TEMPLATES : SOCIAL_TEMPLATES.filter((t) => t.category === category)),
