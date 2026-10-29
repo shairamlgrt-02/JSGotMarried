@@ -12,7 +12,6 @@ type PageTile = {
   text: string;
   label: string;
   tone: string;
-  id?: string;
   external?: boolean;
 };
 
@@ -34,27 +33,27 @@ function CountdownBar({ date }: { date: string }) {
 function NavIcon({ name }: { name: "home" | "gifts" | "chat" | "preview" | "games" }) {
   const shared = { fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
   if (name === "home") return <svg viewBox="0 0 24 24" aria-hidden="true" {...shared}><path d="m3.5 10 8.5-7 8.5 7v10a1 1 0 0 1-1 1h-5.3v-6.5h-4.4V21H4.5a1 1 0 0 1-1-1z" /></svg>;
-  if (name === "gifts") return <svg viewBox="0 0 24 24" aria-hidden="true" {...shared}><rect x="4" y="3.5" width="16" height="17" rx="3" /><path d="M8 3.8v3m8-3v3M4.2 8h15.6M9 12l6 4m0-4-6 4" /></svg>;
+  if (name === "gifts") return <svg viewBox="0 0 24 24" aria-hidden="true" {...shared}><path d="M3 10h18v4H3zM5 14v7h14v-7M12 10v11" /><path d="M12 10H8.2C5 10 5 5.3 8 5.3c2.4 0 4 4.7 4 4.7Zm0 0h3.8c3.2 0 3.2-4.7.2-4.7-2.4 0-4 4.7-4 4.7Z" /></svg>;
   if (name === "chat") return <svg viewBox="0 0 24 24" aria-hidden="true" {...shared}><path d="M20.2 11.5a7.8 7.8 0 0 1-8.1 7.4 9 9 0 0 1-3.6-.8L4 20l1.3-3.8a7.2 7.2 0 0 1-1.5-4.5A7.8 7.8 0 0 1 12 4a7.8 7.8 0 0 1 8.2 7.5Z" /><path d="M8 11.5h.1m3.9 0h.1m3.9 0h.1" /></svg>;
-  if (name === "preview") return <svg viewBox="0 0 24 24" aria-hidden="true" {...shared}><circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 5 5" /></svg>;
-  return <svg viewBox="0 0 24 24" aria-hidden="true" {...shared}><circle cx="12" cy="12" r="9" /><circle cx="12" cy="9" r="3" /><path d="M6.7 18.7a5.9 5.9 0 0 1 10.6 0" /></svg>;
+  if (name === "preview") return <svg viewBox="0 0 24 24" aria-hidden="true" {...shared}><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m4 7 8 6 8-6" /><path d="M12 17s-3.2-1.9-3.2-3.8c0-1.6 2-2.1 3.2-.6 1.2-1.5 3.2-1 3.2.6 0 1.9-3.2 3.8-3.2 3.8Z" fill="currentColor" stroke="none" /></svg>;
+  return <svg viewBox="0 0 24 24" aria-hidden="true" {...shared}><path d="M6.5 9h11a4 4 0 0 1 3.8 5.2l-1 3.2a2.5 2.5 0 0 1-4.1 1.1L14 16h-4l-2.2 2.5a2.5 2.5 0 0 1-4.1-1.1l-1-3.2A4 4 0 0 1 6.5 9Z" /><path d="M7.5 11.5v4m-2-2h4m7.3-.5h.1m2 2h.1" /></svg>;
 }
 
 function BottomNav() {
   const nav = [
     { name: "home" as const, label: "Home", href: "/", active: true },
     { name: "gifts" as const, label: "Gifts", href: "/gifts" },
-    { name: "chat" as const, label: "Chat", href: "/upload" },
-    { name: "preview" as const, label: "Invite", href: "/preview" },
-    { name: "games" as const, label: "Games", href: "#games" },
+    { name: "chat" as const, label: "Chat & Post", href: "/upload" },
+    { name: "preview" as const, label: "Program", href: "/preview" },
+    { name: "games" as const, label: "Games", href: "/games" },
   ];
   return (
     <nav aria-label="Main navigation" className="fixed inset-x-0 bottom-0 z-50 border-t border-[#E3D6CE] bg-[#FFFCF7]/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_-20px_rgba(65,42,34,.55)] backdrop-blur-xl">
       <div className="mx-auto grid h-[62px] max-w-xl grid-cols-5 items-center px-2">
         {nav.map((item) => (
-          <a key={item.name} href={item.href} aria-label={item.name === "games" ? "Games and raffles" : item.label} aria-current={item.active ? "page" : undefined} className={`group flex h-full flex-col items-center justify-center gap-1 no-underline transition-colors ${item.active ? "text-[#6B1D2A]" : "text-[#87776F] hover:text-[#6B1D2A]"}`}>
+          <a key={item.name} href={item.href} aria-label={item.name === "games" ? "Games and raffles" : item.name === "preview" ? "Wedding invitation and program" : item.label} aria-current={item.active ? "page" : undefined} className={`group flex h-full flex-col items-center justify-center gap-1 no-underline transition-colors ${item.active ? "text-[#6B1D2A]" : "text-[#87776F] hover:text-[#6B1D2A]"}`}>
             <span className={`grid h-8 w-11 place-items-center rounded-full transition-colors ${item.active ? "bg-[#F2E4E0]" : "group-hover:bg-[#F7F0EA]"}`}><span className="h-[21px] w-[21px]"><NavIcon name={item.name} /></span></span>
-            <span className="text-[9px] font-medium tracking-[0.04em]">{item.label}</span>
+            <span className="whitespace-nowrap text-[8px] font-medium tracking-[0.02em] sm:text-[9px]">{item.label}</span>
           </a>
         ))}
       </div>
@@ -70,10 +69,10 @@ export default function Hub({ info }: { info: WeddingInfo }) {
 
   const pages: PageTile[] = [
     { href: "/gifts", icon: "🎁", title: "Gift list", text: "Browse the wish list and mark a gift you have chosen.", label: "OPEN GIFTS", tone: "bg-[linear-gradient(145deg,#F5EBD6,#EDE0C8)] text-[#51432F]" },
-    { href: "/upload", icon: "💬", title: "Wedding chat & Stories", text: "Say hello, share updates, photos, videos and voice notes.", label: "JOIN THE CHAT", tone: "bg-[linear-gradient(145deg,#F5E4E1,#EBD6D3)] text-[#572F35]" },
+    { href: "/upload", icon: "💬", title: "Upload Wedding Photos & Messages", text: "Post wedding photos, write messages and share voice notes with everyone.", label: "UPLOAD & POST", tone: "bg-[linear-gradient(145deg,#F5E4E1,#EBD6D3)] text-[#572F35]" },
     { href: "/rsvp", icon: "💌", title: "Send your reply", text: "Let us know if you can celebrate with us. Your invite code is on your card.", label: "REPLY WITH MY CODE", tone: "bg-[linear-gradient(145deg,#762A3B,#551724)] text-[#FFF9F4]" },
     { href: "/preview", icon: "✉️", title: "Wedding invitation", text: "Revisit the full invitation, details and the story of our day.", label: "VIEW INVITATION", tone: "bg-[linear-gradient(145deg,#E9EEE5,#DDE7DA)] text-[#34463A]" },
-    { href: "#games", icon: "🎟️", title: "Games & raffles", text: "Raffle numbers and party games will be here on the wedding day.", label: "OPENS NOVEMBER 11", tone: "bg-[linear-gradient(145deg,#EEE7F0,#E5DCE9)] text-[#51415A]", id: "games" },
+    { href: "/games", icon: "🎟️", title: "Games & raffles", text: "Raffle numbers and party games will be here on the wedding day.", label: "OPENS NOVEMBER 11", tone: "bg-[linear-gradient(145deg,#EEE7F0,#E5DCE9)] text-[#51415A]" },
     ...(handle ? [{ href: `https://instagram.com/${handle}`, external: true, icon: "◎", title: "Follow along", text: `Countdown moments and behind-the-scenes from @${handle}.`, label: "OPEN INSTAGRAM", tone: "bg-[linear-gradient(145deg,#F4E3D9,#EED8C8)] text-[#654438]" }] : []),
   ];
 
@@ -107,7 +106,6 @@ export default function Hub({ info }: { info: WeddingInfo }) {
           {pages.map((page, index) => (
             <a
               key={page.title}
-              id={page.id}
               href={page.href}
               target={page.external ? "_blank" : undefined}
               rel={page.external ? "noopener noreferrer" : undefined}
