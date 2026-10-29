@@ -143,6 +143,7 @@ export async function POST(req: NextRequest, { params }: { params: { table: stri
         { col: "greet", label: "Who it's for", ddl: "ALTER TABLE public.guests ADD COLUMN IF NOT EXISTS greet text DEFAULT '';" },
         { col: "note", label: "notes", ddl: "ALTER TABLE public.guests ADD COLUMN IF NOT EXISTS note text DEFAULT '';" },
         { col: "tags", label: "guest tags", ddl: "ALTER TABLE public.guests ADD COLUMN IF NOT EXISTS tags text DEFAULT '';" },
+        { col: "plus_one_tags", label: "plus-one tags", ddl: "ALTER TABLE public.guests ADD COLUMN IF NOT EXISTS plus_one_tags text NOT NULL DEFAULT '[]';" },
         { col: "role", label: "day-of role", ddl: "ALTER TABLE public.guests ADD COLUMN IF NOT EXISTS role text DEFAULT '';" },
         { col: "role_note", label: "role note", ddl: "ALTER TABLE public.guests ADD COLUMN IF NOT EXISTS role_note text DEFAULT '';" },
       ];

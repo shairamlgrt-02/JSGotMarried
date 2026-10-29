@@ -64,7 +64,7 @@ export function GiftRegistry() {
   useEffect(() => {
     let live = true;
     listGifts().then((b) => {
-      if (live) {
+      if (live && b) {
         // The API returns the default when the stored note is blank — show an empty editor instead.
         setNote(b.note === DEFAULT_REGISTRY_NOTE ? "" : b.note);
         setNoteLoaded(true);
@@ -153,8 +153,8 @@ export function GiftRegistry() {
       <Card className="mt-6">
         <Progress value={items.length ? ((items.length - open) / items.length) * 100 : 0} color="#4A5D23" />
         <p className="text-sm text-ink/50 mt-4">
-          A photo per gift becomes the visual guide guests see on /gifts. For sets (cookware, bundles), describe
-          everything included in the detail line — one claim crosses the whole item off.
+          Add an optional short, sweet note for each gift. The name is enough; there is no need to list product
+          specifications or everything inside a set.
         </p>
         <form onSubmit={add} className="flex flex-col md:flex-row gap-2 mt-4">
           <input
@@ -207,7 +207,7 @@ export function GiftRegistry() {
                 />
                 <EditText
                   value={g.note}
-                  placeholder="Describe what's included — polite and specific…"
+                  placeholder="Optional short, sweet note…"
                   multiline
                   rows={2}
                   onSave={(v) => save({ ...g, note: v.trim() })}

@@ -64,12 +64,12 @@ export type Guest = {
   /** First time the guest opened their personal link — the `opened` stage. */
   viewed_at?: string | null;
   /**
-   * Who this household belongs to — one or more tags from `GUEST_TAGS` (or the couple's own),
-   * stored as a CSV of tag ids so the column stays a plain `text` in Supabase. A maid of honor
-   * who is also the bride's cousin carries both, and each tag on its own is a group the couple
-   * can filter by and message. Replaces the old single `category`.
+   * Who this household's official guest belongs to — one or more group tags, stored as a CSV.
+   * Plus-ones have their own independent groups in `plus_one_tags`.
    */
   tags?: string;
+  /** JSON array of tag-id arrays aligned with the comma-separated names in `plus_one`. */
+  plus_one_tags?: string;
   /**
    * The household's day-of role — the task they are entrusted with on the wedding day ("usher",
    * "coffee_tea"…, or the couple's own words). One role per household; a preset id from
@@ -111,6 +111,35 @@ export const GUEST_TAGS = {
   neighbours:     { label: "Neighbours",         icon: "⌂" },
   online:         { label: "Online Friends",     icon: "☁" },
   vip:            { label: "VIP",                icon: "★" },
+
+  // Day-of teams — these are also in the message composer as role categories. The guest-tag
+  // versions let you classify a person entered in Guests & RSVP without creating a vendor row.
+  ushers_seating:          { label: "Ushers & Seating",          icon: "❦" },
+  registration_guestbook:  { label: "Registration & Guestbook",  icon: "✎" },
+  coffee_tea_station:      { label: "Coffee & Tea Station",      icon: "☕" },
+  snacks_refreshments:     { label: "Snacks & Refreshments",     icon: "◍" },
+  serveware_table_setup:   { label: "Serveware & Table Setup",   icon: "皿" },
+  souvenirs_tokens:        { label: "Souvenirs & Tokens",        icon: "❁" },
+  decor_setup_team:        { label: "Décor & Setup Team",        icon: "✿" },
+  sound_media_support:     { label: "Sound & Media Support",     icon: "♫" },
+  games_giveaways:         { label: "Games & Giveaways",         icon: "✧" },
+  photo_moments:           { label: "Photo Moments",            icon: "◎" },
+  kids_corner_keeper:      { label: "Kids' Corner Keeper",       icon: "☘" },
+  parking_directions:      { label: "Parking & Directions",     icon: "⌂" },
+  all_around_runner:       { label: "All-Around Runner",         icon: "✚" },
+  prayer_partner:          { label: "Prayer Partner",            icon: "✝" },
+  ring_bearer:             { label: "Ring Bearer",               icon: "◯" },
+  flower_girl:             { label: "Flower Girl",               icon: "❀" },
+
+  // Vendor/contact types — the guest-tag version is distinct from the Vendors-table recipient group.
+  vendor_all:              { label: "All Vendors",               icon: "◇" },
+  vendor_band_dj:          { label: "Band / DJ",                 icon: "♫" },
+  vendor_caterers:         { label: "Caterers",                  icon: "◈" },
+  vendor_venue:            { label: "Venue",                     icon: "⌂" },
+  vendor_photo_video:      { label: "Photo / Video",             icon: "◎" },
+  vendor_coordinator:      { label: "Coordinator",               icon: "◉" },
+  vendor_hmua:             { label: "HMUA",                      icon: "✧" },
+  vendor_dress_tailor:     { label: "Dress / Tailor",            icon: "✂" },
 } as const;
 
 export type GuestTagId = keyof typeof GUEST_TAGS;
@@ -136,6 +165,24 @@ export function parseGuestTags(csv: string | null | undefined): string[] {
 /** A list of tag ids → the CSV we store. Blanks and repeats never reach the database. */
 export function formatGuestTags(tags: string[]): string {
   return parseGuestTags(tags.join(",")).join(",");
+}
+
+/** Parse independent group tags for each plus-one, in the same order as `splitPlusOnes(plus_one)`. */
+export function parsePlusOneTags(value: string | null | undefined): string[][] {
+  if (!value) return [];
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return Array.isArray(parsed)
+      ? parsed.map((tags) => Array.isArray(tags) ? parseGuestTags(tags.map(String).join(",")) : [])
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Serialize per-companion tags without allowing duplicate or blank ids. */
+export function formatPlusOneTags(tags: string[][]): string {
+  return JSON.stringify(tags.map((group) => parseGuestTags(group.join(","))));
 }
 
 /** Preset tags read "Bride's Family"; a custom tag shows the words that were typed. */

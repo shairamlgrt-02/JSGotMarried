@@ -6,7 +6,7 @@ import { entourageGroups } from "@/lib/entourage";
 import { STATUS, cleanInviteNote, formatDateTimeStamp, genCodeFor, inviteHref, inviteLink, inviteMessage, inviteStatus, joinPlusOnes, MAX_RSVP_SEATS, mergeHousehold, normalizeLinkSearch, planHouseholdMerges, splitPlusOnes, tallyInvites, cleanCode, whatsappHref, whoIsItFor, type InviteText } from "@/lib/guests";
 import { useCountdown, useTable } from "@/lib/hooks";
 import type { Attending, Attire, BudgetItem, BudgetStatus, ChecklistItem, EntourageMember, Guest, Priority, ScheduleItem, StoryChapter, Vendor, VendorStatus } from "@/lib/types";
-import { ENTOURAGE_ROLES, GUEST_TAG_IDS, TABLES, formatGuestTags, guestTagIcon, guestTagIdFor, guestTagLabel, isPresetGuestTag, parseGuestTags, sortGuestTagIds } from "@/lib/types";
+import { ENTOURAGE_ROLES, GUEST_TAG_IDS, TABLES, formatGuestTags, formatPlusOneTags, guestTagIcon, guestTagIdFor, guestTagLabel, isPresetGuestTag, parseGuestTags, parsePlusOneTags, sortGuestTagIds } from "@/lib/types";
 import { guestTagCategoryId } from "@/lib/messaging";
 import { Btn, Card, Donut, EditText, PageHead, Progress, Select, Stat, Tag, download, fileToDataUrl, money, toCsv } from "./ui";
 
@@ -443,6 +443,8 @@ type GuestEntry = {
   companionName: string;
   invitedAs: string;
   idx: number;
+  /** This person's own group tags (official guest or the corresponding plus-one). */
+  tagIds: string[];
   /** Which extra guest this row is, when the household is more than two (0 = the first plus-one). */
   companionIndex?: number;
 };
@@ -487,6 +489,7 @@ export function Guests({ go }: { go: (tab: string) => void }) {
         companionName: companions.join(", "),
         invitedAs,
         idx: idx * 8,
+        tagIds: parseGuestTags(g.tags),
       });
       if (expandPlusOnes) {
         companions.forEach((name, i) => {
@@ -498,6 +501,7 @@ export function Guests({ go }: { go: (tab: string) => void }) {
             companionName: primaryName,
             invitedAs,
             idx: idx * 8 + i + 1,
+            tagIds: parsePlusOneTags(g.plus_one_tags)[i] ?? [],
             companionIndex: i,
           });
         });
@@ -526,42 +530,41 @@ export function Guests({ go }: { go: (tab: string) => void }) {
         if (detailFilter === "message") return Boolean((g.message || "").trim());
         return true;
       })
-      .filter(({ g, displayName, companionName, invitedAs }) => {
+      .filter(({ g, displayName, companionName, invitedAs, tagIds }) => {
         if (!query) return true;
-        // tag labels are searchable too, so "work" finds everyone tagged ▤ Work/Colleagues
-        const tags = sortGuestTagIds(parseGuestTags(g.tags)).map(guestTagLabel).join(" ");
+        // Each expanded row searches its own tags, so a plus-one's tag needn't match the household's.
+        const tags = sortGuestTagIds(tagIds).map(guestTagLabel).join(" ");
         const haystack = `${displayName} ${companionName} ${invitedAs} ${g.name ?? ""} ${g.plus_one ?? ""} ${g.greet ?? ""} ${g.phone ?? ""} ${g.code ?? ""} ${cleanInviteNote(g.note)} ${g.dietary ?? ""} ${g.song_request ?? ""} ${g.message ?? ""} ${tags}`.toLowerCase();
         return haystack.includes(query);
       });
   }, [entries, filter, detailFilter, q]);
 
-  /** Households per tag — one household counts once even when its plus-one is on its own row. */
+  /** Per-person tag counts when plus-ones are expanded; per-household when the list is collapsed. */
   const tagCounts = useMemo(() => {
     const counts = new Map<string, number>();
     let untagged = 0;
-    const seen = new Set<string>();
-    for (const { g } of matching) {
-      if (seen.has(g.id)) continue;
-      seen.add(g.id);
-      const tags = parseGuestTags(g.tags);
-      if (!tags.length) { untagged++; continue; }
-      for (const id of tags) counts.set(id, (counts.get(id) ?? 0) + 1);
+    for (const { tagIds } of matching) {
+      if (!tagIds.length) { untagged++; continue; }
+      for (const id of tagIds) counts.set(id, (counts.get(id) ?? 0) + 1);
     }
-    return { counts, untagged, total: seen.size };
+    return { counts, untagged, total: matching.length };
   }, [matching]);
 
   /** Tags the couple typed themselves, so they are filterable exactly like the presets. */
   const customTagIds = useMemo(() => {
     const found = new Set<string>();
-    for (const g of rows) for (const id of parseGuestTags(g.tags)) if (!isPresetGuestTag(id)) found.add(id);
+    for (const g of rows) {
+      for (const id of parseGuestTags(g.tags)) if (!isPresetGuestTag(id)) found.add(id);
+      for (const personTags of parsePlusOneTags(g.plus_one_tags))
+        for (const id of personTags) if (!isPresetGuestTag(id)) found.add(id);
+    }
     return sortGuestTagIds([...found]);
   }, [rows]);
 
   const shown = useMemo(() => {
-    const list = tagFilter === "all" ? matching : matching.filter(({ g }) => {
-      const tags = parseGuestTags(g.tags);
-      return tagFilter === "untagged" ? !tags.length : tags.includes(tagFilter.slice(4));
-    });
+    const list = tagFilter === "all" ? matching : matching.filter(({ tagIds }) =>
+      tagFilter === "untagged" ? !tagIds.length : tagIds.includes(tagFilter.slice(4)),
+    );
     return list
       .sort((a, b) => {
         const timeA = a.g.created_at ?? "";
@@ -624,9 +627,9 @@ export function Guests({ go }: { go: (tab: string) => void }) {
 
   const exportCsv = () => {
     const sourceList = shown.length ? shown : entries;
-    const csvRows = sourceList.map(({ g, role, displayName, companionName, invitedAs }) => {
-      // every tag the household carries, in the binder's order, so the sheet reads like the table
-      const tags = sortGuestTagIds(parseGuestTags(g.tags)).map(guestTagLabel).join("; ");
+    const csvRows = sourceList.map(({ g, role, displayName, companionName, invitedAs, tagIds }) => {
+      // Each row exports the same person's own tags shown beside their name.
+      const tags = sortGuestTagIds(tagIds).map(guestTagLabel).join("; ");
       return {
         guest_name: displayName || "(Unnamed guest)",
         guest_type: role === "plus_one" ? "Plus-one (Official Guest)" : "Primary Guest",
@@ -827,7 +830,7 @@ export function Guests({ go }: { go: (tab: string) => void }) {
               <th />
             </tr></thead>
             <tbody className="divide-y divide-ink/10">
-              {shown.map(({ key, g, role, displayName, companionName, invitedAs, companionIndex }) => {
+              {shown.map(({ key, g, role, displayName, companionName, invitedAs, companionIndex, tagIds }) => {
                 const isPlusOneRow = role === "plus_one";
                 const companionAt = companionIndex ?? 0;
                 /** Rewrite one name in the household's `plus_one` list, keeping the others in order. */
@@ -839,10 +842,29 @@ export function Guests({ go }: { go: (tab: string) => void }) {
                   // seats follow the names: two extra guests means a party of three
                   save({ ...g, plus_one: joinPlusOnes(clean), pax: Math.max(Number(g.pax) || 1, clean.length + 1) });
                 };
+                const setCompanionTags = (i: number, nextTags: string[]) => {
+                  const names = splitPlusOnes(g.plus_one);
+                  const groups = parsePlusOneTags(g.plus_one_tags);
+                  while (groups.length < names.length) groups.push([]);
+                  groups[i] = nextTags;
+                  save({ ...g, plus_one_tags: formatPlusOneTags(groups.slice(0, names.length)) });
+                };
+                const setCompanionNames = (value: string) => {
+                  const names = splitPlusOnes(value);
+                  const groups = parsePlusOneTags(g.plus_one_tags).slice(0, names.length);
+                  while (groups.length < names.length) groups.push([]);
+                  save({
+                    ...g,
+                    plus_one: joinPlusOnes(names),
+                    plus_one_tags: formatPlusOneTags(groups),
+                    pax: names.length ? Math.max(Number(g.pax) || 1, names.length + 1) : Number(g.pax) || 1,
+                  });
+                };
                 const removeCompanion = (i: number) => {
                   const names = splitPlusOnes(g.plus_one).filter((_, x) => x !== i);
+                  const groups = parsePlusOneTags(g.plus_one_tags).filter((_, x) => x !== i);
                   const left = Math.max(1, (Number(g.pax) || 1) - 1);
-                  save({ ...g, plus_one: joinPlusOnes(names), pax: left });
+                  save({ ...g, plus_one: joinPlusOnes(names), plus_one_tags: formatPlusOneTags(groups), pax: left });
                 };
                 return (
                   <tr key={key} className={`align-top ${isPlusOneRow ? "bg-wine/[0.03]" : ""}`}>
@@ -880,8 +902,7 @@ export function Guests({ go }: { go: (tab: string) => void }) {
                           value={g.plus_one ?? ""}
                           placeholder={Number(g.pax) >= 3 ? "Extra guests (comma-separated)" : Number(g.pax) >= 2 ? "Plus-one name" : "Add plus-one…"}
                           onSave={(v) => {
-                            const names = splitPlusOnes(v);
-                            save({ ...g, plus_one: joinPlusOnes(names), pax: names.length ? Math.max(Number(g.pax) || 1, names.length + 1) : Number(g.pax) || 1 });
+                            setCompanionNames(v);
                           }}
                           className="text-ink/75"
                         />
@@ -904,11 +925,12 @@ export function Guests({ go }: { go: (tab: string) => void }) {
                       <Select value={g.attending} options={ATT} onChange={(v) => save({ ...g, attending: v })} />
                     </td>
                     <td className="px-1 min-w-[200px] max-w-[280px]">
-                      {isPlusOneRow ? (
-                        <div className="px-2 py-1.5 text-xs text-ink/50 italic">—</div>
-                      ) : (
-                        <GuestTagsCell tags={parseGuestTags(g.tags)} onChange={(next) => save({ ...g, tags: formatGuestTags(next) })} />
-                      )}
+                      <GuestTagsCell
+                        tags={tagIds}
+                        onChange={(next) => isPlusOneRow
+                          ? setCompanionTags(companionAt, next)
+                          : save({ ...g, tags: formatGuestTags(next) })}
+                      />
                     </td>
                     <td className="px-1 min-w-[130px]"><EditText value={g.dietary} placeholder="None" onSave={(v) => save({ ...g, dietary: v })} /></td>
                     <td className="px-1 min-w-[130px]"><EditText value={g.song_request} placeholder="—" onSave={(v) => save({ ...g, song_request: v })} /></td>
@@ -1092,7 +1114,7 @@ export function Content() {
   async function refreshFaq() {
     if (!confirm(
       "Refresh the standard questions with the latest wording?\n\n" +
-      "· The standard questions (ceremony, plus-one, dress code, kids, parking, photos) are rewritten with the newest copy — use this when the dress code or the kids' policy changes.\n" +
+      "· The standard questions (ceremony, livestream, plus-one, dress code, kids, parking, photos) are rewritten with the newest copy.\n" +
       "· A standard question you deleted comes back.\n" +
       "· Questions you wrote yourself are never touched."
     )) return;

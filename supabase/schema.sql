@@ -42,6 +42,9 @@ create table if not exists guests (
 alter table guests add column if not exists code text default '';
 alter table guests add column if not exists approved boolean default null;
 alter table guests add column if not exists plus_one text default '';
+-- Independent category tags for each named plus-one, in the same order as `plus_one` names.
+-- JSON string keeps the older household row shape while letting the binder edit individuals.
+alter table guests add column if not exists plus_one_tags text not null default '[]';
 -- The invite-code ledger (Invite codes tab): `sent_at` is when the link left the binder (you
 -- copied or sent it), `viewed_at` is stamped by the server the first time a guest opens the
 -- link, and `note` is your own reminder about the household. All three are optional — the app
@@ -161,13 +164,32 @@ on conflict (id) do update set
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
 
--- Anon may INSERT only, and only into this bucket. No SELECT/UPDATE/DELETE policy exists, so the
--- default-deny of RLS keeps every uploaded object invisible to other guests.
+-- Anon may INSERT only into this bucket. No direct SELECT/UPDATE/DELETE policy exists; published
+-- moments are browsed only through /api/moments, which verifies post metadata and issues short-lived
+-- signed URLs. Unattached uploads remain unlistable and unreadable to guests.
 drop policy if exists "anon can insert wedding media" on storage.objects;
 create policy "anon can insert wedding media"
   on storage.objects for insert
   to anon
   with check (bucket_id = 'wedding-media');
+
+-- Public social-style guest moments (/upload). Media remains in the private bucket; the server
+-- reads this metadata and emits short-lived signed URLs. Guests can create posts only through
+-- /api/moments, which validates uploaded object paths; no anon SELECT/UPDATE/DELETE is granted.
+create table if not exists public.wedding_moments (
+  id uuid primary key default gen_random_uuid(),
+  device_id text not null,
+  display_name text not null default 'A guest',
+  body text not null default '',
+  overlay_text text not null default '',
+  media jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now()
+);
+create index if not exists wedding_moments_created_at_idx on public.wedding_moments (created_at desc);
+create index if not exists wedding_moments_device_created_idx on public.wedding_moments (device_id, created_at desc);
+alter table public.wedding_moments enable row level security;
+revoke all on public.wedding_moments from anon, authenticated;
+grant all on public.wedding_moments to service_role;
 
 -- ── attire palette (round 22): Garnet goes to the Maid of Honor, the Matron of Honor and the bride's
 -- sister-in-law; the four bridesmaids wear Turquoise, Citrine, Sapphire and Ruby (Amethyst retired) ──
@@ -261,26 +283,49 @@ grant all on public.gift_items to service_role;
 -- fields, visible only inside a personal invitation link (see lib/invite-gate.ts).
 alter table public.wedding_info add column if not exists registry_note text not null default '';
 
+-- Refresh only the original starter descriptions that are still untouched. This preserves any
+-- wording the couple has already customized, while making this update safe to run repeatedly.
+update public.gift_items as g
+set note = revised.new_note
+from (values
+  ('g1', 'For slow mornings together at home — a compact machine with a milk frother would be lovely.', 'For slow mornings and little moments together in our first home. Thank you for helping make them special.'),
+  ('g2', 'The baking dream — for cakes, fresh bread and birthday treats in our new kitchen.', 'For baking sweet things together and sharing them with the people we love.'),
+  ('g3', 'A countertop blender for morning smoothies, soups and sauces.', 'For all the little kitchen moments we will share in our first home. Thank you for thinking of us.'),
+  ('g4', 'With its chopping blade and slicing discs, to make everyday prep a little easier.', 'For the meals and memories we will make together. We are so grateful for your kindness.'),
+  ('g5', 'For all the meals we hope to cook together — a matching set of pots and pans with their lids for our first kitchen. We would be so touched to receive it as a complete set.', 'For the meals we will share in our first home. We are so grateful for your kindness.'),
+  ('g6', 'A standing hot-and-cold water dispenser for the dining area.', 'A thoughtful addition to our home and a little comfort to share each day. Thank you!'),
+  ('g7', 'Twelve settings for hosting our favourite people — dinner plates, side plates and bowls.', 'For gathering around the table with the people we love. Thank you for being part of our new beginning.'),
+  ('g8', 'Crisp cotton bedding made for a king-size bed: a fitted sheet, flat sheet, pillowcases and a duvet cover.', 'For cozy nights and restful mornings in our new home. Thank you for your kindness.'),
+  ('g9', 'A large rug to anchor the living room — warm, neutral tones to suit a vintage-lace home.', 'To make our home feel warm and welcoming. We are grateful for your love and support.'),
+  ('g10', 'A soundbar or connected home speaker to pair with the television, for film nights and living-room dancing.', 'For movie nights, music and laughter in our home. Thank you for celebrating with us.'),
+  ('g11', 'A little smart speaker for music, timers and dancing in the kitchen.', 'For music, laughter and lovely moments in our first home. Thank you for thinking of us.'),
+  ('g12', 'Towards the little touches that make a house a home — decorative vases, table lamps and ornaments. Any single piece from this bundle is welcome.', 'For the little touches that make a house feel like home. Thank you for helping us begin.'),
+  ('g13', 'Soft furnishings for the home — bath and table linens, cushions and a throw or two.', 'For making our home a little softer and cozier. We are so grateful for your love.'),
+  ('g14', 'A peaceful hotel stay for the two of us after the big day — our first little escape as a married couple.', 'A little time away together after the celebrations. Thank you for making it extra special.'),
+  ('g15', 'A reserved table for two at one of our favourite places — dinner, on you.', 'A lovely meal for two as we celebrate this new chapter. We are so grateful.'),
+  ('g16', 'For anyone feeling especially generous — a gift towards our honeymoon, the first big adventure of our married life. It would mean the absolute world to us.', 'A gift toward our first adventure as a married couple. Your kindness means so much to us.')
+) as revised(id, old_note, new_note)
+where g.id = revised.id and g.note = revised.old_note;
+
 -- Starter wishes — "push starter data" also fills these if the table is created empty; the
--- conflict guard means re-running the schema never resurrects an item the couple deleted, and
--- never overwrites wording or pictures they have edited.
+-- conflict guard means re-running the schema never resurrects an item the couple deleted.
 insert into public.gift_items (id, title, note, image_url, claimed, claimed_by, claimed_at, "order") values
-  ('g1',  'Espresso machine',      'For slow mornings together at home — a compact machine with a milk frother would be lovely.',                                                                          '', false, '', null, 0),
-  ('g2',  'Stand mixer',           'The baking dream — for cakes, fresh bread and birthday treats in our new kitchen.',                                                                                      '', false, '', null, 1),
-  ('g3',  'Blender',               'A countertop blender for morning smoothies, soups and sauces.',                                                                                                            '', false, '', null, 2),
-  ('g4',  'Food processor',        'With its chopping blade and slicing discs, to make everyday prep a little easier.',                                                                                       '', false, '', null, 3),
-  ('g5',  'Complete cookware set', 'For all the meals we hope to cook together — a matching set of pots and pans with their lids for our first kitchen. We would be so touched to receive it as a complete set.', '', false, '', null, 4),
-  ('g6',  'Water dispenser',       'A standing hot-and-cold water dispenser for the dining area.',                                                                                                            '', false, '', null, 5),
-  ('g7',  'Dinnerware set',        'Twelve settings for hosting our favourite people — dinner plates, side plates and bowls.',                                                                               '', false, '', null, 6),
-  ('g8',  'King-size bed linen',   'Crisp cotton bedding made for a king-size bed: a fitted sheet, flat sheet, pillowcases and a duvet cover.',                                                                '', false, '', null, 7),
-  ('g9',  'Living room carpet',    'A large rug to anchor the living room — warm, neutral tones to suit a vintage-lace home.',                                                                                '', false, '', null, 8),
-  ('g10', 'TV soundbar',           'A soundbar or connected home speaker to pair with the television, for film nights and living-room dancing.',                                                              '', false, '', null, 9),
-  ('g11', 'Smart speaker',         'A little smart speaker for music, timers and dancing in the kitchen.',                                                                                                    '', false, '', null, 10),
-  ('g12', 'Home décor bundle',     'Towards the little touches that make a house a home — decorative vases, table lamps and ornaments. Any single piece from this bundle is welcome.',                          '', false, '', null, 11),
-  ('g13', 'Soft linens bundle',    'Soft furnishings for the home — bath and table linens, cushions and a throw or two.',                                                                                     '', false, '', null, 12),
-  ('g14', 'A night away for two',  'A peaceful hotel stay for the two of us after the big day — our first little escape as a married couple.',                                                                '', false, '', null, 13),
-  ('g15', 'Dinner date for two',   'A reserved table for two at one of our favourite places — dinner, on you.',                                                                                                '', false, '', null, 14),
-  ('g16', 'Honeymoon trip',        'For anyone feeling especially generous — a gift towards our honeymoon, the first big adventure of our married life. It would mean the absolute world to us.',             '', false, '', null, 15)
+  ('g1',  'Espresso machine',      'For slow mornings and little moments together in our first home. Thank you for helping make them special.',                                      '', false, '', null, 0),
+  ('g2',  'Stand mixer',           'For baking sweet things together and sharing them with the people we love.',                                                                      '', false, '', null, 1),
+  ('g3',  'Blender',               'For all the little kitchen moments we will share in our first home. Thank you for thinking of us.',                                               '', false, '', null, 2),
+  ('g4',  'Food processor',        'For the meals and memories we will make together. We are so grateful for your kindness.',                                                          '', false, '', null, 3),
+  ('g5',  'Complete cookware set', 'For the meals we will share in our first home. We are so grateful for your kindness.',                                                            '', false, '', null, 4),
+  ('g6',  'Water dispenser',       'A thoughtful addition to our home and a little comfort to share each day. Thank you!',                                                             '', false, '', null, 5),
+  ('g7',  'Dinnerware set',        'For gathering around the table with the people we love. Thank you for being part of our new beginning.',                                           '', false, '', null, 6),
+  ('g8',  'King-size bed linen',   'For cozy nights and restful mornings in our new home. Thank you for your kindness.',                                                                '', false, '', null, 7),
+  ('g9',  'Living room carpet',    'To make our home feel warm and welcoming. We are grateful for your love and support.',                                                             '', false, '', null, 8),
+  ('g10', 'TV soundbar',           'For movie nights, music and laughter in our home. Thank you for celebrating with us.',                                                             '', false, '', null, 9),
+  ('g11', 'Smart speaker',         'For music, laughter and lovely moments in our first home. Thank you for thinking of us.',                                                          '', false, '', null, 10),
+  ('g12', 'Home décor bundle',     'For the little touches that make a house feel like home. Thank you for helping us begin.',                                                        '', false, '', null, 11),
+  ('g13', 'Soft linens bundle',    'For making our home a little softer and cozier. We are so grateful for your love.',                                                               '', false, '', null, 12),
+  ('g14', 'A night away for two',  'A little time away together after the celebrations. Thank you for making it extra special.',                                                     '', false, '', null, 13),
+  ('g15', 'Dinner date for two',   'A lovely meal for two as we celebrate this new chapter. We are so grateful.',                                                                     '', false, '', null, 14),
+  ('g16', 'Honeymoon trip',        'A gift toward our first adventure as a married couple. Your kindness means so much to us.',                                                       '', false, '', null, 15)
 on conflict (id) do nothing;
 
 -- Tell PostgREST to re-read the schema, so freshly added columns (guests.code, guests.approved,

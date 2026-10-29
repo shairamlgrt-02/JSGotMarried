@@ -1,0 +1,61 @@
+export type MomentMedia = {
+  url: string;
+  contentType: string;
+};
+
+export type WeddingMoment = {
+  id: string;
+  displayName: string;
+  body: string;
+  overlayText: string;
+  media: MomentMedia[];
+  createdAt: string;
+};
+
+export type MomentPage = {
+  posts: WeddingMoment[];
+  nextCursor: string | null;
+  newCount?: number;
+};
+
+/** Public feed: only published posts; URLs are temporary signed URLs for the private bucket. */
+export async function loadMoments(options: { before?: string; limit?: number; admin?: boolean } = {}): Promise<MomentPage> {
+  const params = new URLSearchParams();
+  if (options.before) params.set("before", options.before);
+  if (options.limit) params.set("limit", String(options.limit));
+  if (options.admin) params.set("admin", "1");
+  const response = await fetch(`/api/moments?${params.toString()}`, { cache: "no-store" });
+  const data = (await response.json().catch(() => ({}))) as MomentPage & { error?: string };
+  if (!response.ok) throw new Error(data.error || "Could not load wedding moments.");
+  return data;
+}
+
+export async function countNewMoments(since: string): Promise<number> {
+  const response = await fetch(`/api/moments?since=${encodeURIComponent(since)}`, { cache: "no-store" });
+  if (!response.ok) return 0;
+  const data = (await response.json().catch(() => ({}))) as { newCount?: number };
+  return Number(data.newCount) || 0;
+}
+
+export async function publishMoment(input: {
+  deviceId: string;
+  displayName: string;
+  body: string;
+  overlayText: string;
+  media: { path: string; contentType: string }[];
+}): Promise<WeddingMoment> {
+  const response = await fetch("/api/moments", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const data = (await response.json().catch(() => ({}))) as { post?: WeddingMoment; error?: string };
+  if (!response.ok || !data.post) throw new Error(data.error || "Your post couldn't be published. Please try again.");
+  return data.post;
+}
+
+export async function deleteMoment(id: string): Promise<void> {
+  const response = await fetch(`/api/moments?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+  const data = (await response.json().catch(() => ({}))) as { error?: string };
+  if (!response.ok) throw new Error(data.error || "Could not remove this post.");
+}

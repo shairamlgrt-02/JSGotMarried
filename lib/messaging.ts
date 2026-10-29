@@ -150,10 +150,21 @@ export const UNGTAGGED_CATEGORY: MessageCategory = {
   id: "guest_untagged", label: "Untagged", icon: "·", source: "guest_tag", filter: "",
 };
 
+/** These identities also have a dedicated role/vendor source in the composer. Mark the guest-tag
+ * entry explicitly so couples can tell "contact people tagged in Guests" from the vendors/role list. */
+const TAGS_WITH_OTHER_COMPOSER_SOURCE = new Set([
+  "ushers_seating", "registration_guestbook", "coffee_tea_station", "snacks_refreshments",
+  "serveware_table_setup", "souvenirs_tokens", "decor_setup_team", "sound_media_support",
+  "games_giveaways", "photo_moments", "kids_corner_keeper", "parking_directions",
+  "all_around_runner", "prayer_partner", "ring_bearer", "flower_girl",
+  "vendor_all", "vendor_band_dj", "vendor_caterers", "vendor_venue", "vendor_photo_video",
+  "vendor_coordinator", "vendor_hmua", "vendor_dress_tailor",
+]);
+
 /** The guest tags, straight from the shared dictionary — the binder's chips and these are the same list. */
 export const GUEST_TAG_CATEGORIES: MessageCategory[] = GUEST_TAG_IDS.map((tagId) => ({
   id: guestTagCategoryId(tagId),
-  label: GUEST_TAGS[tagId].label,
+  label: `${GUEST_TAGS[tagId].label}${TAGS_WITH_OTHER_COMPOSER_SOURCE.has(tagId) ? " · Guest tags" : ""}`,
   icon: GUEST_TAGS[tagId].icon,
   source: "guest_tag" as RecipientSource,
   filter: tagId,
