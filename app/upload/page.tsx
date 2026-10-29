@@ -430,6 +430,34 @@ function StoriesRail({ posts, displayName, onEdit, onDelete, onAddStory, uploadE
   );
 }
 
+const conversationPrompts = [
+  "Mingle, say hello, and share the night.",
+  "Pass along an update or a little announcement.",
+  "Save a laugh or moment to remember later.",
+];
+
+function ConversationPrompt() {
+  const [index, setIndex] = useState(0);
+  const reduceMotion = useReducedMotion();
+
+  useEffect(() => {
+    if (reduceMotion) return;
+    const timer = window.setInterval(() => setIndex((current) => (current + 1) % conversationPrompts.length), 6500);
+    return () => window.clearInterval(timer);
+  }, [reduceMotion]);
+
+  return (
+    <motion.div initial={reduceMotion ? false : { opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1.1, ease: "easeOut" }} className="my-1 flex min-h-8 items-center gap-2.5 px-1.5" aria-live="polite">
+      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-[#E7D3CB] bg-white/75 text-[11px] text-[#9A604E]" aria-hidden>✦</span>
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.p key={index} initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={reduceMotion ? undefined : { opacity: 0 }} transition={{ duration: 1.15, ease: "easeInOut" }} className="text-[10px] leading-relaxed text-[#806B65] sm:text-[11px]">
+          {conversationPrompts[index]}
+        </motion.p>
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
 export default function UploadPage() {
   const { rows: infoRows } = useTable("wedding_info");
   const info = infoRows[0];
@@ -875,8 +903,9 @@ export default function UploadPage() {
         )}
 
         <StoriesRail posts={storyPosts} displayName={displayName} onEdit={setEditingPost} onDelete={(post) => void removePost(post)} onAddStory={openStoryPicker} uploadEnabled={configured && !posting} uploading={storyUploading} progress={uploadProgress} />
+        <ConversationPrompt />
 
-        <section aria-label="Wedding conversation" className="mt-4 overflow-hidden rounded-[22px] border border-[#E3D1CB] bg-[#FFFCF8] shadow-[0_12px_32px_-22px_rgba(107,29,42,.5)]">
+        <section aria-label="Wedding conversation" className="mt-1 overflow-hidden rounded-[22px] border border-[#E3D1CB] bg-[#FFFCF8] shadow-[0_12px_32px_-22px_rgba(107,29,42,.5)]">
           <input ref={storyInput} type="file" accept="image/*,video/*,.heic,.heif,.mov" multiple hidden onChange={(event) => chooseStoryFiles(event.target.files)} />
           <input ref={galleryInput} type="file" accept={UPLOAD_ACCEPT} multiple hidden onChange={(event) => chooseFiles(event.target.files)} />
           <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={(event) => chooseFiles(event.target.files)} />
