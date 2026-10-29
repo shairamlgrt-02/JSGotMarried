@@ -150,7 +150,7 @@ export default function Hub({ info }: { info: WeddingInfo }) {
             href="/upload"
             icon="📷"
             title="Wedding chat & Stories"
-            text="Chat with everyone, send voice notes, and share photos or videos to Stories."
+            text="Chat with everyone, add voice notes, and share photos/videos to Stories — up to 25 files and 1 GB per device."
             cta="Join the chat"
             delay={0.2}
           />

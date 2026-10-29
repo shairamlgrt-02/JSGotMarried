@@ -208,7 +208,7 @@ type StoryItem = {
 };
 type StoryGroup = { key: string; displayName: string; items: StoryItem[]; latestAt: string };
 
-function StoriesRail({ posts, onEdit, onDelete }: { posts: WeddingMoment[]; onEdit: (post: WeddingMoment) => void; onDelete: (post: WeddingMoment) => void }) {
+function StoriesRail({ posts, onEdit, onDelete, onAddStory, uploadEnabled }: { posts: WeddingMoment[]; onEdit: (post: WeddingMoment) => void; onDelete: (post: WeddingMoment) => void; onAddStory: () => void; uploadEnabled: boolean }) {
   const [active, setActive] = useState<{ group: number; item: number } | null>(null);
   const groups = useMemo(() => {
     const byName = new Map<string, StoryGroup>();
@@ -272,12 +272,24 @@ function StoriesRail({ posts, onEdit, onDelete }: { posts: WeddingMoment[]; onEd
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [active, advance]);
 
-  if (!groups.length) return null;
+  if (!groups.length) return (
+    <section aria-label="Stories from guests" className="mb-5 rounded-[22px] border border-[#D8B9AE] bg-[#FBF3EF] px-4 py-4 shadow-[0_12px_30px_-22px_rgba(107,29,42,.45)] sm:px-5">
+      <div className="flex items-start gap-3">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#6B1D2A] text-lg text-[#F8EBCF] shadow-sm" aria-hidden>✦</span>
+        <div className="min-w-0 flex-1">
+          <h2 className="font-serif text-xl leading-tight text-[#6B1D2A]">Stories</h2>
+          <p className="mt-1 text-sm leading-relaxed text-[#765E59]">Photos and videos shared here appear in Stories for everyone to enjoy. Upload up to 25 files and 1 GB total per device, with up to 8 attachments in each message.</p>
+          <button type="button" onClick={onAddStory} disabled={!uploadEnabled} className="mt-3 rounded-full bg-[#6B1D2A] px-4 py-2 text-xs font-medium tracking-wide text-white shadow-sm transition-colors hover:bg-[#4E1722] disabled:cursor-not-allowed disabled:opacity-45">＋ ADD TO STORIES</button>
+          <p className="mt-2 text-[10px] text-taupe">You can choose to share them in the group chat too.</p>
+        </div>
+      </div>
+    </section>
+  );
   return (
     <section aria-label="Stories from guests" className="mb-5 overflow-hidden rounded-[22px] border border-[#D8B9AE] bg-[#FBF3EF] px-3 py-3 shadow-[0_12px_30px_-22px_rgba(107,29,42,.45)] sm:px-4 sm:py-4">
       <div className="mb-3 flex items-center justify-between gap-3 px-1">
-        <div className="flex items-center gap-2.5"><span className="grid h-8 w-8 place-items-center rounded-full bg-[#6B1D2A] text-sm text-[#F8EBCF] shadow-sm" aria-hidden>✦</span><div><h2 className="font-serif text-lg leading-none text-[#6B1D2A]">Stories</h2><p className="script mt-0.5 text-xl leading-none text-[#9A6D6A]">little glimpses, shared with love</p></div></div>
-        <span className="micro hidden rounded-full border border-[#B4C5AE] bg-white/60 px-3 py-1 text-[#526B56] sm:block">MOMENTS FROM EVERYONE</span>
+        <div className="flex min-w-0 items-center gap-2.5"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#6B1D2A] text-sm text-[#F8EBCF] shadow-sm" aria-hidden>✦</span><div className="min-w-0"><h2 className="font-serif text-lg leading-none text-[#6B1D2A]">Stories</h2><p className="mt-1 text-[10px] text-[#765E59]">Photos &amp; videos · max 25 files and 1 GB per device</p></div></div>
+        <button type="button" onClick={onAddStory} disabled={!uploadEnabled} className="shrink-0 rounded-full border border-[#6B1D2A]/20 bg-white/75 px-3 py-2 text-[10px] font-medium text-[#6B1D2A] shadow-sm transition-colors hover:bg-[#6B1D2A] hover:text-white disabled:cursor-not-allowed disabled:opacity-45">＋ ADD STORY</button>
       </div>
       <div className="flex gap-4 overflow-x-auto pb-1 [scrollbar-width:thin]">
         {groups.map((group, index) => {
@@ -345,6 +357,7 @@ export default function UploadPage() {
   const info = infoRows[0];
   const configured = useMemo(() => mediaConfigured(), []);
   const galleryInput = useRef<HTMLInputElement>(null);
+  const storyInput = useRef<HTMLInputElement>(null);
   const cameraInput = useRef<HTMLInputElement>(null);
   const videoInput = useRef<HTMLInputElement>(null);
   const messageInput = useRef<HTMLTextAreaElement>(null);
@@ -495,7 +508,7 @@ export default function UploadPage() {
     return () => window.clearInterval(timer);
   }, [configured, liveStatus, refreshFeed]);
 
-  const addFiles = (files: File[]) => {
+  const addFiles = (files: File[]): boolean => {
     const quotaWithDraft = {
       count: quota.count + unuploadedDraft.length,
       bytes: quota.bytes + draftBytes,
@@ -516,6 +529,7 @@ export default function UploadPage() {
         status: "waiting" as const,
       }))]);
     }
+    return accepted.length > 0;
   };
 
   const chooseFiles = (picked: FileList | null) => {
@@ -525,6 +539,14 @@ export default function UploadPage() {
     if (cameraInput.current) cameraInput.current.value = "";
     if (videoInput.current) videoInput.current.value = "";
   };
+
+  const chooseStoryFiles = (picked: FileList | null) => {
+    setAttachmentMenu(false);
+    if (picked?.length && addFiles(Array.from(picked))) setShowInFeed(false);
+    if (storyInput.current) storyInput.current.value = "";
+  };
+
+  const openStoryPicker = () => storyInput.current?.click();
 
   const startVoiceNote = async () => {
     if (recording) {
@@ -739,9 +761,10 @@ export default function UploadPage() {
           </div>
         )}
 
-        <StoriesRail posts={storyPosts} onEdit={setEditingPost} onDelete={(post) => void removePost(post)} />
+        <StoriesRail posts={storyPosts} onEdit={setEditingPost} onDelete={(post) => void removePost(post)} onAddStory={openStoryPicker} uploadEnabled={configured} />
 
         <section aria-label="Wedding group chat" className="mt-4 overflow-hidden rounded-[22px] border border-[#E3D1CB] bg-[#FFFCF8] shadow-[0_12px_32px_-22px_rgba(107,29,42,.5)]">
+          <input ref={storyInput} type="file" accept="image/*,video/*,.heic,.heif,.mov" multiple hidden onChange={(event) => chooseStoryFiles(event.target.files)} />
           <input ref={galleryInput} type="file" accept={UPLOAD_ACCEPT} multiple hidden onChange={(event) => chooseFiles(event.target.files)} />
           <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={(event) => chooseFiles(event.target.files)} />
           <input ref={videoInput} type="file" accept="video/*" capture="environment" hidden onChange={(event) => chooseFiles(event.target.files)} />
