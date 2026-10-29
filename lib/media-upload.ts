@@ -156,24 +156,39 @@ function canvasBlob(canvas: HTMLCanvasElement, type: string, quality: number): P
 }
 
 async function optimizeChatImage(file: File): Promise<File> {
-  if (typeof createImageBitmap === "undefined") return file;
   let bitmap: ImageBitmap | undefined;
+  let image: HTMLImageElement | undefined;
+  let objectUrl = "";
   try {
-    bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
-    const scale = Math.min(1, CHAT_IMAGE_MAX_EDGE / Math.max(bitmap.width, bitmap.height));
+    let width = 0;
+    let height = 0;
+    if (typeof createImageBitmap !== "undefined") {
+      bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+      width = bitmap.width;
+      height = bitmap.height;
+    } else {
+      objectUrl = URL.createObjectURL(file);
+      image = new Image();
+      image.src = objectUrl;
+      await image.decode();
+      width = image.naturalWidth;
+      height = image.naturalHeight;
+    }
+    const scale = Math.min(1, CHAT_IMAGE_MAX_EDGE / Math.max(width, height));
     if (scale === 1 && file.type === "image/jpeg" && file.size <= 450_000) return file;
     const canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
-    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    canvas.width = Math.max(1, Math.round(width * scale));
+    canvas.height = Math.max(1, Math.round(height * scale));
     const context = canvas.getContext("2d", { alpha: false });
     if (!context) return file;
-    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    if (bitmap) context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    else if (image) context.drawImage(image, 0, 0, canvas.width, canvas.height);
     const blob = await canvasBlob(canvas, "image/jpeg", 0.76);
     if (blob.size >= file.size) return file;
     const name = file.name.replace(/\.[^.]+$/, "") || "chat-photo";
     return new File([blob], `${name}.jpg`, { type: "image/jpeg", lastModified: file.lastModified });
   } catch { return file; }
-  finally { bitmap?.close(); }
+  finally { bitmap?.close(); if (objectUrl) URL.revokeObjectURL(objectUrl); }
 }
 
 async function optimizeChatVideo(file: File): Promise<File> {
@@ -201,7 +216,7 @@ async function optimizeChatVideo(file: File): Promise<File> {
     const stream = captureCanvas.captureStream(24);
     const sourceStream = captureVideo.captureStream?.() || captureVideo.mozCaptureStream?.();
     sourceStream?.getAudioTracks().forEach((track) => stream.addTrack(track));
-    const mimeType = ["video/webm;codecs=vp8,opus", "video/webm;codecs=vp9,opus", "video/webm"]
+    const mimeType = ["video/webm;codecs=vp8,opus", "video/webm;codecs=vp9,opus", "video/webm", "video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4"]
       .find((type) => MediaRecorder.isTypeSupported(type));
     if (!mimeType) { stream.getTracks().forEach((track) => track.stop()); return file; }
     const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 900_000, audioBitsPerSecond: 96_000 });
@@ -228,14 +243,15 @@ async function optimizeChatVideo(file: File): Promise<File> {
     sourceStream?.getTracks().forEach((track) => track.stop());
     if (!blob.size || blob.size >= file.size) return file;
     const name = file.name.replace(/\.[^.]+$/, "") || "chat-video";
-    return new File([blob], `${name}.webm`, { type: mimeType, lastModified: file.lastModified });
+    const extension = mimeType.includes("mp4") ? "mp4" : "webm";
+    return new File([blob], `${name}.${extension}`, { type: mimeType, lastModified: file.lastModified });
   } catch { return file; }
   finally { video.pause(); video.removeAttribute("src"); video.load(); URL.revokeObjectURL(url); }
 }
 
 /** Reduce chat media dimensions/bitrate before it reaches private storage; Stories remain original. */
 export async function optimizeChatMedia(file: File): Promise<File> {
-  if (file.type.startsWith("image/")) return optimizeChatImage(file);
-  if (file.type.startsWith("video/")) return optimizeChatVideo(file);
+  if (file.type.startsWith("image/") || /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(file.name)) return optimizeChatImage(file);
+  if (file.type.startsWith("video/") || /\.(mp4|mov|m4v|webm|3gp)$/i.test(file.name)) return optimizeChatVideo(file);
   return file;
 }
