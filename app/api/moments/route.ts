@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { COOKIE, isAuthed } from "@/lib/auth";
 import { serverSupabase } from "@/lib/supabase-server";
 import type { WeddingMoment } from "@/lib/moments";
+import { normalizeGuestAvatarId } from "@/lib/guest-avatars";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -20,11 +21,13 @@ type StoredMedia = { path: string; contentType: string };
 type Row = {
   id: string;
   display_name: string;
+  avatar: string;
   body: string;
   overlay_text: string;
   media: StoredMedia[];
   device_id: string;
   show_in_feed: boolean;
+  show_in_stories: boolean;
   created_at: string;
 };
 
@@ -55,6 +58,23 @@ async function signedMediaMap(db: NonNullable<ReturnType<typeof serverSupabase>>
   return urls;
 }
 
+async function broadcastMomentChange(db: NonNullable<ReturnType<typeof serverSupabase>>, operation: "INSERT" | "UPDATE" | "DELETE", id: string) {
+  const channel = db.channel("wedding-newsfeed", { config: { private: true } });
+  try {
+    // Private broadcast authorization needs an explicit JWT on the HTTP transport.
+    if (process.env.SUPABASE_SERVICE_ROLE_KEY) await db.realtime.setAuth(process.env.SUPABASE_SERVICE_ROLE_KEY);
+    // A private Realtime broadcast carries only the post ID. Each guest then fetches the post
+    // through this API, which signs private media URLs and applies normal feed visibility rules.
+    const result = await channel.httpSend("moments_changed", { operation, id, at: new Date().toISOString() });
+    if (!result.success) throw new Error(`Realtime broadcast failed (${result.status}).`);
+  } catch (error) {
+    // Posting must still succeed if Realtime is temporarily unavailable; clients can refresh later.
+    console.warn("Could not broadcast a wedding newsfeed update.", error);
+  } finally {
+    try { await db.removeChannel(channel); } catch { /* best-effort cleanup */ }
+  }
+}
+
 function toPublicPost(row: Row, urls: Map<string, string>, canManage = false): WeddingMoment {
   const media = (Array.isArray(row.media) ? row.media : []).flatMap((item) => {
     const url = item?.path ? urls.get(item.path) : undefined;
@@ -63,11 +83,13 @@ function toPublicPost(row: Row, urls: Map<string, string>, canManage = false): W
   return {
     id: row.id,
     displayName: row.display_name || "A guest",
+    avatar: normalizeGuestAvatarId(row.avatar),
     body: row.body || "",
     overlayText: row.overlay_text || "",
     media,
     createdAt: row.created_at,
     showInFeed: row.show_in_feed !== false,
+    showInStories: row.show_in_stories !== false,
     canManage,
   };
 }
@@ -89,6 +111,8 @@ export async function GET(req: NextRequest) {
   const admin = url.searchParams.get("admin") === "1";
   if (admin && !(await isAuthed(cookies().get(COOKIE)?.value))) return json({ error: "Sign in to the binder to open the guest gallery." }, 401);
   const stories = url.searchParams.get("stories") === "1";
+  const requestedId = url.searchParams.get("id") || "";
+  if (requestedId && !/^[0-9a-f-]{36}$/i.test(requestedId)) return json({ error: "A valid post is required." }, 400);
   const rawDeviceId = url.searchParams.get("deviceId") || "";
   const deviceId = validDeviceId(rawDeviceId) ? rawDeviceId : "";
   const requested = Number(url.searchParams.get("limit"));
@@ -96,12 +120,13 @@ export async function GET(req: NextRequest) {
   const limit = Math.max(1, Math.min(admin ? 24 : stories ? 60 : 24, Number.isFinite(requested) && requested > 0 ? requested : fallbackLimit));
   const before = url.searchParams.get("before");
   let query = db.from(TABLE)
-    .select("id, display_name, body, overlay_text, media, device_id, show_in_feed, created_at")
+    .select("id, display_name, avatar, body, overlay_text, media, device_id, show_in_feed, show_in_stories, created_at")
     .order("created_at", { ascending: false })
     .limit(limit);
-  if (stories) query = query.not("media", "eq", "[]");
+  if (requestedId) query = query.eq("id", requestedId);
+  else if (stories) query = query.eq("show_in_stories", true).not("media", "eq", "[]");
   else if (!admin) query = query.eq("show_in_feed", true);
-  if (before && Number.isFinite(Date.parse(before))) query = query.lt("created_at", before);
+  if (!requestedId && before && Number.isFinite(Date.parse(before))) query = query.lt("created_at", before);
   const { data, error } = await query;
   if (error) return json({ error: "The moments feed is not set up yet. Run the wedding-media and moments sections of supabase/schema.sql." }, 503);
 
@@ -110,7 +135,7 @@ export async function GET(req: NextRequest) {
     const paths = rows.flatMap((row) => Array.isArray(row.media) ? row.media.map((item) => item.path) : []);
     const urls = await signedMediaMap(db, paths);
     const posts = rows.map((row) => toPublicPost(row, urls, admin || Boolean(deviceId && row.device_id === deviceId)));
-    const hasMore = rows.length === limit;
+    const hasMore = !requestedId && rows.length === limit;
     return json({ posts, nextCursor: hasMore ? rows[rows.length - 1]?.created_at ?? null : null });
   } catch {
     return json({ error: "The moments feed could not load its photos and videos. Please try again." }, 503);
@@ -130,9 +155,11 @@ export async function POST(req: NextRequest) {
   const deviceId = String(body.deviceId ?? "").trim();
   if (!validDeviceId(deviceId)) return json({ error: "Please refresh the page and try again." }, 400);
   const displayName = safeName(body.displayName);
+  const avatar = normalizeGuestAvatarId(body.avatar);
   const text = safeText(body.body, 1200);
   const overlayText = safeText(body.overlayText, 120);
   const showInFeed = body.showInFeed !== false;
+  const showInStories = body.showInStories === true;
   const rawMedia = Array.isArray(body.media) ? body.media : [];
   if (rawMedia.length > 8) return json({ error: "A post can have up to 8 photos or videos." }, 400);
   const media: StoredMedia[] = [];
@@ -140,7 +167,7 @@ export async function POST(req: NextRequest) {
     const item = raw as Partial<StoredMedia>;
     const path = String(item.path ?? "");
     const contentType = String(item.contentType ?? "");
-    if (!validStoragePath(path, deviceId) || !/^(image|video)\/[a-z0-9.+-]+$/i.test(contentType))
+    if (!validStoragePath(path, deviceId) || !/^(image|video|audio)\/[a-z0-9.+-]+$/i.test(contentType))
       return json({ error: "One of those media files could not be verified. Please choose it again." }, 400);
     media.push({ path, contentType });
   }
@@ -153,19 +180,17 @@ export async function POST(req: NextRequest) {
     }
   }
   if (!text && !media.length) return json({ error: "Add a note, photo or video before posting." }, 400);
-  if (!showInFeed && !media.length) return json({ error: "Stories need at least one photo or video." }, 400);
+  if (showInStories && !media.some((item) => item.contentType.startsWith("image/") || item.contentType.startsWith("video/"))) return json({ error: "Stories need at least one photo or video." }, 400);
+  if (!showInFeed && !showInStories) return json({ error: "Choose where this moment should appear." }, 400);
 
-  // Soft per-device limit; this prevents accidental floods of feed posts or stories.
-  const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { count } = await db.from(TABLE).select("id", { count: "exact", head: true }).eq("device_id", deviceId).gt("created_at", dayAgo);
-  if ((count ?? 0) >= 30) return json({ error: "You've shared lots of lovely moments today. Please try again tomorrow." }, 429);
 
   const { data, error } = await db.from(TABLE)
-    .insert({ device_id: deviceId, display_name: displayName, body: text, overlay_text: overlayText, media, show_in_feed: showInFeed })
-    .select("id, display_name, body, overlay_text, media, device_id, show_in_feed, created_at")
+    .insert({ device_id: deviceId, display_name: displayName, avatar, body: text, overlay_text: overlayText, media, show_in_feed: showInFeed, show_in_stories: showInStories })
+    .select("id, display_name, avatar, body, overlay_text, media, device_id, show_in_feed, show_in_stories, created_at")
     .single();
   if (error || !data) return json({ error: "Your post couldn't be saved just now. Please try again." }, 503);
   const row = data as Row;
+  await broadcastMomentChange(db, "INSERT", row.id);
   try {
     const urls = await signedMediaMap(db, row.media.map((item) => item.path));
     return json({ post: toPublicPost(row, urls, true) }, 201);
@@ -200,10 +225,11 @@ export async function PATCH(req: NextRequest) {
   if (!text && !media.length) return json({ error: "A text-only post needs a note." }, 400);
   const { data, error } = await db.from(TABLE).update({ body: text, overlay_text: overlayText })
     .eq("id", id)
-    .select("id, display_name, body, overlay_text, media, device_id, show_in_feed, created_at")
+    .select("id, display_name, avatar, body, overlay_text, media, device_id, show_in_feed, show_in_stories, created_at")
     .single();
   if (error || !data) return json({ error: "Your edits couldn't be saved. Please try again." }, 503);
   const row = data as Row;
+  await broadcastMomentChange(db, "UPDATE", row.id);
   try {
     const urls = await signedMediaMap(db, row.media.map((item) => item.path));
     return json({ post: toPublicPost(row, urls, true) });
@@ -231,5 +257,6 @@ export async function DELETE(req: NextRequest) {
   }
   const { error: deleteError } = await db.from(TABLE).delete().eq("id", id);
   if (deleteError) return json({ error: "The post couldn't be removed. Please try again." }, 503);
+  await broadcastMomentChange(db, "DELETE", id);
   return json({ ok: true });
 }

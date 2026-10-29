@@ -149,9 +149,9 @@ export default function Hub({ info }: { info: WeddingInfo }) {
           <Tile
             href="/upload"
             icon="📷"
-            title="Memory wall"
-            text="Share a note, a photo or a little video with everyone."
-            cta="Visit the wall"
+            title="Wedding chat & Stories"
+            text="Chat with everyone, add voice notes, and share optimized photos/videos in the group chat. Upload Stories separately; Stories have a 1 GB per-device limit."
+            cta="Join the chat"
             delay={0.2}
           />
           <Tile

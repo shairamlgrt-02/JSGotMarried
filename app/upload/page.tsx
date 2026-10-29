@@ -1,12 +1,13 @@
 "use client";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { createPortal } from "react-dom";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useTable } from "@/lib/hooks";
 import { fullDate } from "@/components/public/Envelope";
-import { countNewMoments, deleteMoment, loadMoments, publishMoment, updateMoment, type WeddingMoment } from "@/lib/moments";
+import { deleteMoment, loadMoments, publishMoment, updateMoment, type WeddingMoment } from "@/lib/moments";
+import { browserSupabase } from "@/lib/supabase-browser";
+import { DEFAULT_GUEST_AVATAR, GUEST_AVATARS, guestAvatarEmoji, normalizeGuestAvatarId, type GuestAvatarId } from "@/lib/guest-avatars";
 import {
-  MAX_FILES_PER_GUEST,
   MAX_TOTAL_BYTES,
   UPLOAD_ACCEPT,
   addToQuota,
@@ -16,7 +17,9 @@ import {
   objectPath,
   readQuota,
   uploadMediaFile,
-  validateSelection,
+  validateChatSelection,
+  validateStorySelection,
+  optimizeChatMedia,
 } from "@/lib/media-upload";
 
 type DraftMedia = {
@@ -29,6 +32,23 @@ type DraftMedia = {
 
 const MAX_POST_MEDIA = 8;
 const firstName = (name: string) => name.trim().split(/\s+/)[0] || "A guest";
+
+function AvatarFace({ avatar, className = "" }: { avatar: GuestAvatarId; className?: string }) {
+  if (avatar === "man") return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={`h-[72%] w-[72%] fill-current ${className}`}>
+      <circle cx="12" cy="7.2" r="4.2" />
+      <path d="M3.5 21c.4-5.1 3.7-8 8.5-8s8.1 2.9 8.5 8H3.5Z" />
+    </svg>
+  );
+  return <span aria-hidden="true" className={`leading-none ${className}`}>{guestAvatarEmoji(avatar)}</span>;
+}
+
+function AvatarBadge({ avatar, className = "" }: { avatar: GuestAvatarId; className?: string }) {
+  return <span className={`grid shrink-0 place-items-center overflow-hidden rounded-full ${className}`}><AvatarFace avatar={avatar} /></span>;
+}
+
+const CHAT_WALLPAPER = `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="190" height="190" viewBox="0 0 190 190"><g fill="none" stroke="#a99988" stroke-opacity=".25" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><path d="M18 22h30a6 6 0 0 1 6 6v15a6 6 0 0 1-6 6H34l-9 7v-7h-7a6 6 0 0 1-6-6V28a6 6 0 0 1 6-6Z"/><path d="M119 20c-9-10-23 2-2 18 21-16 7-28-2-18Z"/><path d="m86 78 2.5 6.5L95 87l-6.5 2.5L86 96l-2.5-6.5L77 87l6.5-2.5L86 78Z"/><circle cx="151" cy="78" r="13"/><circle cx="151" cy="78" r="8"/><path d="M26 119h29a6 6 0 0 1 6 6v16a6 6 0 0 1-6 6H43l-9 7v-7h-8a6 6 0 0 1-6-6v-16a6 6 0 0 1 6-6Z"/><path d="M117 117v23m-8-8h16m-13-11 10 17m0-17-10 17"/><path d="M158 134c-7-8-18 2-2 14 16-12 5-22-2-14Z"/><circle cx="89" cy="151" r="12"/><path d="M85 151h8m-4-4v8"/></g></svg>`)}")`;
+
 const POSTER_TONES = [
   { ink: "#6B1D2A", edge: "#D8A7A8", wash: "#F8ECEA", deep: "#8F4650" },
   { ink: "#47614D", edge: "#A9BEA9", wash: "#EDF3EC", deep: "#607E65" },
@@ -42,12 +62,18 @@ const posterTone = (name: string) => {
   return POSTER_TONES[hash % POSTER_TONES.length]!;
 };
 const mediaContentType = (file: File) => {
-  if (file.type) return file.type;
+  const type = file.type.split(";")[0]?.trim() || "";
+  if (/^(image|video|audio)\//i.test(type)) return type;
   const extension = file.name.split(".").pop()?.toLowerCase();
   if (extension === "heic") return "image/heic";
   if (extension === "heif") return "image/heif";
   if (extension === "mov") return "video/quicktime";
-  return "application/octet-stream";
+  if (extension === "m4a") return "audio/mp4";
+  if (extension === "mp3") return "audio/mpeg";
+  if (extension === "wav") return "audio/wav";
+  if (extension === "ogg") return "audio/ogg";
+  if (extension === "aac") return "audio/aac";
+  return type || "application/octet-stream";
 };
 function relativeTime(value: string) {
   const time = new Date(value).getTime();
@@ -58,6 +84,12 @@ function relativeTime(value: string) {
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours}h ago`;
   return new Date(value).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
+
+function mergeChatMessages(current: WeddingMoment[], incoming: WeddingMoment[]) {
+  const byId = new Map(current.map((message) => [message.id, message]));
+  incoming.forEach((message) => byId.set(message.id, message));
+  return [...byId.values()].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
 function MomentMediaGrid({ post, expanded, onExpand }: { post: WeddingMoment; expanded: boolean; onExpand: () => void }) {
@@ -84,20 +116,24 @@ function MomentMediaGrid({ post, expanded, onExpand }: { post: WeddingMoment; ex
     <>
       <div className={`mt-3 grid gap-1.5 overflow-hidden rounded-2xl ${visible.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
         {visible.map((media, index) => (
-          <div key={`${post.id}-${index}`} className={`relative overflow-hidden bg-ink/5 ${visible.length === 1 ? "aspect-[4/3] max-h-[340px]" : "aspect-square"}`}>
-            <button type="button" onClick={() => setPreviewIndex(index)} className="absolute inset-0 h-full w-full" aria-label={`Open ${media.contentType.startsWith("video/") ? "video" : "photo"} ${index + 1}`}>
-              {media.contentType.startsWith("video/") ? (
-                <video src={media.url} muted playsInline preload="metadata" className="h-full w-full object-cover" />
-              ) : (
-                <img src={media.url} alt={`Shared moment ${index + 1}`} loading="lazy" className="h-full w-full object-cover transition-transform duration-300 hover:scale-[1.02]" />
-              )}
-              {media.contentType.startsWith("video/") && <span className="absolute inset-0 grid place-items-center text-4xl text-white drop-shadow">▶</span>}
-              {post.overlayText && <span className="pointer-events-none absolute inset-x-2 bottom-2 line-clamp-2 rounded-lg bg-ink/55 px-3 py-2 text-center font-serif text-sm text-white shadow backdrop-blur-sm">{post.overlayText}</span>}
-            </button>
+          <div key={`${post.id}-${index}`} className={`relative overflow-hidden rounded-xl bg-ink/5 ${media.contentType.startsWith("audio/") ? "flex min-h-20 items-center p-2" : visible.length === 1 ? "aspect-[4/3] max-h-[340px]" : "aspect-square"}`}>
+            {media.contentType.startsWith("audio/") ? (
+              <div className="w-full"><p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-taupe">Voice note</p><audio src={media.url} controls preload="metadata" className="h-10 w-full" /></div>
+            ) : (
+              <button type="button" onClick={() => setPreviewIndex(index)} className="absolute inset-0 h-full w-full" aria-label={`Open ${media.contentType.startsWith("video/") ? "video" : "photo"} ${index + 1}`}>
+                {media.contentType.startsWith("video/") ? (
+                  <video src={media.url} muted playsInline preload="metadata" className="h-full w-full object-cover" />
+                ) : (
+                  <img src={media.url} alt={`Shared moment ${index + 1}`} loading="lazy" className="h-full w-full object-cover transition-transform duration-300 hover:scale-[1.02]" />
+                )}
+                {media.contentType.startsWith("video/") && <span className="absolute inset-0 grid place-items-center text-4xl text-white drop-shadow">▶</span>}
+                {post.overlayText && <span className="pointer-events-none absolute inset-x-2 bottom-2 line-clamp-2 rounded-lg bg-ink/55 px-3 py-2 text-center font-serif text-sm text-white shadow backdrop-blur-sm">{post.overlayText}</span>}
+              </button>
+            )}
             {overflow > 0 && index === visible.length - 1 && (
-              <button type="button" onClick={onExpand} className="absolute inset-0 z-10 grid place-items-center bg-ink/65 text-white transition-colors hover:bg-ink/75" aria-label={`Show ${overflow} more photos or videos`}>
+              <button type="button" onClick={onExpand} className="absolute inset-0 z-10 grid place-items-center bg-ink/65 text-white transition-colors hover:bg-ink/75" aria-label={`Show ${overflow} more attachments`}>
                 <span className="font-serif text-4xl">+{overflow}</span>
-                <span className="micro absolute mt-16 tracking-[0.16em]">MORE MOMENTS</span>
+                <span className="micro absolute mt-16 tracking-[0.16em]">MORE ATTACHMENTS</span>
               </button>
             )}
           </div>
@@ -115,7 +151,7 @@ function MomentMediaGrid({ post, expanded, onExpand }: { post: WeddingMoment; ex
                 <button type="button" onClick={() => setPreviewIndex(null)} className="grid h-10 w-10 place-items-center rounded-full bg-black/45 text-2xl" aria-label="Close photo preview">×</button>
               </div>
               <button type="button" onClick={() => movePreview(-1)} className="absolute left-0 z-20 grid h-12 w-12 place-items-center rounded-full bg-black/40 text-2xl hover:bg-black/65" aria-label="Previous photo">‹</button>
-              {current.contentType.startsWith("video/") ? <video key={current.url} src={current.url} controls autoPlay playsInline className="max-h-full max-w-[88%] object-contain" /> : <img key={current.url} src={current.url} alt={`Shared moment ${(previewIndex ?? 0) + 1}`} className="max-h-full max-w-[88%] object-contain" />}
+              {current.contentType.startsWith("video/") ? <video key={current.url} src={current.url} controls autoPlay playsInline className="max-h-full max-w-[88%] object-contain" /> : current.contentType.startsWith("audio/") ? <audio key={current.url} src={current.url} controls autoPlay className="w-full max-w-lg" /> : <img key={current.url} src={current.url} alt={`Shared moment ${(previewIndex ?? 0) + 1}`} className="max-h-full max-w-[88%] object-contain" />}
               <button type="button" onClick={() => movePreview(1)} className="absolute right-0 z-20 grid h-12 w-12 place-items-center rounded-full bg-black/40 text-2xl hover:bg-black/65" aria-label="Next photo">›</button>
               {post.overlayText && <p className="absolute bottom-5 left-16 right-16 rounded-xl bg-black/55 px-4 py-3 text-center font-serif text-lg shadow-lg backdrop-blur-sm">{post.overlayText}</p>}
             </div>
@@ -128,37 +164,29 @@ function MomentMediaGrid({ post, expanded, onExpand }: { post: WeddingMoment; ex
 }
 
 function MomentCard({ post, expanded, onExpand, onEdit, onDelete }: { post: WeddingMoment; expanded: boolean; onExpand: () => void; onEdit: (post: WeddingMoment) => void; onDelete: (post: WeddingMoment) => void }) {
-  const initials = post.displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "♡";
+  const mine = Boolean(post.canManage);
   const tone = posterTone(post.displayName);
   return (
     <motion.article
       layout
-      initial={{ opacity: 0, y: 14 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      className="rounded-[24px] border border-t-4 p-4 shadow-[0_16px_34px_-24px_rgba(61,35,45,.42)] transition-shadow hover:shadow-[0_20px_42px_-24px_rgba(61,35,45,.5)] sm:p-5"
-      style={{ borderColor: tone.edge, borderTopColor: tone.ink, backgroundColor: "#FFFCF8" }}
+      exit={{ opacity: 0, y: -6 }}
+      className={`flex w-full ${mine ? "justify-end" : "justify-start"}`}
     >
-      <header className="flex items-center gap-3">
-        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full border font-serif shadow-sm" style={{ backgroundColor: tone.wash, borderColor: tone.edge, color: tone.ink }}>
-          {initials}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-medium" style={{ color: tone.ink }}>{post.displayName}</p>
-          <p className="micro mt-0.5 text-taupe">{relativeTime(post.createdAt)} <span aria-hidden>·</span> shared a moment</p>
-        </div>
-        {post.canManage ? (
-          <div className="flex shrink-0 items-center gap-2">
-            <button type="button" onClick={() => onEdit(post)} className="micro text-taupe hover:text-wine">EDIT</button>
-            <button type="button" onClick={() => onDelete(post)} className="micro text-taupe hover:text-burgundy" aria-label="Delete your post">DELETE</button>
-          </div>
-        ) : <span className="script text-2xl" style={{ color: tone.deep }} aria-hidden>♡</span>}
-      </header>
-      {post.body && <p className="mt-3 whitespace-pre-wrap break-words text-[15px] leading-relaxed text-ink/85">{post.body}</p>}
-      {post.media.length > 0 && <MomentMediaGrid post={post} expanded={expanded} onExpand={onExpand} />}
-      <footer className="mt-3 flex items-center gap-2 border-t pt-2.5 text-[10px] tracking-[0.08em] text-taupe/80" style={{ borderColor: `${tone.edge}88` }}>
-        <span className="text-sm" style={{ color: tone.deep }} aria-hidden>✦</span> A little piece of the day, shared with love
-      </footer>
+      <div className={`max-w-[88%] min-w-[42%] rounded-2xl border px-3.5 py-2.5 shadow-sm sm:max-w-[78%] ${mine ? "rounded-br-md border-[#C6D8C5] bg-[#E9F2E7]" : "rounded-bl-md border-[#E7DAD5] bg-white"}`}>
+        <header className="mb-1 flex items-center gap-2">
+          <AvatarBadge avatar={post.avatar} className="h-6 w-6 border border-white/80 bg-white/75 text-base text-[#6B1D2A] shadow-sm" />
+          <p className="min-w-0 flex-1 truncate text-xs font-semibold" style={{ color: mine ? "#526B56" : tone.ink }}>{mine ? "You" : post.displayName}</p>
+          {mine && <div className="flex shrink-0 items-center gap-2">
+            <button type="button" onClick={() => onEdit(post)} className="text-[9px] tracking-wide text-taupe hover:text-wine">EDIT</button>
+            <button type="button" onClick={() => onDelete(post)} className="text-[9px] tracking-wide text-taupe hover:text-burgundy" aria-label="Delete your message">DELETE</button>
+          </div>}
+        </header>
+        {post.body && <p className="whitespace-pre-wrap break-words text-[14px] leading-relaxed text-ink/90">{post.body}</p>}
+        {post.media.length > 0 && <MomentMediaGrid post={post} expanded={expanded} onExpand={onExpand} />}
+        <footer className="mt-1.5 flex justify-end text-[10px] text-taupe/80">{relativeTime(post.createdAt)}</footer>
+      </div>
     </motion.article>
   );
 }
@@ -177,16 +205,87 @@ function EditMomentDialog({ post, onClose, onSave }: { post: WeddingMoment; onCl
     <motion.div className="fixed inset-0 z-[120] flex items-center justify-center bg-ink/65 p-4" role="dialog" aria-modal="true" aria-labelledby="edit-moment-title" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
       <motion.div initial={{ y: 8, scale: 0.98 }} animate={{ y: 0, scale: 1 }} onClick={(event) => event.stopPropagation()} className="w-full max-w-lg rounded-2xl bg-paper p-5 shadow-2xl sm:p-6">
         <div className="mb-4 flex items-center justify-between gap-3">
-          <div><p className="micro tracking-[0.18em] text-taupe">YOUR MOMENT</p><h2 id="edit-moment-title" className="mt-1 font-serif text-2xl text-mocha">Edit post</h2></div>
+          <div><p className="micro tracking-[0.18em] text-taupe">YOUR MESSAGE</p><h2 id="edit-moment-title" className="mt-1 font-serif text-2xl text-mocha">Edit message</h2></div>
           <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-full text-2xl text-taupe hover:bg-ink/5" aria-label="Close edit dialog">×</button>
         </div>
         <label className="micro mb-1 block text-taupe" htmlFor="edit-moment-body">Caption or note</label>
         <textarea id="edit-moment-body" value={body} onChange={(event) => setBody(event.target.value.slice(0, 1200))} rows={5} maxLength={1200} className="w-full resize-y rounded-xl border border-taupe/25 bg-white/80 p-3 text-sm leading-relaxed text-ink outline-none focus:border-wine/50" />
-        {post.media.length > 0 && <div className="mt-3"><label className="micro mb-1 block text-taupe" htmlFor="edit-moment-overlay">Text over your photo/video</label><input id="edit-moment-overlay" value={overlayText} onChange={(event) => setOverlayText(event.target.value.slice(0, 120))} maxLength={120} className="w-full rounded-xl border border-taupe/25 bg-white/80 px-3 py-2 text-sm outline-none focus:border-wine/50" /></div>}
+        {post.media.some((media) => media.contentType.startsWith("image/") || media.contentType.startsWith("video/")) && <div className="mt-3"><label className="micro mb-1 block text-taupe" htmlFor="edit-moment-overlay">Text over your photo/video</label><input id="edit-moment-overlay" value={overlayText} onChange={(event) => setOverlayText(event.target.value.slice(0, 120))} maxLength={120} className="w-full rounded-xl border border-taupe/25 bg-white/80 px-3 py-2 text-sm outline-none focus:border-wine/50" /></div>}
         {error && <p role="alert" className="mt-3 text-sm text-burgundy">{error}</p>}
         <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={onClose} disabled={saving} className="micro rounded-full border border-taupe/30 px-4 py-2 text-taupe">CANCEL</button><button type="button" onClick={() => void save()} disabled={saving} className="micro rounded-full bg-wine px-5 py-2 text-lace disabled:opacity-50">{saving ? "SAVING…" : "SAVE CHANGES"}</button></div>
       </motion.div>
     </motion.div>
+  );
+}
+
+type NamePromptMode = "story" | "chat" | "edit";
+
+function NamePromptDialog({ mode, initialName, initialAvatar, onClose, onSave }: { mode: NamePromptMode; initialName: string; initialAvatar: GuestAvatarId; onClose: () => void; onSave: (name: string, avatar: GuestAvatarId) => void }) {
+  const [name, setName] = useState(initialName);
+  const [avatar, setAvatar] = useState(initialAvatar);
+  const isChatPrompt = mode === "chat";
+  const title = mode === "story" ? "Post as?" : mode === "chat" ? "What name should everyone see?" : "Edit your name & avatar";
+  const description = mode === "story"
+    ? "Your Story name also appears in the group chat. Your name is optional."
+    : mode === "chat"
+      ? "Add your name before sending your first message. You can change it any time."
+      : "Your avatar and name appear on your chat messages and Stories.";
+  const save = (event: FormEvent) => {
+    event.preventDefault();
+    onSave(name.trim(), avatar);
+  };
+  return (
+    <motion.div className="fixed inset-0 z-[130] flex items-center justify-center bg-ink/65 p-4" role="dialog" aria-modal="true" aria-labelledby="name-prompt-title" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
+      <motion.form onSubmit={save} initial={{ y: 8, scale: 0.98 }} animate={{ y: 0, scale: 1 }} onClick={(event) => event.stopPropagation()} className="w-full max-w-sm rounded-2xl bg-paper p-5 shadow-2xl sm:p-6">
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div><h2 id="name-prompt-title" className="font-serif text-2xl text-mocha">{title}</h2><p className="mt-1 text-xs leading-relaxed text-taupe">{description}</p></div>
+          <button type="button" onClick={onClose} aria-label="Close name dialog" className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-xl text-taupe hover:bg-ink/5">×</button>
+        </div>
+        <label htmlFor="moment-display-name" className="micro mb-1 block text-taupe">Your name{mode === "story" ? " (optional)" : ""}</label>
+        <input id="moment-display-name" autoFocus value={name} onChange={(event) => setName(event.target.value.slice(0, 60))} placeholder={mode === "story" ? "Name (optional)" : "Your name"} maxLength={60} className="w-full rounded-xl border border-taupe/25 bg-white/90 px-3 py-2.5 text-sm text-ink outline-none focus:border-wine/50" />
+        <fieldset className="mt-4">
+          <legend className="micro mb-2 text-taupe">Choose your avatar</legend>
+          <div className="grid grid-cols-4 gap-2">
+            {GUEST_AVATARS.map((choice) => {
+              const selected = avatar === choice.id;
+              return <button key={choice.id} type="button" onClick={() => setAvatar(choice.id)} aria-label={choice.label} aria-pressed={selected} className={`flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-xl border px-1 py-1.5 transition-colors ${selected ? "border-wine bg-wine/10 ring-1 ring-wine/25" : "border-taupe/20 bg-white/70 hover:bg-white"}`}>
+                <AvatarFace avatar={choice.id} className={choice.id === "man" ? "text-[#6B1D2A]" : "text-[22px]"} />
+                <span className="max-w-full truncate text-[8px] leading-none text-taupe">{choice.label}</span>
+              </button>;
+            })}
+          </div>
+        </fieldset>
+        <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={onClose} className="micro rounded-full border border-taupe/30 px-4 py-2 text-taupe">CANCEL</button><button type="submit" disabled={isChatPrompt && !name.trim()} className="micro rounded-full bg-wine px-5 py-2 text-lace disabled:cursor-not-allowed disabled:opacity-45">{mode === "edit" ? "SAVE" : mode === "story" ? "CONTINUE" : "CONTINUE TO CHAT"}</button></div>
+      </motion.form>
+    </motion.div>
+  );
+}
+
+function StoryCardPreview({ media, fallback, tone }: { media: WeddingMoment["media"][number]; fallback: string; tone: ReturnType<typeof posterTone> }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!("IntersectionObserver" in window)) { setInView(true); return; }
+    const observer = new IntersectionObserver(([entry]) => setInView(Boolean(entry?.isIntersecting)), { rootMargin: "60px", threshold: 0.15 });
+    observer.observe(video);
+    return () => observer.disconnect();
+  }, [media.url]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (inView) void video.play().catch(() => undefined);
+    else video.pause();
+  }, [inView]);
+
+  return (
+    <>
+      <span className="absolute inset-0 grid place-items-center font-serif text-4xl" style={{ backgroundColor: tone.wash, color: tone.ink }}>{fallback}</span>
+      <video ref={videoRef} src={inView ? media.url : undefined} muted loop playsInline autoPlay preload="none" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />
+    </>
   );
 }
 
@@ -200,12 +299,13 @@ type StoryItem = {
 };
 type StoryGroup = { key: string; displayName: string; items: StoryItem[]; latestAt: string };
 
-function StoriesRail({ posts, onEdit, onDelete }: { posts: WeddingMoment[]; onEdit: (post: WeddingMoment) => void; onDelete: (post: WeddingMoment) => void }) {
+function StoriesRail({ posts, displayName, onEdit, onDelete, onAddStory, uploadEnabled, uploading, progress }: { posts: WeddingMoment[]; displayName: string; onEdit: (post: WeddingMoment) => void; onDelete: (post: WeddingMoment) => void; onAddStory: () => void; uploadEnabled: boolean; uploading: boolean; progress: number }) {
   const [active, setActive] = useState<{ group: number; item: number } | null>(null);
+  const reduceMotion = useReducedMotion();
   const groups = useMemo(() => {
     const byName = new Map<string, StoryGroup>();
     for (const post of posts) {
-      if (!post.media.length) continue;
+      if (!post.media.some((media) => media.contentType.startsWith("image/") || media.contentType.startsWith("video/"))) continue;
       const key = post.displayName.trim().toLocaleLowerCase();
       let group = byName.get(key);
       if (!group) {
@@ -213,14 +313,17 @@ function StoriesRail({ posts, onEdit, onDelete }: { posts: WeddingMoment[]; onEd
         byName.set(key, group);
       }
       if (new Date(post.createdAt).getTime() > new Date(group.latestAt).getTime()) group.latestAt = post.createdAt;
-      post.media.forEach((media, index) => group!.items.push({
-        id: `${post.id}-${index}`,
-        media,
-        body: post.body,
-        overlayText: post.overlayText,
-        createdAt: post.createdAt,
-        post,
-      }));
+      post.media.forEach((media, index) => {
+        if (!media.contentType.startsWith("image/") && !media.contentType.startsWith("video/")) return;
+        group!.items.push({
+          id: `${post.id}-${index}`,
+          media,
+          body: post.body,
+          overlayText: post.overlayText,
+          createdAt: post.createdAt,
+          post,
+        });
+      });
     }
     return [...byName.values()]
       .map((group) => ({ ...group, items: group.items.sort((a, b) => a.createdAt.localeCompare(b.createdAt)) }))
@@ -261,32 +364,62 @@ function StoriesRail({ posts, onEdit, onDelete }: { posts: WeddingMoment[]; onEd
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [active, advance]);
 
-  if (!groups.length) return null;
   return (
-    <section aria-label="Stories from guests" className="mb-5 overflow-hidden rounded-[22px] border border-[#D8B9AE] bg-[#FBF3EF] px-3 py-3 shadow-[0_12px_30px_-22px_rgba(107,29,42,.45)] sm:px-4 sm:py-4">
-      <div className="mb-3 flex items-center justify-between gap-3 px-1">
-        <div className="flex items-center gap-2.5"><span className="grid h-8 w-8 place-items-center rounded-full bg-[#6B1D2A] text-sm text-[#F8EBCF] shadow-sm" aria-hidden>✦</span><div><h2 className="font-serif text-lg leading-none text-[#6B1D2A]">Stories</h2><p className="script mt-0.5 text-xl leading-none text-[#9A6D6A]">little glimpses, shared with love</p></div></div>
-        <span className="micro hidden rounded-full border border-[#B4C5AE] bg-white/60 px-3 py-1 text-[#526B56] sm:block">MOMENTS FROM EVERYONE</span>
+    <section aria-label="Stories from guests" className="mb-4 rounded-[20px] border border-[#E5D4CE] bg-[#FFFCF9]/90 px-3 py-3 shadow-[0_8px_24px_-20px_rgba(107,29,42,.4)] sm:px-4">
+      <div className="mb-2.5 flex items-start justify-between gap-3 px-0.5">
+        <div className="min-w-0">
+          <h2 className="text-[13px] font-semibold leading-tight text-[#6B1D2A]">Share your #JSGotMarried moments</h2>
+          <p className="mt-0.5 max-w-xl text-[10px] leading-snug text-[#765E59]">Add to Stories below and upload your photos &amp; videos for the couple and everyone to see.</p>
+        </div>
+        <div className="shrink-0 pt-0.5 text-right text-[9px] leading-tight text-[#8B706A]">
+          <p className="max-w-[100px] truncate">{displayName.trim() ? `Post as ${firstName(displayName)}` : "Post as a guest"}</p>
+          <p className="mt-0.5">1 GB per device</p>
+        </div>
       </div>
-      <div className="flex gap-4 overflow-x-auto pb-1 [scrollbar-width:thin]">
-        {groups.map((group, index) => {
+
+      <div className="flex gap-2.5 overflow-x-auto pb-0.5 [scrollbar-width:thin]">
+        <motion.button type="button" onClick={onAddStory} disabled={!uploadEnabled} aria-label="Add a Story"
+          initial={reduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} whileHover={reduceMotion ? undefined : { y: -3, scale: 1.015 }} whileTap={reduceMotion ? undefined : { scale: 0.975 }} transition={{ duration: 0.22 }}
+          className="relative flex h-[164px] w-[108px] shrink-0 flex-col overflow-hidden rounded-[15px] border border-[#E6D5CE] bg-white text-left shadow-sm disabled:cursor-not-allowed disabled:opacity-50">
+          <span className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-[radial-gradient(ellipse_at_35%_20%,#fff8ee_0%,#f5e7e2_54%,#e9d6d1_100%)]">
+            <span className="absolute -right-5 -top-6 h-20 w-20 rounded-full border border-[#D4B1A7]/40" />
+            <span className="absolute -bottom-8 -left-5 h-24 w-24 rounded-full border border-[#D4B1A7]/40" />
+            <motion.span animate={uploading || reduceMotion ? { scale: 1 } : { scale: [1, 1.08, 1] }} transition={uploading || reduceMotion ? { duration: 0.2 } : { duration: 2.4, repeat: Infinity, ease: "easeInOut" }} className="relative grid h-10 w-10 place-items-center rounded-full bg-[#6B1D2A] text-2xl font-light text-white shadow-md">{uploading ? "…" : "+"}</motion.span>
+          </span>
+          <span className="flex h-[48px] flex-col justify-center px-2.5">
+            <span className="text-[11px] font-semibold leading-tight text-[#46362C]">{uploading ? `Uploading ${progress}%` : "Add to Story"}</span>
+            <span className="mt-0.5 text-[9px] leading-tight text-[#8A746E]">Photos &amp; videos</span>
+          </span>
+        </motion.button>
+
+        {groups.length ? groups.map((group, index) => {
           const first = group.items[0];
           const tone = posterTone(group.displayName);
           const initials = group.displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "♡";
           return (
-            <button key={group.key} type="button" onClick={() => setActive({ group: index, item: 0 })} className="group flex w-[72px] shrink-0 flex-col items-center gap-1.5 text-center">
-              <span className="relative grid h-[66px] w-[66px] place-items-center rounded-full p-[3px] shadow-[0_5px_12px_-8px_rgba(51,39,31,.8)] transition-transform group-hover:scale-105" style={{ background: `conic-gradient(from 220deg,${tone.ink},#E5C982,${tone.deep},#D7A7A8,${tone.ink})` }}>
-                <span className="relative grid h-full w-full place-items-center overflow-hidden rounded-full border-2 border-white font-serif" style={{ backgroundColor: tone.wash, color: tone.ink }}>
-                  {first.media.contentType.startsWith("image/") ? <img src={first.media.url} alt="" className="h-full w-full object-cover" loading="lazy" /> : <span className="text-xl">{initials}</span>}
-                </span>
-                {group.items.some((item) => item.media.contentType.startsWith("video/")) && <span className="absolute bottom-0 right-0 grid h-5 w-5 place-items-center rounded-full border-2 border-white text-[9px] text-white" style={{ backgroundColor: tone.ink }}>▶</span>}
+            <motion.button key={group.key} type="button" onClick={() => setActive({ group: index, item: 0 })}
+              aria-label={`View ${group.displayName}'s Stories`} initial={reduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} whileHover={reduceMotion ? undefined : { y: -3, scale: 1.015 }} whileTap={reduceMotion ? undefined : { scale: 0.975 }} transition={{ duration: 0.22, delay: Math.min(index * 0.045, 0.25) }}
+              className="group relative h-[164px] w-[108px] shrink-0 overflow-hidden rounded-[15px] border border-black/5 bg-[#EDE4DF] text-left shadow-sm">
+              {first.media.contentType.startsWith("image/") ? (
+                <img src={first.media.url} alt="" className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" loading="lazy" />
+              ) : (
+                <StoryCardPreview media={first.media} fallback={initials} tone={tone} />
+              )}
+              <span className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/75" />
+              <span className="absolute left-2.5 top-2.5 grid h-8 w-8 place-items-center overflow-hidden rounded-full border-2 border-[#1684FF] bg-white font-serif text-sm text-[#6B1D2A] shadow-md">
+                <AvatarFace avatar={first.post.avatar} />
               </span>
-              <span className="w-full truncate text-[11px] font-medium" style={{ color: tone.ink }}>{firstName(group.displayName)}</span>
-            </button>
+              {group.items.some((item) => item.media.contentType.startsWith("video/")) && <span className="absolute right-2 top-2 grid h-6 w-6 place-items-center rounded-full bg-black/45 text-[10px] text-white">▶</span>}
+              <span className="absolute inset-x-2 bottom-2.5 line-clamp-2 text-[11px] font-semibold leading-tight text-white drop-shadow">{group.displayName}</span>
+            </motion.button>
           );
-        })}
+        }) : [0, 1].map((placeholder) => (
+          <div key={`story-placeholder-${placeholder}`} aria-hidden="true" className={`relative flex h-[164px] w-[108px] shrink-0 flex-col justify-between overflow-hidden rounded-[15px] border border-dashed border-[#D8C7C1] px-2.5 py-2.5 ${placeholder === 0 ? "bg-[#F5EEEA]" : "bg-[#F1F0EB]"}`}>
+            <span className="grid h-7 w-7 place-items-center rounded-full border border-[#D9C8C1] bg-white/75 text-xs text-[#A88D85]">✦</span>
+            <span className="mb-0.5 text-[10px] leading-snug text-[#9A8580]">Stories from your guests will appear here</span>
+          </div>
+        ))}
       </div>
-
       <AnimatePresence>
         {active && currentGroup && currentItem && (
           <motion.div
@@ -302,7 +435,7 @@ function StoriesRail({ posts, onEdit, onDelete }: { posts: WeddingMoment[]; onEd
                 {currentGroup.items.map((item, index) => <span key={item.id} className="h-1 flex-1 overflow-hidden rounded-full bg-white/35"><span className={`block h-full rounded-full ${index <= (active?.item ?? 0) ? "bg-white" : "bg-transparent"}`} /></span>)}
               </div>
               <div className="absolute inset-x-4 top-7 z-20 flex items-center gap-3">
-                <div className="grid h-9 w-9 place-items-center rounded-full border border-white/50 bg-white/10 font-serif">{currentGroup.displayName.slice(0, 1).toUpperCase()}</div>
+                <AvatarBadge avatar={currentItem.post.avatar} className="h-9 w-9 border border-white/50 bg-white/10 text-lg text-white" />
                 <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{currentGroup.displayName}</p><p className="text-[10px] text-white/65">{relativeTime(currentItem.createdAt)}</p></div>
                 {currentItem.post.canManage && <>
                   <button type="button" aria-label="Edit this story" onClick={() => { onEdit(currentItem.post); setActive(null); }} className="rounded-full bg-black/30 px-2.5 py-1.5 text-[10px] tracking-wide">EDIT</button>
@@ -329,24 +462,69 @@ function StoriesRail({ posts, onEdit, onDelete }: { posts: WeddingMoment[]; onEd
   );
 }
 
+const conversationPrompts = [
+  { greeting: "Hello,", message: "Mingle, say hello, and share the night." },
+  { greeting: "Kamusta?", message: "Pass along an update or a little announcement." },
+  { greeting: "Shalom.", message: "Save a laugh or moment to remember later." },
+];
+
+function ConversationPrompt() {
+  const [index, setIndex] = useState(0);
+  const reduceMotion = useReducedMotion();
+
+  useEffect(() => {
+    if (reduceMotion) return;
+    const timer = window.setInterval(() => setIndex((current) => (current + 1) % conversationPrompts.length), 6500);
+    return () => window.clearInterval(timer);
+  }, [reduceMotion]);
+
+  const scrollToConversation = () => {
+    document.getElementById("wedding-conversation")?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+  };
+
+  return (
+    <motion.div initial={reduceMotion ? false : { opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1.1, ease: "easeOut" }} className="my-1 flex min-h-10 items-center gap-2.5 px-1.5" aria-live="polite">
+      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-[#E7D3CB] bg-white/75 text-[11px] text-[#9A604E]" aria-hidden>✦</span>
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div key={index} initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={reduceMotion ? undefined : { opacity: 0 }} transition={{ duration: 1.15, ease: "easeInOut" }} className="min-w-0 flex-1 leading-tight">
+          <p className="script text-[21px] leading-none text-wine sm:text-2xl">{conversationPrompts[index]?.greeting}</p>
+          <p className="mt-1 text-[10px] leading-relaxed text-[#806B65] sm:text-[11px]">{conversationPrompts[index]?.message}</p>
+        </motion.div>
+      </AnimatePresence>
+      <button type="button" onClick={scrollToConversation} aria-label="Chat with us — scroll to the wedding conversation" title="Join the conversation" className="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-[#E7D3CB] bg-white/75 px-3 text-[10px] font-medium text-[#6B1D2A] transition-colors hover:bg-[#F5E9E6]">
+        <span>Chat with us</span>
+        <motion.span aria-hidden animate={reduceMotion ? undefined : { y: [0, -4, 4, 0, 0] }} transition={reduceMotion ? undefined : { duration: 2.1, repeat: Infinity, repeatDelay: 1.4, times: [0, 0.2, 0.43, 0.64, 1], ease: "easeInOut" }} className="text-lg leading-none">↓</motion.span>
+      </button>
+    </motion.div>
+  );
+}
+
 export default function UploadPage() {
   const { rows: infoRows } = useTable("wedding_info");
   const info = infoRows[0];
   const configured = useMemo(() => mediaConfigured(), []);
   const galleryInput = useRef<HTMLInputElement>(null);
+  const storyInput = useRef<HTMLInputElement>(null);
   const cameraInput = useRef<HTMLInputElement>(null);
   const videoInput = useRef<HTMLInputElement>(null);
+  const messageInput = useRef<HTMLTextAreaElement>(null);
   const deviceId = useMemo(() => guestId(), []);
+  const voiceRecorder = useRef<MediaRecorder | null>(null);
+  const voiceStream = useRef<MediaStream | null>(null);
+  const voiceChunks = useRef<Blob[]>([]);
 
   const [quota, setQuota] = useState(readQuota());
   const [draftMedia, setDraftMedia] = useState<DraftMedia[]>([]);
   const draftRef = useRef(draftMedia);
   draftRef.current = draftMedia;
   const [displayName, setDisplayName] = useState("");
+  const [avatar, setAvatar] = useState<GuestAvatarId>(DEFAULT_GUEST_AVATAR);
+  const [namePromptMode, setNamePromptMode] = useState<NamePromptMode | null>(null);
   const [body, setBody] = useState("");
-  const [overlayText, setOverlayText] = useState("");
-  const [composerOpen, setComposerOpen] = useState(false);
-  const [showInFeed, setShowInFeed] = useState(true);
+  const [recording, setRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const [attachmentMenu, setAttachmentMenu] = useState(false);
   const [editingPost, setEditingPost] = useState<WeddingMoment | null>(null);
   const [posts, setPosts] = useState<WeddingMoment[]>([]);
   const [storyPosts, setStoryPosts] = useState<WeddingMoment[]>([]);
@@ -355,35 +533,45 @@ export default function UploadPage() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [posting, setPosting] = useState(false);
-  const [uploadIndex, setUploadIndex] = useState<number | null>(null);
+  const [storyUploading, setStoryUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [pulling, setPulling] = useState(false);
-  const [newCount, setNewCount] = useState(0);
+  const [liveStatus, setLiveStatus] = useState<"connecting" | "live" | "offline">("connecting");
+  const [unreadCount, setUnreadCount] = useState(0);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const newestAt = useRef("");
+  const chatScroll = useRef<HTMLDivElement>(null);
+  const postsRef = useRef<WeddingMoment[]>([]);
+  const initialScrollDone = useRef(false);
   const touchStartY = useRef<number | null>(null);
 
   const couple = info?.bride && info?.groom ? `${info.groom} & ${info.bride}` : "the couple";
   const hashtag = info?.hashtags?.[0] || "";
-  const unuploadedDraft = draftMedia.filter((item) => !item.path);
-  const draftBytes = unuploadedDraft.reduce((sum, item) => sum + item.file.size, 0);
-  const remainingFiles = Math.max(0, MAX_FILES_PER_GUEST - quota.count - unuploadedDraft.length);
-  const remainingBytes = Math.max(0, MAX_TOTAL_BYTES - quota.bytes - draftBytes);
+  const remainingBytes = Math.max(0, MAX_TOTAL_BYTES - quota.bytes);
 
   const refreshFeed = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true);
     setError("");
     try {
       const [page, storyPage] = await Promise.all([
-        loadMoments({ limit: 12, deviceId }),
+        loadMoments({ limit: 24, deviceId }),
         loadMoments({ limit: 48, stories: true, deviceId }),
       ]);
-      setPosts(page.posts);
+      const knownIds = new Set(postsRef.current.map((message) => message.id));
+      const arrived = page.posts.filter((message) => !knownIds.has(message.id));
+      const node = chatScroll.current;
+      const nearBottom = !node || node.scrollHeight - node.scrollTop - node.clientHeight < 140;
+      setPosts((current) => {
+        const merged = mergeChatMessages(current, page.posts);
+        postsRef.current = merged;
+        return merged;
+      });
+      if (quiet && arrived.length) {
+        if (nearBottom) requestAnimationFrame(() => { if (chatScroll.current) chatScroll.current.scrollTop = chatScroll.current.scrollHeight; });
+        else setUnreadCount((count) => count + arrived.length);
+      }
       setStoryPosts(storyPage.posts);
       setNextCursor(page.nextCursor);
-      newestAt.current = page.posts[0]?.createdAt || new Date().toISOString();
-      setNewCount(0);
     } catch (e) {
       if (!quiet) setError((e as Error).message);
     } finally {
@@ -393,59 +581,237 @@ export default function UploadPage() {
   }, [deviceId]);
 
   useEffect(() => {
-    try { setDisplayName(localStorage.getItem("jsos:moment-name-v1") || ""); } catch { /* private mode */ }
+    try {
+      setDisplayName(localStorage.getItem("jsos:moment-name-v1") || "");
+      const savedAvatar = localStorage.getItem("jsos:moment-avatar-v1");
+      if (savedAvatar) setAvatar(normalizeGuestAvatarId(savedAvatar));
+    } catch { /* private mode */ }
     void refreshFeed();
     return () => draftRef.current.forEach((item) => URL.revokeObjectURL(item.previewUrl));
   }, [refreshFeed]);
 
   useEffect(() => {
-    const timer = setInterval(async () => {
-      if (!newestAt.current || document.visibilityState !== "visible") return;
-      const count = await countNewMoments(newestAt.current);
-      if (count > 0) setNewCount(count);
-    }, 60_000);
-    return () => clearInterval(timer);
-  }, []);
+    if (loading || initialScrollDone.current || !posts.length) return;
+    initialScrollDone.current = true;
+    requestAnimationFrame(() => {
+      const node = chatScroll.current;
+      if (node) node.scrollTop = node.scrollHeight;
+    });
+  }, [loading, posts.length]);
 
-  const chooseFiles = (picked: FileList | null) => {
-    if (!picked) return;
-    const files = Array.from(picked);
-    const quotaWithDraft = {
-      count: quota.count + unuploadedDraft.length,
-      bytes: quota.bytes + draftBytes,
+  useEffect(() => {
+    const supabase = browserSupabase();
+    if (!supabase) { setLiveStatus("offline"); return; }
+    const channel = supabase
+      .channel("wedding-newsfeed", { config: { private: true, broadcast: { ack: false, self: false } } })
+      .on("broadcast", { event: "moments_changed" }, async (message) => {
+        const payload = (message as { payload?: { operation?: string; id?: string } })?.payload;
+        if (!payload?.id) return;
+        if (payload.operation === "DELETE") {
+          const remaining = postsRef.current.filter((item) => item.id !== payload.id);
+          postsRef.current = remaining;
+          setPosts(remaining);
+          setStoryPosts((current) => current.filter((item) => item.id !== payload.id));
+          return;
+        }
+        try {
+          const result = await loadMoments({ id: payload.id, limit: 1, deviceId });
+          const messagePost = result.posts[0];
+          if (!messagePost) return;
+          const isNew = !postsRef.current.some((item) => item.id === messagePost.id);
+          const node = chatScroll.current;
+          const nearBottom = !node || node.scrollHeight - node.scrollTop - node.clientHeight < 140;
+          const next = messagePost.showInFeed
+            ? mergeChatMessages(postsRef.current, [messagePost])
+            : postsRef.current.filter((item) => item.id !== messagePost.id);
+          postsRef.current = next;
+          setPosts(next);
+          if (messagePost.media.some((media) => media.contentType.startsWith("image/") || media.contentType.startsWith("video/"))) {
+            setStoryPosts((current) => [messagePost, ...current.filter((item) => item.id !== messagePost.id)].slice(0, 48));
+          }
+          if (isNew && messagePost.showInFeed) {
+            if (nearBottom) requestAnimationFrame(() => { if (chatScroll.current) chatScroll.current.scrollTop = chatScroll.current.scrollHeight; });
+            else setUnreadCount((count) => count + 1);
+          }
+        } catch { /* a dropped event can be recovered by reconnecting or using Refresh */ }
+      })
+      .subscribe((status) => {
+        const ready = status === "SUBSCRIBED";
+        setLiveStatus(ready ? "live" : status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED" ? "offline" : "connecting");
+        if (ready) void refreshFeed(true);
+      });
+    return () => {
+      setLiveStatus("offline");
+      void supabase.removeChannel(channel);
     };
-    const result = validateSelection(files, quotaWithDraft);
+  }, [deviceId, refreshFeed]);
+
+  // A quiet fallback only runs while Realtime is disconnected, so messages still catch up after
+  // a temporary socket outage without making guests manually refresh.
+  useEffect(() => {
+    if (!configured || liveStatus === "live") return;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void refreshFeed(true);
+    }, 15_000);
+    return () => window.clearInterval(timer);
+  }, [configured, liveStatus, refreshFeed]);
+
+  const addFiles = (files: File[]): boolean => {
+    const result = validateChatSelection(files);
     const room = Math.max(0, MAX_POST_MEDIA - draftMedia.length);
     const accepted = result.accepted.slice(0, room);
     const notices = [...result.errors];
-    if (result.accepted.length > room) notices.push(`One post can include up to ${MAX_POST_MEDIA} items.`);
-    if (!accepted.length && files.length) setError(notices[0] || "No more media can be added to this post.");
+    if (result.accepted.length > room) notices.push(`One message can include up to ${MAX_POST_MEDIA} attachments.`);
+    if (!accepted.length && files.length) setError(notices[0] || "No more attachments can be added to this message.");
     else setError("");
     if (notices.length) setNotice(notices.join(" "));
     if (accepted.length) {
-      setComposerOpen(true);
-      setDraftMedia((current) => [...current, ...accepted.map((file) => ({
-        file,
-        previewUrl: URL.createObjectURL(file),
-        progress: 0,
-        status: "waiting" as const,
-      }))]);
+      setDraftMedia((current) => [...current, ...accepted.map((file) => ({ file, previewUrl: URL.createObjectURL(file), progress: 0, status: "waiting" as const }))]);
     }
+    return accepted.length > 0;
+  };
+
+  const chooseFiles = (picked: FileList | null) => {
+    setAttachmentMenu(false);
+    if (picked) addFiles(Array.from(picked));
     if (galleryInput.current) galleryInput.current.value = "";
     if (cameraInput.current) cameraInput.current.value = "";
     if (videoInput.current) videoInput.current.value = "";
   };
+
+  const chooseStoryFiles = (picked: FileList | null) => {
+    setAttachmentMenu(false);
+    if (picked?.length) void uploadStories(Array.from(picked));
+    if (storyInput.current) storyInput.current.value = "";
+  };
+
+  const uploadStories = async (files: File[]) => {
+    const validation = validateStorySelection(files, quota);
+    const accepted = validation.accepted;
+    if (!accepted.length) {
+      setError(validation.errors[0] || "Choose a photo or video to add to Stories.");
+      return;
+    }
+    setPosting(true);
+    setStoryUploading(true);
+    setError("");
+    setNotice("");
+    try {
+      const published: WeddingMoment[] = [];
+      for (const file of accepted) {
+        const path = objectPath(file, deviceId);
+        setUploadProgress(0);
+        await uploadMediaFile(file, path, (percent) => setUploadProgress(percent));
+        setQuota(addToQuota([file]));
+        const post = await publishMoment({
+          deviceId, displayName: displayName.trim(), avatar, body: "", overlayText: "",
+          media: [{ path, contentType: mediaContentType(file) }], showInFeed: false, showInStories: true,
+        });
+        published.push(post);
+      }
+      setStoryPosts((current) => [...published.reverse(), ...current].slice(0, 48));
+      const skipped = validation.errors.length ? ` ${validation.errors.length} file(s) were skipped.` : "";
+      setNotice(`${accepted.length === 1 ? "Added to Stories" : `Added ${accepted.length} items to Stories`} — not shared in the group chat. ♡${skipped}`);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Your Story could not be uploaded. Please try again.");
+    } finally {
+      setPosting(false);
+      setStoryUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const showStoryPicker = () => storyInput.current?.click();
+  const openStoryPicker = () => setNamePromptMode("story");
+
+  const saveNamePrompt = (name: string, selectedAvatar: GuestAvatarId) => {
+    const mode = namePromptMode;
+    if (!mode) return;
+    const cleanName = name.trim();
+    setDisplayName(cleanName);
+    setAvatar(selectedAvatar);
+    try {
+      localStorage.setItem("jsos:moment-name-v1", cleanName);
+      localStorage.setItem("jsos:moment-avatar-v1", selectedAvatar);
+    } catch { /* private mode */ }
+    setNamePromptMode(null);
+    if (mode === "story") showStoryPicker();
+    if (mode === "chat") void sharePost(cleanName, selectedAvatar);
+  };
+
+  const startVoiceNote = async () => {
+    if (recording) {
+      voiceRecorder.current?.stop();
+      setRecording(false);
+      return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+      setError("Voice notes aren't supported in this browser. You can still attach an audio file.");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      voiceStream.current = stream;
+      const mimeType = ["audio/webm;codecs=opus", "audio/mp4", "audio/webm", "audio/ogg;codecs=opus"]
+        .find((type) => MediaRecorder.isTypeSupported(type));
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      voiceChunks.current = [];
+      recorder.ondataavailable = (event) => { if (event.data.size) voiceChunks.current.push(event.data); };
+      recorder.onstop = () => {
+        const type = recorder.mimeType || "audio/webm";
+        const extension = type.includes("mp4") ? "m4a" : type.includes("ogg") ? "ogg" : "webm";
+        const audio = new File(voiceChunks.current, `voice-note-${Date.now()}.${extension}`, { type });
+        if (audio.size) addFiles([audio]);
+        stream.getTracks().forEach((track) => track.stop());
+        voiceStream.current = null;
+        voiceRecorder.current = null;
+        voiceChunks.current = [];
+      };
+      recorder.start();
+      voiceRecorder.current = recorder;
+      setRecordingSeconds(0);
+      setRecording(true);
+      setError("");
+    } catch {
+      voiceStream.current?.getTracks().forEach((track) => track.stop());
+      voiceStream.current = null;
+      voiceRecorder.current = null;
+      setRecording(false);
+      setError("Microphone access was blocked. Please allow it, or attach a photo, video or audio file instead.");
+    }
+  };
+
+  useEffect(() => {
+    if (!recording) return;
+    const timer = window.setInterval(() => setRecordingSeconds((seconds) => seconds + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, [recording]);
+
+  useEffect(() => () => {
+    const recorder = voiceRecorder.current;
+    if (recorder) {
+      recorder.onstop = null;
+      recorder.ondataavailable = null;
+      if (recorder.state !== "inactive") recorder.stop();
+    }
+    voiceStream.current?.getTracks().forEach((track) => track.stop());
+  }, []);
 
   const removeDraft = (index: number) => {
     const item = draftMedia[index];
     if (item) URL.revokeObjectURL(item.previewUrl);
     const remaining = draftMedia.filter((_, i) => i !== index);
     setDraftMedia(remaining);
-    if (!remaining.length) setShowInFeed(true);
   };
 
-  const sharePost = async () => {
-    if (!configured || posting || (!body.trim() && !draftMedia.length) || (!showInFeed && !draftMedia.length)) return;
+  const sharePost = async (providedName?: string, providedAvatar?: GuestAvatarId) => {
+    if (!configured || posting || (!body.trim() && !draftMedia.length)) return;
+    const authorName = (providedName ?? displayName).trim();
+    const authorAvatar = providedAvatar ?? avatar;
+    if (!authorName && providedName === undefined) {
+      setNamePromptMode("chat");
+      return;
+    }
     setPosting(true);
     setError("");
     setNotice("");
@@ -454,49 +820,53 @@ export default function UploadPage() {
       for (let i = 0; i < draftMedia.length; i++) {
         let item = draftMedia[i];
         if (!item.path) {
-          const path = objectPath(item.file, deviceId);
-          setUploadIndex(i);
+          const optimizedFile = await optimizeChatMedia(item.file);
+          const path = objectPath(optimizedFile, deviceId);
           setUploadProgress(0);
           setDraftMedia((current) => current.map((x, n) => n === i ? { ...x, status: "uploading", progress: 0 } : x));
-          await uploadMediaFile(item.file, path, (percent) => {
+          await uploadMediaFile(optimizedFile, path, (percent) => {
             setUploadProgress(percent);
             setDraftMedia((current) => current.map((x, n) => n === i ? { ...x, progress: percent } : x));
           });
-          item = { ...item, path, progress: 100, status: "uploaded" };
+          item = { ...item, file: optimizedFile, path, progress: 100, status: "uploaded" };
           setDraftMedia((current) => current.map((x, n) => n === i ? item : x));
-          setQuota(addToQuota([item.file]));
         }
         readyMedia.push({ path: item.path!, contentType: mediaContentType(item.file) });
       }
 
-      const post = await publishMoment({ deviceId, displayName: displayName.trim(), body, overlayText, media: readyMedia, showInFeed });
-      if (post.showInFeed) setPosts((current) => [post, ...current.filter((item) => item.id !== post.id)]);
-      if (post.media.length) setStoryPosts((current) => [post, ...current.filter((item) => item.id !== post.id)]);
-      newestAt.current = post.createdAt;
+      const post = await publishMoment({ deviceId, displayName: authorName, avatar: authorAvatar, body, overlayText: "", media: readyMedia, showInFeed: true, showInStories: false });
+      if (post.showInFeed) {
+        setPosts((current) => {
+          const next = mergeChatMessages(current, [post]);
+          postsRef.current = next;
+          return next;
+        });
+        setUnreadCount(0);
+        requestAnimationFrame(() => { if (chatScroll.current) chatScroll.current.scrollTop = chatScroll.current.scrollHeight; });
+      }
       setBody("");
-      setOverlayText("");
-      setShowInFeed(true);
-      setComposerOpen(false);
+      setEmojiOpen(false);
       draftRef.current.forEach((item) => URL.revokeObjectURL(item.previewUrl));
       setDraftMedia([]);
-      setNotice(post.showInFeed ? "Posted to the Newsfeed and Stories — thank you for sharing it ♡" : "Posted to Stories only — it won't appear in the Newsfeed ♡");
-      try { localStorage.setItem("jsos:moment-name-v1", displayName.trim()); } catch { /* private mode */ }
+      setNotice("Sent to the group chat ♡ Chat photos and videos are optimized and stay out of Stories.");
+      try { localStorage.setItem("jsos:moment-name-v1", authorName); } catch { /* private mode */ }
       window.setTimeout(() => setNotice(""), 4500);
     } catch (e) {
       setError((e as Error).message || "That didn't send — please try again.");
     } finally {
       setPosting(false);
-      setUploadIndex(null);
       setUploadProgress(0);
     }
   };
 
   const removePost = async (post: WeddingMoment) => {
-    if (!post.canManage || !window.confirm("Delete your post and its uploaded photos/videos? This can't be undone.")) return;
+    if (!post.canManage || !window.confirm("Delete your message and its uploaded attachments? This can't be undone.")) return;
     setError("");
     try {
       await deleteMoment(post.id, deviceId);
-      setPosts((current) => current.filter((item) => item.id !== post.id));
+      const remaining = postsRef.current.filter((item) => item.id !== post.id);
+      postsRef.current = remaining;
+      setPosts(remaining);
       setStoryPosts((current) => current.filter((item) => item.id !== post.id));
       setNotice("Your moment has been deleted.");
       window.setTimeout(() => setNotice(""), 4500);
@@ -508,7 +878,9 @@ export default function UploadPage() {
   const savePostEdit = async (bodyText: string, overlay: string) => {
     if (!editingPost) return;
     const updated = await updateMoment({ id: editingPost.id, deviceId, body: bodyText, overlayText: overlay });
-    setPosts((current) => current.map((item) => item.id === updated.id ? updated : item));
+    const changed = postsRef.current.map((item) => item.id === updated.id ? updated : item);
+    postsRef.current = changed;
+    setPosts(changed);
     setStoryPosts((current) => current.map((item) => item.id === updated.id ? updated : item));
     setEditingPost(null);
     setNotice("Your changes have been saved ♡");
@@ -519,12 +891,19 @@ export default function UploadPage() {
     if (!nextCursor || loadingMore) return;
     setLoadingMore(true);
     try {
-      const page = await loadMoments({ before: nextCursor, limit: 12, deviceId });
+      const node = chatScroll.current;
+      const oldHeight = node?.scrollHeight ?? 0;
+      const oldTop = node?.scrollTop ?? 0;
+      const page = await loadMoments({ before: nextCursor, limit: 24, deviceId });
       setPosts((current) => {
-        const seen = new Set(current.map((post) => post.id));
-        return [...current, ...page.posts.filter((post) => !seen.has(post.id))];
+        const merged = mergeChatMessages(current, page.posts);
+        postsRef.current = merged;
+        return merged;
       });
       setNextCursor(page.nextCursor);
+      requestAnimationFrame(() => {
+        if (node) node.scrollTop = oldTop + node.scrollHeight - oldHeight;
+      });
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -555,10 +934,12 @@ export default function UploadPage() {
             <a href="/" className="micro inline-flex items-center gap-1.5 text-taupe no-underline transition-colors hover:text-wine">
               <span aria-hidden>←</span> BACK TO THE HOUSE
             </a>
-            <h1 className="mt-1 font-serif text-2xl leading-tight text-wine sm:text-[1.7rem]">Memory Wall</h1>
+            <h1 className="mt-1 font-serif text-2xl leading-tight text-wine sm:text-[1.7rem]">Wedding chat</h1>
             <p className="mt-0.5 truncate text-xs text-taupe">{info ? fullDate(info.date) : "11.11.2026"} · {couple}{hashtag ? ` · ${hashtag}` : ""}</p>
           </div>
-          <span className="hidden shrink-0 font-serif text-3xl text-wine/45 sm:block" aria-hidden>♡</span>
+          <button type="button" onClick={() => setNamePromptMode("edit")} title={displayName.trim() ? `Edit name and avatar: ${displayName}` : "Add your name and choose an avatar"} aria-label={displayName.trim() ? `Edit your name and avatar, currently ${displayName}` : "Add your name and choose an avatar"} className="flex max-w-[112px] shrink-0 items-center gap-1.5 rounded-full border border-[#D8B9AE] bg-white/75 px-2.5 py-2 text-[10px] font-medium text-[#70434A] shadow-sm transition-colors hover:bg-[#F7ECE9] sm:max-w-[150px] sm:px-3 sm:text-xs">
+            <AvatarBadge avatar={avatar} className="h-5 w-5 border border-[#E4D2CB] bg-white text-sm text-[#6B1D2A]" /><span className="truncate">{displayName.trim() ? `As ${firstName(displayName)}` : "Name"}</span><span aria-hidden>✎</span>
+          </button>
         </header>
 
         <div className="mb-4 flex items-center justify-between gap-3 overflow-hidden rounded-2xl border border-[#E1C8C2] bg-[#F2E5E2] px-4 py-2.5 text-[#6B1D2A] shadow-[0_8px_20px_-16px_rgba(107,29,42,.45)] sm:px-5">
@@ -568,161 +949,78 @@ export default function UploadPage() {
 
         {!configured && (
           <div className="mb-4 rounded-2xl border border-taupe/25 bg-white/70 p-5 text-center text-sm text-ink/65">
-            The private album is not connected yet. Please let the couple know so they can finish the one-time setup.
+            The wedding chat isn't connected yet. Please let the couple know so they can finish the one-time setup.
           </div>
         )}
 
-        <StoriesRail posts={storyPosts} onEdit={setEditingPost} onDelete={(post) => void removePost(post)} />
+        <StoriesRail posts={storyPosts} displayName={displayName} onEdit={setEditingPost} onDelete={(post) => void removePost(post)} onAddStory={openStoryPicker} uploadEnabled={configured && !posting} uploading={storyUploading} progress={uploadProgress} />
+        <ConversationPrompt />
 
-        <section aria-label="Write a post" className="mt-4 rounded-[20px] border border-[#E3D1CB] bg-[#FFFCF8] shadow-[0_10px_28px_-22px_rgba(107,29,42,.42)]">
+        <section id="wedding-conversation" aria-label="Wedding conversation" className="mt-1 scroll-mt-4 overflow-hidden rounded-[22px] border border-[#E3D1CB] bg-[#FFFCF8] shadow-[0_12px_32px_-22px_rgba(107,29,42,.5)]">
+          <input ref={storyInput} type="file" accept="image/*,video/*,.heic,.heif,.mov" multiple hidden onChange={(event) => chooseStoryFiles(event.target.files)} />
           <input ref={galleryInput} type="file" accept={UPLOAD_ACCEPT} multiple hidden onChange={(event) => chooseFiles(event.target.files)} />
           <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={(event) => chooseFiles(event.target.files)} />
           <input ref={videoInput} type="file" accept="video/*" capture="environment" hidden onChange={(event) => chooseFiles(event.target.files)} />
-
-          {!composerOpen ? (
-            <div className="flex items-center gap-3 p-3 sm:p-4">
-              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-[#D8B5AE] bg-[#F2E4E1] font-serif text-xl text-[#6B1D2A]">♡</div>
-              <button type="button" onClick={() => setComposerOpen(true)} className="flex h-11 min-w-0 flex-1 items-center rounded-full border border-[#E7DAD5] bg-[#F8F5F1] px-4 text-left text-sm text-[#84766F] transition-colors hover:border-[#C99A91] hover:bg-white sm:text-base">
-                What&apos;s on your mind{displayName.trim() ? `, ${firstName(displayName.trim())}` : ""}?
+          <div className="flex items-center justify-between gap-3 border-b border-[#E8DCD7] bg-white/75 px-4 py-3">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#E9F2E7] text-lg text-[#526B56]" aria-hidden>♡</span>
+              <div className="min-w-0"><h2 className="font-serif text-xl leading-tight text-[#46362C]">Wedding conversation</h2><p className="text-[11px] text-taupe">Chat, share updates &amp; relive the night</p></div>
+            </div>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <button type="button" onClick={() => setNamePromptMode("edit")} title={displayName.trim() ? `Edit name and avatar: ${displayName}` : "Add your name and choose an avatar"} aria-label={displayName.trim() ? `Edit your name and avatar, currently ${displayName}` : "Add your name and choose an avatar"} className="flex max-w-[88px] items-center gap-1 truncate rounded-full border border-[#E3D1CB] bg-white/80 px-2 py-1 text-[9px] font-medium text-[#70434A] hover:bg-[#F7ECE9] sm:max-w-[120px] sm:text-[10px]">
+                <AvatarBadge avatar={avatar} className="h-4 w-4 border border-[#E3D1CB] bg-white text-[10px] text-[#6B1D2A]" /><span className="truncate">{displayName.trim() ? `As ${firstName(displayName)}` : "Name"}</span><span aria-hidden>✎</span>
               </button>
-              <button type="button" onClick={() => galleryInput.current?.click()} aria-label="Upload a photo or video" title="Upload a photo or video" className="inline-flex h-11 shrink-0 items-center gap-2 rounded-full border border-[#D8C79F] bg-[#F5EFDF] px-3.5 text-[10px] font-medium tracking-[0.1em] text-[#7B6331] transition-colors hover:bg-[#EFE4C8] sm:px-4 sm:text-xs">
-                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="h-4 w-4"><path d="M4 6.5A1.5 1.5 0 0 1 5.5 5h13A1.5 1.5 0 0 1 20 6.5v11a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5v-11Z" stroke="currentColor" strokeWidth="1.6"/><circle cx="9" cy="9" r="1.3" fill="currentColor"/><path d="m5 17 4.4-4.6a1 1 0 0 1 1.45 0l2.1 2.2 1.5-1.5a1 1 0 0 1 1.42 0L19 16.7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                UPLOAD
-              </button>
+              <span title={liveStatus === "live" ? "Live" : liveStatus === "offline" ? "Offline" : "Connecting"} className="inline-flex items-center gap-1.5 text-[10px] text-taupe"><span className={`h-2 w-2 rounded-full ${liveStatus === "live" ? "bg-[#4D8A57]" : liveStatus === "offline" ? "bg-[#B66A62]" : "bg-[#C49A57]"}`} /><span className="hidden sm:inline">{liveStatus === "live" ? "LIVE" : liveStatus === "offline" ? "OFFLINE" : "CONNECTING"}</span></span>
+              <button type="button" onClick={() => { setPulling(true); void refreshFeed(true); }} title="Refresh chat" aria-label="Refresh chat" className="grid h-8 w-8 place-items-center rounded-full border border-[#E3D1CB] text-lg text-[#806F68] transition-colors hover:bg-[#F5E9E6]">↻</button>
             </div>
-          ) : (
-            <div className="p-4 sm:p-5">
-              <div className="mb-4 flex items-center justify-between gap-3 border-b border-[#E8DCD7] pb-3">
-                <div className="flex items-center gap-2.5"><span className="grid h-8 w-8 place-items-center rounded-full bg-[#F2E4E1] text-[#9A604E]" aria-hidden>✧</span><div><p className="micro !tracking-[0.16em] text-[#8C6260]">SHARE A MOMENT</p><h2 className="font-serif text-xl leading-tight text-[#46362C]">What&apos;s on your mind?</h2></div></div>
-                <button type="button" onClick={() => setComposerOpen(false)} aria-label="Close composer" title="Close composer" className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[#E3D1CB] text-xl text-[#806F68] transition-colors hover:bg-[#F5E9E6]">×</button>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-[#D8B5AE] bg-[#F2E4E1] font-serif text-xl text-[#6B1D2A]">♡</div>
-                <div className="min-w-0 flex-1">
-                  <input value={displayName} onChange={(event) => setDisplayName(event.target.value.slice(0, 60))} placeholder="Your name (optional)" aria-label="Your name" className="w-full border-b border-[#E3D8D2] bg-transparent pb-2 font-serif text-lg text-mocha outline-none placeholder:text-taupe/65 focus:border-wine/50" />
-                  <textarea value={body} onChange={(event) => setBody(event.target.value.slice(0, 1200))} placeholder="Leave a little note, a wish, or a moment you want to remember…" rows={3} className="mt-3 w-full resize-y bg-transparent text-[15px] leading-relaxed text-ink outline-none placeholder:text-ink/40" />
-                  {draftMedia.length > 0 && (
-                    <div className={`mt-3 grid gap-2 ${draftMedia.length === 1 ? "grid-cols-1" : "grid-cols-2 sm:grid-cols-4"}`}>
-                      {draftMedia.map((item, index) => (
-                        <div key={`${item.file.name}-${index}`} className="relative aspect-square overflow-hidden rounded-xl bg-oat">
-                          {item.file.type.startsWith("video/") ? <video src={item.previewUrl} controls playsInline className="h-full w-full object-cover" /> : <img src={item.previewUrl} alt={item.file.name} className="h-full w-full object-cover" />}
-                          {overlayText && <div className="pointer-events-none absolute inset-x-2 bottom-2 rounded-lg bg-ink/55 px-2 py-1.5 text-center font-serif text-xs text-white shadow backdrop-blur-sm">{overlayText}</div>}
-                          {item.status === "uploading" && <div className="absolute inset-x-0 bottom-0 bg-ink/65 p-2 text-xs text-white">Uploading {uploadIndex === index ? uploadProgress : item.progress}%<div className="mt-1 h-1 overflow-hidden rounded bg-white/30"><div className="h-full bg-white" style={{ width: `${item.progress}%` }} /></div></div>}
-                          {item.status === "uploaded" && <span className="absolute bottom-2 left-2 rounded-full bg-moss/90 px-2 py-1 text-[10px] text-white">ready ✓</span>}
-                          {!posting && <button type="button" onClick={() => removeDraft(index)} aria-label={`Remove ${item.file.name}`} className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-ink/65 text-sm text-white">×</button>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {draftMedia.length > 0 && <input value={overlayText} onChange={(event) => setOverlayText(event.target.value.slice(0, 120))} placeholder="Optional text over your photos/videos" className="mt-3 w-full rounded-xl border border-[#E5D8D2] bg-white px-3 py-2 text-xs text-ink outline-none focus:border-wine/40" />}
-                  <p className="mt-2 text-right text-[10px] text-taupe/70">{body.length}/1200</p>
-                </div>
-              </div>
-
-              <div className="mt-4 border-t border-[#E8DCD7] pt-3">
-                <div className="grid grid-cols-3 gap-2">
-                  <button type="button" title="Upload photos or videos" aria-label="Upload photos or videos" onClick={() => galleryInput.current?.click()} className="micro flex min-w-0 items-center justify-center gap-1.5 rounded-full border border-[#D8C7C1] bg-white px-2 py-2 text-[9px] text-[#70434A] transition-colors hover:bg-[#F7ECE9] sm:gap-2 sm:px-3 sm:text-[10px]">
-                    <span aria-hidden>▧</span><span className="truncate">Upload</span>
-                  </button>
-                  <button type="button" title="Take a photo" aria-label="Take a photo" onClick={() => cameraInput.current?.click()} className="micro flex min-w-0 items-center justify-center gap-1.5 rounded-full border border-[#D8C7C1] bg-white px-2 py-2 text-[9px] text-[#70434A] transition-colors hover:bg-[#F7ECE9] sm:gap-2 sm:px-3 sm:text-[10px]">
-                    <span aria-hidden>◉</span><span className="truncate">Photo</span>
-                  </button>
-                  <button type="button" title="Record a video" aria-label="Record a video" onClick={() => videoInput.current?.click()} className="micro flex min-w-0 items-center justify-center gap-1.5 rounded-full border border-[#D8C7C1] bg-white px-2 py-2 text-[9px] text-[#70434A] transition-colors hover:bg-[#F7ECE9] sm:gap-2 sm:px-3 sm:text-[10px]">
-                    <span aria-hidden>▷</span><span className="truncate">Video</span>
-                  </button>
-                </div>
-                {draftMedia.length > 0 && <label className="mt-3 flex cursor-pointer items-start gap-2 rounded-xl bg-[#F8F2E7] px-3 py-2.5 text-sm text-ink/75"><input type="checkbox" checked={showInFeed} onChange={(event) => setShowInFeed(event.target.checked)} className="mt-0.5 accent-burgundy" /><span><b>Also show this in the Newsfeed</b><span className="block text-xs text-taupe">Uncheck to share it as a Story only.</span></span></label>}
-                <div className="mt-3 flex justify-end">
-                  <motion.button type="button" whileTap={{ scale: 0.97 }} onClick={() => void sharePost()} disabled={posting || !configured || (!body.trim() && draftMedia.length === 0) || (!showInFeed && draftMedia.length === 0)} className="micro inline-flex min-w-32 items-center justify-center gap-2 rounded-full bg-[#6B1D2A] px-6 py-2.5 tracking-[0.12em] text-white shadow-sm transition-colors hover:bg-[#4E1722] disabled:cursor-not-allowed disabled:opacity-45">
-                    {posting ? "POSTING…" : <><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="h-4 w-4"><path d="M21 3 10.8 13.2M21 3l-6.5 18-3.7-7.8L3 9.5 21 3Z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>POST</>}
-                  </motion.button>
-                </div>
-              </div>
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[10px] text-taupe/75"><span>{MAX_POST_MEDIA} items per post · {MAX_FILES_PER_GUEST} files per device</span><span>{formatBytes(quota.bytes + draftBytes)} of {formatBytes(MAX_TOTAL_BYTES)} used · private album</span></div>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-ink/8"><div className="h-full rounded-full bg-wine/60 transition-all" style={{ width: `${Math.min(100, Math.round(((quota.bytes + draftBytes) / MAX_TOTAL_BYTES) * 100))}%` }} /></div>
-            </div>
-          )}
-          {error && <p role="alert" className="m-3 rounded-xl bg-burgundy/10 px-3 py-2 text-sm text-burgundy">{error}</p>}
-          {notice && <motion.p role="status" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="m-3 rounded-xl bg-[#EDF2E9] px-3 py-2 text-sm text-[#526B56]">{notice}</motion.p>}
-        </section>
-
-        <section aria-label="Wedding moments" className="mt-7">
-          <div className="mb-4 flex items-center justify-between gap-3 px-1">
-            <div className="flex min-w-0 items-center gap-3">
-              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-[#D8B5AE] bg-[#F2E4E1] text-xl text-[#8B4A53]" aria-hidden>✦</span>
-              <div className="min-w-0">
-                <p className="micro tracking-[0.2em] text-[#815861]">THE SHARED ALBUM</p>
-                <h2 className="mt-0.5 font-serif text-2xl leading-none text-[#46362C]">Newsfeed</h2>
-                <p className="mt-1 text-xs text-taupe">Little notes and moments from everyone</p>
-              </div>
-            </div>
-            <button type="button" onClick={refreshFromTop} disabled={loading || pulling} className="micro shrink-0 rounded-full border border-[#D7C28D] bg-[#F7F0DE] px-3 py-2 text-[#80662E] shadow-sm transition-colors hover:border-[#6B1D2A] hover:bg-[#6B1D2A] hover:text-white disabled:opacity-50">
-              {pulling ? "REFRESHING…" : "↻ REFRESH"}
-            </button>
           </div>
 
-          <AnimatePresence>
-            {newCount > 0 && (
-              <motion.button
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                type="button"
-                onClick={refreshFromTop}
-                className="mb-4 w-full rounded-2xl border border-[#D8B5AE] bg-[#F2E4E1] py-3 font-serif text-[#6B1D2A] shadow-[0_10px_24px_-16px_rgba(107,29,42,.3)] transition-colors hover:bg-[#EBD6D2]"
-              >
-                {newCount} new {newCount === 1 ? "moment" : "moments"} · tap to see ♡
-              </motion.button>
-            )}
-          </AnimatePresence>
-
-          {pulling && <p className="mb-3 text-center text-xs text-wine/70">Gathering the newest moments…</p>}
-          {error && posts.length === 0 && <p className="rounded-2xl bg-white/70 p-5 text-center text-sm text-ink/55">The shared album is getting ready. Please try refreshing in a moment.</p>}
-          {loading ? (
-            <div className="space-y-4" aria-label="Loading moments">
-              {[0, 1, 2].map((item) => <div key={item} className="h-48 animate-pulse rounded-[24px] bg-white/55" />)}
-            </div>
-          ) : posts.length ? (
-            <div className="space-y-4">
+          <div ref={chatScroll} role="log" aria-label="Chat messages" aria-live="polite" onScroll={(event) => { const node = event.currentTarget; if (node.scrollHeight - node.scrollTop - node.clientHeight < 60) setUnreadCount(0); }} style={{ backgroundColor: "#F7F3EA", backgroundImage: CHAT_WALLPAPER, backgroundSize: "190px 190px" }} className="relative flex h-[min(56vh,560px)] min-h-[300px] flex-col gap-2 overflow-y-auto px-3 py-3 sm:px-4">
+            {nextCursor && <button type="button" onClick={() => void loadOlder()} disabled={loadingMore} className="mx-auto mb-2 rounded-full border border-[#D8C7C1] bg-white/85 px-4 py-1.5 text-[10px] text-taupe shadow-sm disabled:opacity-50">{loadingMore ? "LOADING OLDER MESSAGES…" : "LOAD EARLIER MESSAGES"}</button>}
+            {loading ? (
+              <div className="mt-auto space-y-3" aria-label="Loading chat messages"><div className="h-12 w-2/3 animate-pulse rounded-2xl bg-white/70" /><div className="ml-auto h-12 w-1/2 animate-pulse rounded-2xl bg-[#E5EEE2]" /><div className="h-12 w-3/5 animate-pulse rounded-2xl bg-white/70" /></div>
+            ) : posts.length ? (
               <AnimatePresence initial={false}>
-                {posts.map((post) => (
-                  <MomentCard
-                    key={post.id}
-                    post={post}
-                    expanded={expandedIds.has(post.id)}
-                    onExpand={() => setExpandedIds((current) => new Set(current).add(post.id))}
-                    onEdit={setEditingPost}
-                    onDelete={(item) => void removePost(item)}
-                  />
-                ))}
+                {posts.map((post) => <MomentCard key={post.id} post={post} expanded={expandedIds.has(post.id)} onExpand={() => setExpandedIds((current) => new Set(current).add(post.id))} onEdit={setEditingPost} onDelete={(item) => void removePost(item)} />)}
               </AnimatePresence>
-              {nextCursor && (
-                <button type="button" onClick={() => void loadOlder()} disabled={loadingMore} className="micro block w-full rounded-full border border-taupe/25 bg-white/65 py-3 text-taupe transition-colors hover:border-wine hover:text-wine disabled:opacity-50">
-                  {loadingMore ? "LOADING…" : "OLDER MOMENTS  ↓"}
-                </button>
-              )}
+            ) : !error ? (
+              <div className="m-auto max-w-sm py-6 text-center"><div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-full border border-[#D8C7C1] bg-white text-2xl text-[#9A604E]">✦</div><p className="font-serif text-xl text-[#6B1D2A]">Say hello to everyone</p><p className="mt-1 text-xs leading-relaxed text-ink/60">Chat with everyone, share updates and keep the night’s memories together.</p></div>
+            ) : <p className="m-auto rounded-xl bg-white/75 p-4 text-center text-sm text-ink/55">The group chat is getting ready. Please try refreshing in a moment.</p>}
+            {unreadCount > 0 && <button type="button" onClick={() => { if (chatScroll.current) chatScroll.current.scrollTop = chatScroll.current.scrollHeight; setUnreadCount(0); }} className="sticky bottom-1 mx-auto rounded-full bg-[#6B1D2A] px-4 py-2 text-xs font-medium text-white shadow-lg">{unreadCount} new {unreadCount === 1 ? "message" : "messages"} ↓</button>}
+          </div>
+
+          <div className="sticky bottom-0 z-20 border-t border-[#E8DCD7] bg-[#FFFCF8] p-3 shadow-[0_-8px_18px_-18px_rgba(54,43,35,.45)] sm:p-4">
+            {emojiOpen && <div className="mb-2 flex flex-wrap gap-1.5 rounded-xl bg-[#F7F1E8] p-2" aria-label="Choose an emoji">{["🤍", "😂", "🥹", "🎉", "📸", "😍", "🙌", "✨", "💃", "🕺", "🥂", "❤️"].map((emoji) => <button key={emoji} type="button" onClick={() => { setBody((text) => `${text}${emoji}`); messageInput.current?.focus(); }} className="grid h-9 w-9 place-items-center rounded-lg text-xl transition-colors hover:bg-white" aria-label={`Add ${emoji}`}>{emoji}</button>)}</div>}
+            {attachmentMenu && <div className="mb-2 flex flex-wrap gap-2 rounded-xl bg-[#F7F1E8] p-2" aria-label="Attachment options"><button type="button" onClick={() => galleryInput.current?.click()} className="rounded-full bg-white px-3 py-2 text-xs text-[#70434A] shadow-sm">▧ Upload files</button><button type="button" onClick={() => cameraInput.current?.click()} className="rounded-full bg-white px-3 py-2 text-xs text-[#70434A] shadow-sm">◉ Take a photo</button><button type="button" onClick={() => videoInput.current?.click()} className="rounded-full bg-white px-3 py-2 text-xs text-[#70434A] shadow-sm">▷ Record video</button></div>}
+            {draftMedia.length > 0 && <div className="mb-2 flex gap-2 overflow-x-auto pb-1">{draftMedia.map((item, index) => <div key={`${item.file.name}-${index}`} className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-[#E3D1CB] bg-[#F5F0E9]">
+              {item.file.type.startsWith("audio/") ? <div className="flex h-full flex-col items-center justify-center gap-1 px-1 text-center text-[10px] text-[#526B56]"><span className="text-xl">🎙</span><span className="line-clamp-2">Voice note</span></div> : item.file.type.startsWith("video/") ? <video src={item.previewUrl} className="h-full w-full object-cover" /> : <img src={item.previewUrl} alt="Attachment preview" className="h-full w-full object-cover" />}
+              {posting && <span className="absolute inset-x-0 bottom-0 bg-black/60 px-1 py-0.5 text-center text-[9px] text-white">{item.status === "uploading" ? `${uploadProgress}%` : item.status === "uploaded" ? "READY" : "WAITING"}</span>}
+              {!posting && <button type="button" onClick={() => removeDraft(index)} aria-label={`Remove ${item.file.name}`} className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-black/65 text-sm text-white">×</button>}
+            </div>)}</div>}
+            {recording && <div className="mb-2 flex items-center gap-2 rounded-xl bg-[#F9E7E5] px-3 py-2 text-xs text-[#8B3030]"><span className="h-2 w-2 animate-pulse rounded-full bg-red-600" />Recording voice note · {Math.floor(recordingSeconds / 60)}:{String(recordingSeconds % 60).padStart(2, "0")} · tap the mic to finish</div>}
+            <div className="flex items-end gap-2">
+              <button type="button" onClick={() => setEmojiOpen((open) => !open)} aria-label="Add emoji" title="Add emoji" className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-[#E3D1CB] bg-white text-xl text-[#806F68] hover:bg-[#F7F1E8]">☺</button>
+              <textarea ref={messageInput} value={body} onChange={(event) => setBody(event.target.value.slice(0, 1200))} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void sharePost(); } }} placeholder="Message everyone…" aria-label="Write a message" rows={Math.min(4, Math.max(1, body.split("\n").length))} className="max-h-28 min-h-10 min-w-0 flex-1 resize-none rounded-2xl border border-[#E3D8D2] bg-white px-3 py-2.5 text-sm leading-relaxed text-ink outline-none placeholder:text-taupe/75 focus:border-[#C99A91]" />
+              <button type="button" onClick={() => setAttachmentMenu((open) => !open)} aria-label="Add photo, video or audio" title="Add photo, video or audio" className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-[#E3D1CB] bg-white text-lg text-[#70434A] hover:bg-[#F7ECE9]">＋</button>
+              <button type="button" onClick={() => void startVoiceNote()} disabled={posting || !configured} aria-label={recording ? "Finish voice note" : "Record voice note"} title={recording ? "Finish voice note" : "Record voice note"} className={`grid h-10 w-10 shrink-0 place-items-center rounded-full border ${recording ? "border-red-300 bg-red-50 text-red-700" : "border-[#E3D1CB] bg-white text-[#70434A] hover:bg-[#F7ECE9]"} disabled:opacity-40`}>{recording ? "■" : "🎙"}</button>
+              <button type="button" onClick={() => void sharePost()} disabled={posting || !configured || (!body.trim() && !draftMedia.length)} aria-label={posting ? "Sending message" : "Send message"} title="Send message" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#5D8061] text-lg text-white shadow-sm transition-colors hover:bg-[#47614D] disabled:cursor-not-allowed disabled:opacity-40">{posting ? "…" : "➤"}</button>
             </div>
-          ) : !error ? (
-            <div className="relative overflow-hidden rounded-[26px] border border-[#D6B7AD] bg-[#FBF5F0] px-6 py-10 text-center shadow-[0_18px_38px_-28px_rgba(107,29,42,.35)]">
-              <span className="absolute -left-5 -top-8 h-24 w-24 rounded-full bg-[#D9AFB0]/25 blur-xl" aria-hidden />
-              <span className="absolute -bottom-10 -right-2 h-28 w-28 rounded-full bg-[#AFC2A8]/30 blur-xl" aria-hidden />
-              <div className="relative mx-auto mb-4 grid h-16 w-16 place-items-center rounded-[22px] border border-[#D7C18E] bg-white/75 text-3xl text-[#9A604E] shadow-sm" aria-hidden>✿</div>
-              <p className="relative font-serif text-2xl text-[#6B1D2A]">Every memory starts somewhere</p>
-              <p className="relative mx-auto mt-2 max-w-sm text-sm leading-relaxed text-ink/60">No Newsfeed posts yet. Share a note, or include a Story in the Newsfeed when you post.</p>
-              <div className="relative mt-5 flex flex-wrap justify-center gap-2 text-[10px] tracking-wide">
-                <span className="rounded-full bg-[#F4E2E1] px-3 py-1.5 text-[#7C3945]">A little note</span><span className="rounded-full bg-[#E9F0E6] px-3 py-1.5 text-[#526B56]">A favorite photo</span><span className="rounded-full bg-[#F4EEDB] px-3 py-1.5 text-[#80662E]">A bit of joy</span>
-              </div>
-            </div>
-          ) : null}
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2 px-1 text-[9px] text-taupe/75"><span>{MAX_POST_MEDIA} attachments per message · chat media stays in this chat</span><span>Stories: {formatBytes(quota.bytes)} / {formatBytes(MAX_TOTAL_BYTES)} used · private</span></div>
+            {error && <p role="alert" className="mt-2 rounded-xl bg-burgundy/10 px-3 py-2 text-xs text-burgundy">{error}</p>}
+            {notice && <motion.p role="status" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="mt-2 rounded-xl bg-[#EDF2E9] px-3 py-2 text-xs text-[#526B56]">{notice}</motion.p>}
+          </div>
         </section>
 
+        <div className="sr-only" aria-live="polite">{liveStatus === "live" ? "Live group chat connected" : liveStatus === "offline" ? "Live chat offline; manual refresh available" : "Connecting to live group chat"}</div>
+
         <footer className="mt-10 text-center">
-          <p className="micro text-taupe/75">{remainingFiles} uploads left on this device · {formatBytes(remainingBytes)} remaining</p>
-          <p className="mt-2 font-serif text-xs italic text-taupe/70">A private little album for {firstName(couple)} and everyone who loves them.</p>
+          <p className="micro text-taupe/75">Stories: {formatBytes(remainingBytes)} remaining on this device</p>
+          <p className="mt-2 font-serif text-xs italic text-taupe/70">A little live chat and keepsake wall for {firstName(couple)} and everyone who loves them.</p>
         </footer>
       </div>
       <AnimatePresence>
         {editingPost && <EditMomentDialog key={editingPost.id} post={editingPost} onClose={() => setEditingPost(null)} onSave={savePostEdit} />}
+        {namePromptMode && <NamePromptDialog key={namePromptMode} mode={namePromptMode} initialName={displayName} initialAvatar={avatar} onClose={() => setNamePromptMode(null)} onSave={saveNamePrompt} />}
       </AnimatePresence>
     </main>
   );

@@ -1,3 +1,5 @@
+import type { GuestAvatarId } from "@/lib/guest-avatars";
+
 export type MomentMedia = {
   url: string;
   contentType: string;
@@ -6,11 +8,13 @@ export type MomentMedia = {
 export type WeddingMoment = {
   id: string;
   displayName: string;
+  avatar: GuestAvatarId;
   body: string;
   overlayText: string;
   media: MomentMedia[];
   createdAt: string;
   showInFeed: boolean;
+  showInStories: boolean;
   /** Present only when the request proves this post belongs to the current device (or is admin). */
   canManage?: boolean;
 };
@@ -28,6 +32,7 @@ export async function loadMoments(options: {
   admin?: boolean;
   stories?: boolean;
   deviceId?: string;
+  id?: string;
 } = {}): Promise<MomentPage> {
   const params = new URLSearchParams();
   if (options.before) params.set("before", options.before);
@@ -35,6 +40,7 @@ export async function loadMoments(options: {
   if (options.admin) params.set("admin", "1");
   if (options.stories) params.set("stories", "1");
   if (options.deviceId) params.set("deviceId", options.deviceId);
+  if (options.id) params.set("id", options.id);
   const response = await fetch(`/api/moments?${params.toString()}`, { cache: "no-store" });
   const data = (await response.json().catch(() => ({}))) as MomentPage & { error?: string };
   if (!response.ok) throw new Error(data.error || "Could not load wedding moments.");
@@ -51,10 +57,12 @@ export async function countNewMoments(since: string): Promise<number> {
 export async function publishMoment(input: {
   deviceId: string;
   displayName: string;
+  avatar: GuestAvatarId;
   body: string;
   overlayText: string;
   media: { path: string; contentType: string }[];
   showInFeed: boolean;
+  showInStories: boolean;
 }): Promise<WeddingMoment> {
   const response = await fetch("/api/moments", {
     method: "POST",
