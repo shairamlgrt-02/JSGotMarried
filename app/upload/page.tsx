@@ -431,9 +431,9 @@ function StoriesRail({ posts, displayName, onEdit, onDelete, onAddStory, uploadE
 }
 
 const conversationPrompts = [
-  "Mingle, say hello, and share the night.",
-  "Pass along an update or a little announcement.",
-  "Save a laugh or moment to remember later.",
+  { greeting: "Hello,", message: "Mingle, say hello, and share the night." },
+  { greeting: "Kamusta?", message: "Pass along an update or a little announcement." },
+  { greeting: "Shalom.", message: "Save a laugh or moment to remember later." },
 ];
 
 function ConversationPrompt() {
@@ -446,14 +446,22 @@ function ConversationPrompt() {
     return () => window.clearInterval(timer);
   }, [reduceMotion]);
 
+  const scrollToConversation = () => {
+    document.getElementById("wedding-conversation")?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+  };
+
   return (
-    <motion.div initial={reduceMotion ? false : { opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1.1, ease: "easeOut" }} className="my-1 flex min-h-8 items-center gap-2.5 px-1.5" aria-live="polite">
+    <motion.div initial={reduceMotion ? false : { opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1.1, ease: "easeOut" }} className="my-1 flex min-h-10 items-center gap-2.5 px-1.5" aria-live="polite">
       <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-[#E7D3CB] bg-white/75 text-[11px] text-[#9A604E]" aria-hidden>✦</span>
       <AnimatePresence mode="wait" initial={false}>
-        <motion.p key={index} initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={reduceMotion ? undefined : { opacity: 0 }} transition={{ duration: 1.15, ease: "easeInOut" }} className="text-[10px] leading-relaxed text-[#806B65] sm:text-[11px]">
-          {conversationPrompts[index]}
-        </motion.p>
+        <motion.div key={index} initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={reduceMotion ? undefined : { opacity: 0 }} transition={{ duration: 1.15, ease: "easeInOut" }} className="min-w-0 flex-1 leading-tight">
+          <p className="script text-[21px] leading-none text-wine sm:text-2xl">{conversationPrompts[index]?.greeting}</p>
+          <p className="mt-1 text-[10px] leading-relaxed text-[#806B65] sm:text-[11px]">{conversationPrompts[index]?.message}</p>
+        </motion.div>
       </AnimatePresence>
+      <button type="button" onClick={scrollToConversation} aria-label="Scroll to the wedding conversation" title="Join the conversation" className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-[#E7D3CB] bg-white/75 text-[#6B1D2A] transition-colors hover:bg-[#F5E9E6]">
+        <motion.span aria-hidden animate={reduceMotion ? undefined : { y: [0, -4, 4, 0, 0] }} transition={reduceMotion ? undefined : { duration: 2.1, repeat: Infinity, repeatDelay: 1.4, times: [0, 0.2, 0.43, 0.64, 1], ease: "easeInOut" }} className="text-xl leading-none">↓</motion.span>
+      </button>
     </motion.div>
   );
 }
@@ -905,7 +913,7 @@ export default function UploadPage() {
         <StoriesRail posts={storyPosts} displayName={displayName} onEdit={setEditingPost} onDelete={(post) => void removePost(post)} onAddStory={openStoryPicker} uploadEnabled={configured && !posting} uploading={storyUploading} progress={uploadProgress} />
         <ConversationPrompt />
 
-        <section aria-label="Wedding conversation" className="mt-1 overflow-hidden rounded-[22px] border border-[#E3D1CB] bg-[#FFFCF8] shadow-[0_12px_32px_-22px_rgba(107,29,42,.5)]">
+        <section id="wedding-conversation" aria-label="Wedding conversation" className="mt-1 scroll-mt-4 overflow-hidden rounded-[22px] border border-[#E3D1CB] bg-[#FFFCF8] shadow-[0_12px_32px_-22px_rgba(107,29,42,.5)]">
           <input ref={storyInput} type="file" accept="image/*,video/*,.heic,.heif,.mov" multiple hidden onChange={(event) => chooseStoryFiles(event.target.files)} />
           <input ref={galleryInput} type="file" accept={UPLOAD_ACCEPT} multiple hidden onChange={(event) => chooseFiles(event.target.files)} />
           <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={(event) => chooseFiles(event.target.files)} />
