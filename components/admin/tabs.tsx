@@ -1114,7 +1114,7 @@ export function Content() {
   async function refreshFaq() {
     if (!confirm(
       "Refresh the standard questions with the latest wording?\n\n" +
-      "· The standard questions (ceremony, plus-one, dress code, kids, parking, photos) are rewritten with the newest copy — use this when the dress code or the kids' policy changes.\n" +
+      "· The standard questions (ceremony, livestream, plus-one, dress code, kids, parking, photos) are rewritten with the newest copy.\n" +
       "· A standard question you deleted comes back.\n" +
       "· Questions you wrote yourself are never touched."
     )) return;

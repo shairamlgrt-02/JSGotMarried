@@ -298,6 +298,7 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     { id: "f4", question: "Is there parking?", answer: "Yes — though not in the courtyard: parking is in a separate area, and The Heaven's team will tell you where to park when you arrive at the gate. Then walk straight to the majlis — it is where everyone is gathered.", order: 4 },
     { id: "f5", question: "Can I post photos?", answer: "Please! Tag @shaiandjeg and use #JSGotMarried — #JSSayIDo and #JSWishComeTrue work beautifully too. We only ask for an unplugged ceremony.", order: 5 },
     { id: "f6", question: "Where do I go when I arrive?", answer: "Straight to the majlis — the welcome lounge just outside the hall. The hall itself rests from 2:00 to 4:00 PM while The Heaven's team clean and prepare it, so nobody enters until 4:00. Our coordinators will meet you at the majlis, the entourage is briefed there, and snacks and refreshments are served from the moment you arrive. A few minutes before 4:00 PM we all walk into the hall together for the ceremony — and from 5:30 PM the majlis hosts the Welcome Toast & Snacks until the reception at 7:00 PM.", order: 6 },
+    { id: "f7", question: "Will the ceremony be livestreamed?", answer: "Yes. The livestream will be available to watch in the majlis and on YouTube. We’ll share the YouTube link as soon as it’s available.", order: 7 },
   ],
   message_templates: [],
   messages: [],
