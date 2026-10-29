@@ -209,7 +209,7 @@ type StoryItem = {
 };
 type StoryGroup = { key: string; displayName: string; items: StoryItem[]; latestAt: string };
 
-function StoriesRail({ posts, onEdit, onDelete, onAddStory, uploadEnabled, uploading, progress }: { posts: WeddingMoment[]; onEdit: (post: WeddingMoment) => void; onDelete: (post: WeddingMoment) => void; onAddStory: () => void; uploadEnabled: boolean; uploading: boolean; progress: number }) {
+function StoriesRail({ posts, displayName, onEdit, onDelete, onAddStory, uploadEnabled, uploading, progress }: { posts: WeddingMoment[]; displayName: string; onEdit: (post: WeddingMoment) => void; onDelete: (post: WeddingMoment) => void; onAddStory: () => void; uploadEnabled: boolean; uploading: boolean; progress: number }) {
   const [active, setActive] = useState<{ group: number; item: number } | null>(null);
   const groups = useMemo(() => {
     const byName = new Map<string, StoryGroup>();
@@ -273,43 +273,60 @@ function StoriesRail({ posts, onEdit, onDelete, onAddStory, uploadEnabled, uploa
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [active, advance]);
 
-  if (!groups.length) return (
-    <section aria-label="Stories from guests" className="mb-5 rounded-[22px] border border-[#D8B9AE] bg-[#FBF3EF] px-4 py-4 shadow-[0_12px_30px_-22px_rgba(107,29,42,.45)] sm:px-5">
-      <div className="flex items-start gap-3">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#6B1D2A] text-lg text-[#F8EBCF] shadow-sm" aria-hidden>✦</span>
-        <div className="min-w-0 flex-1">
-          <h2 className="font-serif text-xl leading-tight text-[#6B1D2A]">Stories</h2>
-          <p className="mt-1 text-sm leading-relaxed text-[#765E59]">Stories are a separate place for photos and videos. Add a Story here; it will not appear in the group chat. Stories have a 1 GB total limit per device.</p>
-          <button type="button" onClick={onAddStory} disabled={!uploadEnabled} className="mt-3 rounded-full bg-[#6B1D2A] px-4 py-2 text-xs font-medium tracking-wide text-white shadow-sm transition-colors hover:bg-[#4E1722] disabled:cursor-not-allowed disabled:opacity-45">{uploading ? `UPLOADING ${progress}%…` : "＋ ADD TO STORIES"}</button>
+  return (
+    <section aria-label="Stories from guests" className="mb-4 rounded-[20px] border border-[#E5D4CE] bg-[#FFFCF9]/90 px-3 py-3 shadow-[0_8px_24px_-20px_rgba(107,29,42,.4)] sm:px-4">
+      <div className="mb-2.5 flex items-start justify-between gap-3 px-0.5">
+        <div className="min-w-0">
+          <h2 className="text-[13px] font-semibold leading-tight text-[#6B1D2A]">Share your #JSGotMarried moments</h2>
+          <p className="mt-0.5 max-w-xl text-[10px] leading-snug text-[#765E59]">Add to Stories below and upload your photos &amp; videos for the couple and everyone to see.</p>
+        </div>
+        <div className="shrink-0 pt-0.5 text-right text-[9px] leading-tight text-[#8B706A]">
+          <p className="max-w-[100px] truncate">{displayName.trim() ? `Story by ${firstName(displayName)}` : "Add your name below"}</p>
+          <p className="mt-0.5">1 GB per device</p>
         </div>
       </div>
-    </section>
-  );
-  return (
-    <section aria-label="Stories from guests" className="mb-5 overflow-hidden rounded-[22px] border border-[#D8B9AE] bg-[#FBF3EF] px-3 py-3 shadow-[0_12px_30px_-22px_rgba(107,29,42,.45)] sm:px-4 sm:py-4">
-      <div className="mb-3 flex items-center justify-between gap-3 px-1">
-        <div className="flex min-w-0 items-center gap-2.5"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#6B1D2A] text-sm text-[#F8EBCF] shadow-sm" aria-hidden>✦</span><div className="min-w-0"><h2 className="font-serif text-lg leading-none text-[#6B1D2A]">Stories</h2><p className="mt-1 text-[10px] text-[#765E59]">Photos &amp; videos · 1 GB per device</p></div></div>
-        <button type="button" onClick={onAddStory} disabled={!uploadEnabled} className="shrink-0 rounded-full border border-[#6B1D2A]/20 bg-white/75 px-3 py-2 text-[10px] font-medium text-[#6B1D2A] shadow-sm transition-colors hover:bg-[#6B1D2A] hover:text-white disabled:cursor-not-allowed disabled:opacity-45">{uploading ? `UPLOADING ${progress}%` : "＋ ADD STORY"}</button>
-      </div>
-      <div className="flex gap-4 overflow-x-auto pb-1 [scrollbar-width:thin]">
-        {groups.map((group, index) => {
+
+      <div className="flex gap-2.5 overflow-x-auto pb-0.5 [scrollbar-width:thin]">
+        <button type="button" onClick={onAddStory} disabled={!uploadEnabled} aria-label="Add a Story"
+          className="relative flex h-[164px] w-[108px] shrink-0 flex-col overflow-hidden rounded-[15px] border border-[#E6D5CE] bg-white text-left shadow-sm transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50">
+          <span className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-[radial-gradient(ellipse_at_35%_20%,#fff8ee_0%,#f5e7e2_54%,#e9d6d1_100%)]">
+            <span className="absolute -right-5 -top-6 h-20 w-20 rounded-full border border-[#D4B1A7]/40" />
+            <span className="absolute -bottom-8 -left-5 h-24 w-24 rounded-full border border-[#D4B1A7]/40" />
+            <span className="relative grid h-10 w-10 place-items-center rounded-full bg-[#6B1D2A] text-2xl font-light text-white shadow-md">{uploading ? "…" : "+"}</span>
+          </span>
+          <span className="flex h-[48px] flex-col justify-center px-2.5">
+            <span className="text-[11px] font-semibold leading-tight text-[#46362C]">{uploading ? `Uploading ${progress}%` : "Add to Story"}</span>
+            <span className="mt-0.5 text-[9px] leading-tight text-[#8A746E]">Photos &amp; videos</span>
+          </span>
+        </button>
+
+        {groups.length ? groups.map((group, index) => {
           const first = group.items[0];
           const tone = posterTone(group.displayName);
           const initials = group.displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "♡";
           return (
-            <button key={group.key} type="button" onClick={() => setActive({ group: index, item: 0 })} className="group flex w-[72px] shrink-0 flex-col items-center gap-1.5 text-center">
-              <span className="relative grid h-[66px] w-[66px] place-items-center rounded-full p-[3px] shadow-[0_5px_12px_-8px_rgba(51,39,31,.8)] transition-transform group-hover:scale-105" style={{ background: `conic-gradient(from 220deg,${tone.ink},#E5C982,${tone.deep},#D7A7A8,${tone.ink})` }}>
-                <span className="relative grid h-full w-full place-items-center overflow-hidden rounded-full border-2 border-white font-serif" style={{ backgroundColor: tone.wash, color: tone.ink }}>
-                  {first.media.contentType.startsWith("image/") ? <img src={first.media.url} alt="" className="h-full w-full object-cover" loading="lazy" /> : <span className="text-xl">{initials}</span>}
-                </span>
-                {group.items.some((item) => item.media.contentType.startsWith("video/")) && <span className="absolute bottom-0 right-0 grid h-5 w-5 place-items-center rounded-full border-2 border-white text-[9px] text-white" style={{ backgroundColor: tone.ink }}>▶</span>}
+            <button key={group.key} type="button" onClick={() => setActive({ group: index, item: 0 })}
+              aria-label={`View ${group.displayName}'s Stories`} className="group relative h-[164px] w-[108px] shrink-0 overflow-hidden rounded-[15px] border border-black/5 bg-[#EDE4DF] text-left shadow-sm transition-transform hover:-translate-y-0.5">
+              {first.media.contentType.startsWith("image/") ? (
+                <img src={first.media.url} alt="" className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" loading="lazy" />
+              ) : (
+                <span className="absolute inset-0 grid place-items-center font-serif text-4xl" style={{ backgroundColor: tone.wash, color: tone.ink }}>{initials}</span>
+              )}
+              <span className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/75" />
+              <span className="absolute left-2.5 top-2.5 grid h-8 w-8 place-items-center overflow-hidden rounded-full border-2 border-[#1684FF] bg-white font-serif text-xs font-semibold shadow-md" style={{ color: tone.ink }}>
+                {first.media.contentType.startsWith("image/") ? <img src={first.media.url} alt="" className="h-full w-full object-cover" loading="lazy" /> : initials.slice(0, 1)}
               </span>
-              <span className="w-full truncate text-[11px] font-medium" style={{ color: tone.ink }}>{firstName(group.displayName)}</span>
+              {group.items.some((item) => item.media.contentType.startsWith("video/")) && <span className="absolute right-2 top-2 grid h-6 w-6 place-items-center rounded-full bg-black/45 text-[10px] text-white">▶</span>}
+              <span className="absolute inset-x-2 bottom-2.5 line-clamp-2 text-[11px] font-semibold leading-tight text-white drop-shadow">{group.displayName}</span>
             </button>
           );
-        })}
+        }) : [0, 1].map((placeholder) => (
+          <div key={`story-placeholder-${placeholder}`} aria-hidden="true" className={`relative flex h-[164px] w-[108px] shrink-0 flex-col justify-between overflow-hidden rounded-[15px] border border-dashed border-[#D8C7C1] px-2.5 py-2.5 ${placeholder === 0 ? "bg-[#F5EEEA]" : "bg-[#F1F0EB]"}`}>
+            <span className="grid h-7 w-7 place-items-center rounded-full border border-[#D9C8C1] bg-white/75 text-xs text-[#A88D85]">✦</span>
+            <span className="mb-0.5 text-[10px] leading-snug text-[#9A8580]">Stories from your guests will appear here</span>
+          </div>
+        ))}
       </div>
-
       <AnimatePresence>
         {active && currentGroup && currentItem && (
           <motion.div
@@ -776,7 +793,7 @@ export default function UploadPage() {
           </div>
         )}
 
-        <StoriesRail posts={storyPosts} onEdit={setEditingPost} onDelete={(post) => void removePost(post)} onAddStory={openStoryPicker} uploadEnabled={configured && !posting} uploading={storyUploading} progress={uploadProgress} />
+        <StoriesRail posts={storyPosts} displayName={displayName} onEdit={setEditingPost} onDelete={(post) => void removePost(post)} onAddStory={openStoryPicker} uploadEnabled={configured && !posting} uploading={storyUploading} progress={uploadProgress} />
 
         <section aria-label="Wedding group chat" className="mt-4 overflow-hidden rounded-[22px] border border-[#E3D1CB] bg-[#FFFCF8] shadow-[0_12px_32px_-22px_rgba(107,29,42,.5)]">
           <input ref={storyInput} type="file" accept="image/*,video/*,.heic,.heif,.mov" multiple hidden onChange={(event) => chooseStoryFiles(event.target.files)} />
