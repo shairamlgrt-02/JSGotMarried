@@ -827,7 +827,9 @@ export default function UploadPage() {
             <h1 className="mt-1 font-serif text-2xl leading-tight text-wine sm:text-[1.7rem]">Wedding chat</h1>
             <p className="mt-0.5 truncate text-xs text-taupe">{info ? fullDate(info.date) : "11.11.2026"} · {couple}{hashtag ? ` · ${hashtag}` : ""}</p>
           </div>
-          <span className="hidden shrink-0 font-serif text-3xl text-wine/45 sm:block" aria-hidden>♡</span>
+          <button type="button" onClick={() => setNamePromptMode("edit")} title={displayName.trim() ? `Edit name: ${displayName}` : "Add your name"} aria-label={displayName.trim() ? `Edit your name, currently ${displayName}` : "Add your name"} className="flex max-w-[112px] shrink-0 items-center gap-1.5 rounded-full border border-[#D8B9AE] bg-white/75 px-2.5 py-2 text-[10px] font-medium text-[#70434A] shadow-sm transition-colors hover:bg-[#F7ECE9] sm:max-w-[150px] sm:px-3 sm:text-xs">
+            <span className="truncate">{displayName.trim() ? `As ${firstName(displayName)}` : "Add your name"}</span><span aria-hidden>✎</span>
+          </button>
         </header>
 
         <div className="mb-4 flex items-center justify-between gap-3 overflow-hidden rounded-2xl border border-[#E1C8C2] bg-[#F2E5E2] px-4 py-2.5 text-[#6B1D2A] shadow-[0_8px_20px_-16px_rgba(107,29,42,.45)] sm:px-5">
@@ -854,9 +856,6 @@ export default function UploadPage() {
               <div className="min-w-0"><h2 className="font-serif text-xl leading-tight text-[#46362C]">Wedding group chat</h2><p className="text-[11px] text-taupe">Messages, photos, videos &amp; voice notes</p></div>
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
-              <button type="button" onClick={() => setNamePromptMode("edit")} title={displayName.trim() ? `Edit name: ${displayName}` : "Add your name"} aria-label={displayName.trim() ? `Edit your name, currently ${displayName}` : "Add your name"} className="flex max-w-[96px] items-center gap-1 truncate rounded-full border border-[#E3D1CB] bg-white/80 px-2 py-1.5 text-[9px] font-medium text-[#70434A] hover:bg-[#F7ECE9] sm:max-w-[140px] sm:text-[10px]">
-                <span className="truncate">{displayName.trim() ? `As ${firstName(displayName)}` : "Add your name"}</span><span aria-hidden>✎</span>
-              </button>
               <span title={liveStatus === "live" ? "Live" : liveStatus === "offline" ? "Offline" : "Connecting"} className="inline-flex items-center gap-1.5 text-[10px] text-taupe"><span className={`h-2 w-2 rounded-full ${liveStatus === "live" ? "bg-[#4D8A57]" : liveStatus === "offline" ? "bg-[#B66A62]" : "bg-[#C49A57]"}`} /><span className="hidden sm:inline">{liveStatus === "live" ? "LIVE" : liveStatus === "offline" ? "OFFLINE" : "CONNECTING"}</span></span>
               <button type="button" onClick={() => { setPulling(true); void refreshFeed(true); }} title="Refresh chat" aria-label="Refresh chat" className="grid h-8 w-8 place-items-center rounded-full border border-[#E3D1CB] text-lg text-[#806F68] transition-colors hover:bg-[#F5E9E6]">↻</button>
             </div>
