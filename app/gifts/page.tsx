@@ -124,9 +124,9 @@ export default function GiftsPage() {
   }, [reload]);
 
   const couple = info?.bride && info?.groom ? `${info.groom} & ${info.bride}` : "the couple";
-  // In local/demo mode the API board carries no transfer fields — the table read holds the same ones.
-  const benefitNo = benefit || (info?.benefitpay_number || "").trim();
-  const ibanNo = iban || (info?.benefitpay_iban || "").trim();
+  // Transfer details come from the resolved gift board. Never fall back to the page's seeded
+  // wedding_info row: sealed public table reads are redacted after hydration and caused a brief
+  // flash of placeholder bank details before the transfer card disappeared.
   const open = items.filter((g) => !g.claimed);
   const taken = items.filter((g) => g.claimed);
   const pct = items.length ? Math.round((taken.length / items.length) * 100) : 0;
@@ -182,15 +182,20 @@ export default function GiftsPage() {
 
         {/* Compact one-row transfer card: number and IBAN side by side, tap to copy,
             so the gift list starts immediately below as the guest scrolls. */}
-        {benefitNo || ibanNo ? (
+        {loading ? (
+          <section role="status" aria-label="Loading transfer details" className="mt-5 rounded-[22px] border border-taupe/20 bg-[#FCFAF6]/70 p-4 md:p-5">
+            <div className="h-3 w-40 animate-pulse rounded-full bg-taupe/15" />
+            <div className="mt-3 grid grid-cols-2 gap-2.5"><div className="h-[4.5rem] animate-pulse rounded-xl bg-taupe/10" /><div className="h-[4.5rem] animate-pulse rounded-xl bg-taupe/10" /></div>
+          </section>
+        ) : benefit || iban ? (
           <section className="mt-5 rounded-[22px] border border-taupe/25 bg-[#FCFAF6] p-4 md:p-5 shadow-[0_12px_30px_-18px_rgba(61,47,38,.45)]">
             <div className="flex items-center justify-between gap-3">
               <p className="micro text-wine tracking-[0.2em]">PREFER A TRANSFER?</p>
               <p className="micro text-taupe/80 tracking-[0.12em]">TAP TO COPY</p>
             </div>
-            <div className={`grid gap-2.5 mt-3 ${benefitNo && ibanNo ? "grid-cols-2" : "grid-cols-1"}`}>
-              <CopyCell label="BENEFITPAY · NUMBER" value={benefitNo} />
-              <CopyCell label="BANK TRANSFER · IBAN" value={ibanNo} />
+            <div className={`grid gap-2.5 mt-3 ${benefit && iban ? "grid-cols-2" : "grid-cols-1"}`}>
+              <CopyCell label="BENEFITPAY · NUMBER" value={benefit} />
+              <CopyCell label="BANK TRANSFER · IBAN" value={iban} />
             </div>
             <p className="micro !text-[9px] text-taupe/80 text-center mt-3 tracking-[0.1em]">
               BOTH ACCOUNTS ARE NAMED JSGOTMARRIED — PLEASE CHECK THE NAME BEFORE YOU CONFIRM ✦

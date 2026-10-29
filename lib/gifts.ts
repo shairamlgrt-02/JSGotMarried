@@ -1,4 +1,4 @@
-import { CHANGE_EVENT, getMode } from "./db";
+import { CHANGE_EVENT, getMode, list as listTable } from "./db";
 import { SEED } from "./seed";
 import { DEFAULT_REGISTRY_NOTE, type GiftItem } from "./types";
 
@@ -88,13 +88,20 @@ function forgetClaim(id: string) {
  * instead of blanking the transfer card mid-visit. Local/demo mode always resolves a board.
  */
 export async function listGifts(): Promise<GiftBoard | null> {
-  const fallback = (): GiftBoard => ({
-    items: readLocalItems(),
-    note: readLocalNote() || DEFAULT_REGISTRY_NOTE,
-    // In local mode the generic table read (the page's useTable) already carries these fields.
-    benefit: "",
-    iban: "",
-  });
+  const fallback = async (): Promise<GiftBoard> => {
+    const rows = await listTable("wedding_info");
+    const info = rows[0] ?? SEED.wedding_info[0];
+    const defaults = SEED.wedding_info[0];
+    return {
+      items: readLocalItems(),
+      note: readLocalNote() || DEFAULT_REGISTRY_NOTE,
+      // In local/demo mode the wedding-info table is the source of truth for transfer details.
+      // Merge old saved rows with current defaults so legacy browser data doesn't flash values
+      // from SEED and then replace them with an incomplete row.
+      benefit: String(info.benefitpay_number ?? defaults.benefitpay_number ?? "").trim(),
+      iban: String(info.benefitpay_iban ?? defaults.benefitpay_iban ?? "").trim(),
+    };
+  };
   if ((await getMode()) === "local") return fallback();
   try {
     const r = await fetch("/api/gifts", { cache: "no-store" });
