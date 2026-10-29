@@ -1,4 +1,4 @@
-import { CHANGE_EVENT, getMode } from "./db";
+import { CHANGE_EVENT, getMode, list as listTable } from "./db";
 import { SEED } from "./seed";
 import { DEFAULT_REGISTRY_NOTE, type GiftItem } from "./types";
 
@@ -10,13 +10,11 @@ import { DEFAULT_REGISTRY_NOTE, type GiftItem } from "./types";
  * in this browser's localStorage, seeded from SEED, so the whole flow still works in demo mode.
  *
  * Claims are deliberately public (no invitation code): every guest should be able to mark a
- * present bought. A guest may only release a claim from the same device that made it — the ids
- * are remembered in localStorage — while the binder can release any claim.
+ * present bought. Once confirmed, only the couple may release a claim from the authenticated binder.
  */
 
 const ITEMS_KEY = "jsos:gift_items";
 const NOTE_KEY = "jsos:registry-note";
-const DEVICE_CLAIMS_KEY = "jsos:gift-claims-v1";
 
 export type GiftBoard = {
   items: GiftItem[];
@@ -28,7 +26,7 @@ export type GiftBoard = {
 };
 
 /** The cheap polling payload — claim state only, never notes or pictures. */
-export type GiftState = Pick<GiftItem, "id" | "claimed" | "claimed_by" | "claimed_at">;
+export type GiftState = Pick<GiftItem, "id" | "claimed" | "claimed_at"> & { claimed_by?: string };
 export type GiftActionResult = { ok: boolean; error?: string };
 
 /** Display order everywhere: the couple's `order`, then title. */
@@ -59,42 +57,26 @@ function readLocalNote(): string {
   return (typeof localStorage !== "undefined" && localStorage.getItem(NOTE_KEY)) || "";
 }
 
-/** Ids this device has claimed — the only claims the page shows a release button for. */
-export function deviceClaims(): string[] {
-  if (typeof localStorage === "undefined") return [];
-  try {
-    const ids = JSON.parse(localStorage.getItem(DEVICE_CLAIMS_KEY) || "[]");
-    return Array.isArray(ids) ? ids.filter((x) => typeof x === "string") : [];
-  } catch {
-    return [];
-  }
-}
-
-export function isMyClaim(id: string): boolean {
-  return deviceClaims().includes(id);
-}
-
-function rememberClaim(id: string) {
-  localStorage.setItem(DEVICE_CLAIMS_KEY, JSON.stringify([...new Set([...deviceClaims(), id])]));
-}
-
-function forgetClaim(id: string) {
-  localStorage.setItem(DEVICE_CLAIMS_KEY, JSON.stringify(deviceClaims().filter((x) => x !== id)));
-}
-
 /**
  * The board as guests see it: ordered items plus the public monetary-gift note.
  * Returns null when a Supabase-mode fetch fails, so callers can keep what's already on screen
  * instead of blanking the transfer card mid-visit. Local/demo mode always resolves a board.
  */
 export async function listGifts(): Promise<GiftBoard | null> {
-  const fallback = (): GiftBoard => ({
-    items: readLocalItems(),
-    note: readLocalNote() || DEFAULT_REGISTRY_NOTE,
-    // In local mode the generic table read (the page's useTable) already carries these fields.
-    benefit: "",
-    iban: "",
-  });
+  const fallback = async (): Promise<GiftBoard> => {
+    const rows = await listTable("wedding_info");
+    const info = rows[0] ?? SEED.wedding_info[0];
+    const defaults = SEED.wedding_info[0];
+    return {
+      items: readLocalItems(),
+      note: readLocalNote() || DEFAULT_REGISTRY_NOTE,
+      // In local/demo mode the wedding-info table is the source of truth for transfer details.
+      // Merge old saved rows with current defaults so legacy browser data doesn't flash values
+      // from SEED and then replace them with an incomplete row.
+      benefit: String(info.benefitpay_number ?? defaults.benefitpay_number ?? "").trim(),
+      iban: String(info.benefitpay_iban ?? defaults.benefitpay_iban ?? "").trim(),
+    };
+  };
   if ((await getMode()) === "local") return fallback();
   try {
     const r = await fetch("/api/gifts", { cache: "no-store" });
@@ -157,6 +139,7 @@ export async function saveRegistryNote(note: string): Promise<void> {
 /** Mark a gift bought. The server's conditional update settles two-guest races; 409 = lost the race. */
 export async function claimGift(id: string, name: string): Promise<GiftActionResult> {
   const who = name.trim().slice(0, 120);
+  if (!who) return { ok: false, error: "Please add your name before choosing a gift." };
   if ((await getMode()) === "local") {
     const rows = readLocalItems();
     const target = rows.find((g) => g.id === id);
@@ -164,13 +147,10 @@ export async function claimGift(id: string, name: string): Promise<GiftActionRes
     if (target.claimed)
       return {
         ok: false,
-        error: target.claimed_by
-          ? `“${target.title}” was just bought by ${target.claimed_by}.`
-          : `“${target.title}” was just bought by someone else.`,
+        error: `“${target.title}” is no longer available.`,
       };
     const now = new Date().toISOString();
     writeLocalItems(rows.map((g) => (g.id === id ? { ...g, claimed: true, claimed_by: who, claimed_at: now } : g)));
-    rememberClaim(id);
     return { ok: true };
   }
   try {
@@ -181,32 +161,6 @@ export async function claimGift(id: string, name: string): Promise<GiftActionRes
     });
     const j = (await r.json().catch(() => ({}))) as { error?: string };
     if (!r.ok) return { ok: false, error: j.error || "That didn't go through — please try again." };
-    rememberClaim(id);
-    window.dispatchEvent(new CustomEvent(CHANGE_EVENT, { detail: "gift_items" }));
-    return { ok: true };
-  } catch {
-    return { ok: false, error: "You seem to be offline — please try again in a little while." };
-  }
-}
-
-/** Put a gift back on the list. Offered on the guest page only for claims made on this device. */
-export async function releaseGift(id: string): Promise<GiftActionResult> {
-  if ((await getMode()) === "local") {
-    const rows = readLocalItems();
-    if (!rows.some((g) => g.id === id)) return { ok: false, error: "That gift is no longer on the list." };
-    writeLocalItems(rows.map((g) => (g.id === id ? { ...g, claimed: false, claimed_by: "", claimed_at: null } : g)));
-    forgetClaim(id);
-    return { ok: true };
-  }
-  try {
-    const r = await fetch("/api/gifts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "release", id }),
-    });
-    const j = (await r.json().catch(() => ({}))) as { error?: string };
-    if (!r.ok) return { ok: false, error: j.error || "That didn't go through — please try again." };
-    forgetClaim(id);
     window.dispatchEvent(new CustomEvent(CHANGE_EVENT, { detail: "gift_items" }));
     return { ok: true };
   } catch {

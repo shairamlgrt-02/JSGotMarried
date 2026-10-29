@@ -1,14 +1,15 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import SocialShell from "@/components/public/SocialShell";
+import { OPEN_GUEST_NAME_EVENT, GUEST_NAME_EVENT, GUEST_NAME_KEY, cleanGuestName } from "@/lib/guest-identity";
 import { useTable } from "@/lib/hooks";
-import { fullDate } from "@/components/public/Envelope";
-import { claimGift, isMyClaim, listGifts, pollGiftState, releaseGift } from "@/lib/gifts";
+import { claimGift, listGifts, pollGiftState } from "@/lib/gifts";
+import { SEED } from "@/lib/seed";
 import { DEFAULT_REGISTRY_NOTE, type GiftItem } from "@/lib/types";
 
-const STATE_POLL_MS = 8000; // cheap claim-state ping
-const BOARD_REFRESH_MS = 45000; // full board (notes, pictures) refresh
+const STATE_POLL_MS = 8000;
+const BOARD_REFRESH_MS = 45000;
 
-/** One compact tap-to-copy transfer cell — two sit side by side in a single row. */
 function CopyCell({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false);
   if (!value) return null;
@@ -16,66 +17,52 @@ function CopyCell({ label, value }: { label: string; value: string }) {
     try {
       await navigator.clipboard.writeText(value.replace(/\s+/g, ""));
       setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
-    } catch {
-      /* clipboard blocked on older browsers — long-press still works */
-    }
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch { /* long-press remains available when clipboard access is blocked */ }
   };
   return (
-    <button
-      type="button"
-      onClick={copy}
-      title="Tap to copy"
-      className="min-w-0 text-left rounded-xl border border-taupe/25 bg-white/70 px-3.5 py-3 hover:border-wine/50 transition-colors group"
-    >
-      <div className="micro !text-[9px] text-taupe tracking-[0.14em]">{label}</div>
-      <span className="block font-serif text-sm md:text-base text-mocha break-all leading-snug mt-1">{value}</span>
-      <span className="micro !text-[9px] text-wine opacity-80 group-hover:opacity-100 mt-1 inline-block">
-        {copied ? "copied ✓" : "tap to copy"}
-      </span>
+    <button type="button" onClick={copy} title="Tap to copy" className="group min-w-0 rounded-xl border border-[#DCCBC4] bg-white/75 px-3 py-2.5 text-left transition-colors hover:border-[#9B5B64] sm:px-3.5">
+      <span className="micro block text-[8px] tracking-[0.12em] text-taupe">{label}</span>
+      <span className="mt-1 block break-all font-serif text-sm leading-snug text-[#4A3732] sm:text-base">{value}</span>
+      <span className="micro mt-1 inline-block text-[8px] tracking-wide text-[#6B1D2A]">{copied ? "COPIED ✓" : "TAP TO COPY"}</span>
     </button>
   );
 }
 
-/** The picture, or a graceful monogram tile until the couple uploads one. */
-function GiftImage({ gift, claimed }: { gift: GiftItem; claimed: boolean }) {
-  const [failed, setFailed] = useState(false);
-  if (gift.image_url && !failed) {
-    return (
-      <img
-        src={gift.image_url}
-        alt={gift.title}
-        loading="lazy"
-        onError={() => setFailed(true)}
-        className={`w-24 h-24 md:w-28 md:h-28 shrink-0 rounded-xl object-cover border border-taupe/20 bg-oat transition-[filter] duration-500 ${
-          claimed ? "grayscale opacity-60" : "[filter:sepia(.06)_saturate(.96)]"
-        }`}
-      />
-    );
-  }
+function GiftCard({ gift, onChoose, busy }: { gift: GiftItem; onChoose: () => void; busy: boolean }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const claimed = Boolean(gift.claimed);
   return (
-    <div
-      aria-hidden
-      className={`w-24 h-24 md:w-28 md:h-28 shrink-0 rounded-xl border border-wine/15 bg-[linear-gradient(145deg,#EFE3D3,#FBF8F2)] grid place-items-center script text-wine/70 text-3xl ${
-        claimed ? "opacity-50" : ""
-      }`}
-    >
-      ♡
-    </div>
+    <li className={`relative min-w-0 overflow-hidden rounded-[18px] bg-[#E9DED4] shadow-[0_10px_25px_-16px_rgba(62,39,32,.55)] ring-1 ring-[#E8D9D1] ${claimed ? "opacity-[.88]" : ""}`}>
+      <div className="relative aspect-[4/5] overflow-hidden">
+        {gift.image_url && !imageFailed ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={gift.image_url} alt={gift.title} loading="lazy" onError={() => setImageFailed(true)} className={`absolute inset-0 h-full w-full object-cover transition-transform duration-500 ${claimed ? "scale-[1.02] grayscale-[.35]" : "group-hover:scale-[1.04]"}`} />
+        ) : (
+          <div aria-hidden className="absolute inset-0 grid place-items-center bg-[radial-gradient(ellipse_at_35%_28%,rgba(255,255,255,.7),transparent_38%),linear-gradient(145deg,#D8C7B5,#F2E8DE_48%,#C7B0A6)] text-[46px] text-[#754650]/70">♡</div>
+        )}
+        <div aria-hidden className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-[#321A20]/95 via-[#40282A]/55 to-transparent" />
+        {claimed && <span className="absolute left-2 top-2 rounded-full border border-white/45 bg-[#5C202A]/90 px-2 py-1 text-[7px] font-semibold tracking-[0.12em] text-white sm:left-2.5 sm:top-2.5 sm:text-[8px]">ALREADY CHOSEN</span>}
+        <div className="absolute inset-x-0 bottom-0 p-1.5 text-white sm:p-3">
+          <p className="line-clamp-2 font-serif text-[12px] font-semibold leading-[1.12] drop-shadow-sm sm:text-[17px]">{gift.title}</p>
+          {gift.note && <p className="mt-1 line-clamp-1 text-[8px] leading-tight text-white/85 sm:text-[10px]">{gift.note}</p>}
+          <div className="mt-1.5 flex min-h-7 items-end justify-between gap-1 border-t border-white/25 pt-1 sm:mt-2 sm:min-h-8 sm:gap-1.5 sm:pt-1.5">
+            <span className={`min-w-0 truncate text-[8px] font-medium tracking-[0.06em] sm:text-[9px] ${claimed ? "text-white/85" : "text-white/75"}`}>
+              {claimed ? "GIFTED · UNAVAILABLE" : "AVAILABLE"}
+            </span>
+            <button type="button" onClick={onChoose} disabled={claimed || busy} aria-label={claimed ? `${gift.title} is already chosen` : `Choose ${gift.title}`} title={claimed ? "Already chosen" : "Choose this gift"} className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border text-sm transition-colors sm:h-8 sm:w-8 sm:text-base ${claimed ? "cursor-not-allowed border-white/40 bg-white/20 text-white/80" : "border-white/85 bg-[#FFFCF7] text-[#6B1D2A] shadow-sm hover:scale-105 hover:bg-[#F2E4E0]"}`}>
+              {claimed ? "✓" : busy ? "…" : "✓"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </li>
   );
 }
 
-/**
- * The public gift registry. No invitation code needed — every guest should be able to mark a
- * present bought. Claim state re-polls every few seconds (lightweight, no pictures) so items
- * other guests take cross off live; the full board refreshes less often and on tab focus.
- * A claim made on this device is the only kind this page offers to release; the binder can
- * release any of them.
- */
 export default function GiftsPage() {
   const { rows: infoRows } = useTable("wedding_info");
-  const info = infoRows[0];
-
+  const info = infoRows[0] ?? SEED.wedding_info[0];
   const [items, setItems] = useState<GiftItem[]>([]);
   const [note, setNote] = useState(DEFAULT_REGISTRY_NOTE);
   const [benefit, setBenefit] = useState("");
@@ -89,7 +76,6 @@ export default function GiftsPage() {
   const reload = useCallback(async () => {
     const board = await listGifts();
     setLoading(false);
-    // A failed refresh must never wipe content the guest is already looking at — keep prior state.
     if (!board) return;
     setItems(board.items);
     setNote(board.note);
@@ -98,41 +84,47 @@ export default function GiftsPage() {
   }, []);
 
   useEffect(() => {
+    try { setGuestName(cleanGuestName(localStorage.getItem(GUEST_NAME_KEY))); } catch { /* private mode */ }
+    const syncName = (event: Event) => {
+      const detail = (event as CustomEvent<string>).detail;
+      if (typeof detail === "string") setGuestName(cleanGuestName(detail));
+      else { try { setGuestName(cleanGuestName(localStorage.getItem(GUEST_NAME_KEY))); } catch { /* private mode */ } }
+    };
+    window.addEventListener(GUEST_NAME_EVENT, syncName);
+    window.addEventListener("storage", syncName);
     void reload();
-    const boardTimer = setInterval(() => void reload(), BOARD_REFRESH_MS);
-    // Cheap ping: merge only claim fields, keeping the loaded notes and pictures in place.
-    const stateTimer = setInterval(async () => {
+    const boardTimer = window.setInterval(() => void reload(), BOARD_REFRESH_MS);
+    const stateTimer = window.setInterval(async () => {
       const states = await pollGiftState();
       if (!states.length) return;
-      const byId = new Map(states.map((s) => [s.id, s]));
-      setItems((cur) =>
-        cur.map((g) => {
-          const s = byId.get(g.id);
-          return s ? { ...g, claimed: s.claimed, claimed_by: s.claimed_by, claimed_at: s.claimed_at } : g;
-        }),
-      );
+      const byId = new Map(states.map((state) => [state.id, state]));
+      setItems((current) => current.map((gift) => {
+        const state = byId.get(gift.id);
+        return state ? { ...gift, claimed: state.claimed, claimed_by: state.claimed_by ?? "", claimed_at: state.claimed_at } : gift;
+      }));
     }, STATE_POLL_MS);
-    const onVisible = () => {
-      if (document.visibilityState === "visible") void reload();
-    };
+    const onVisible = () => { if (document.visibilityState === "visible") void reload(); };
     document.addEventListener("visibilitychange", onVisible);
     return () => {
-      clearInterval(boardTimer);
-      clearInterval(stateTimer);
+      window.removeEventListener(GUEST_NAME_EVENT, syncName);
+      window.removeEventListener("storage", syncName);
+      window.clearInterval(boardTimer);
+      window.clearInterval(stateTimer);
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [reload]);
 
-  const couple = info?.bride && info?.groom ? `${info.groom} & ${info.bride}` : "the couple";
-  // In local/demo mode the API board carries no transfer fields — the table read holds the same ones.
-  const benefitNo = benefit || (info?.benefitpay_number || "").trim();
-  const ibanNo = iban || (info?.benefitpay_iban || "").trim();
-  const open = items.filter((g) => !g.claimed);
-  const taken = items.filter((g) => g.claimed);
-  const pct = items.length ? Math.round((taken.length / items.length) * 100) : 0;
+  const openCount = items.filter((gift) => !gift.claimed).length;
+  const claimedCount = items.length - openCount;
+  const pct = items.length ? Math.round((claimedCount / items.length) * 100) : 0;
+  const selectedGift = items.find((gift) => gift.id === askId);
 
   const confirmClaim = async () => {
     if (!askId) return;
+    if (!guestName.trim()) {
+      window.dispatchEvent(new Event(OPEN_GUEST_NAME_EVENT));
+      return;
+    }
     const id = askId;
     setBusyId(id);
     setNotice(null);
@@ -140,198 +132,74 @@ export default function GiftsPage() {
     setBusyId(null);
     if (result.ok) {
       setAskId(null);
-      setGuestName("");
-      setNotice({ kind: "ok", text: "Thank you — it's marked as bought. Everyone else will see it crossed off now." });
+      setNotice({ kind: "ok", text: "Thank you — it’s marked as chosen. Everyone will see it’s no longer available." });
     } else {
-      setNotice({ kind: "err", text: result.error || "That didn't go through — please try again." });
+      setNotice({ kind: "err", text: result.error || "That didn’t go through — please try again." });
     }
     await reload();
   };
 
-  const undo = async (id: string) => {
-    setBusyId(id);
-    const result = await releaseGift(id);
-    setBusyId(null);
-    if (!result.ok) setNotice({ kind: "err", text: result.error || "That didn't go through — please try again." });
-    await reload();
-  };
-
   return (
-    <main className="min-h-screen paper-bg text-ink">
-      <div className="max-w-2xl mx-auto px-5 py-14 md:py-20">
-        <a
-          href="/"
-          className="micro inline-flex items-center gap-2 tracking-[0.18em] text-taupe no-underline transition-colors hover:text-wine focus:outline-none focus-visible:ring-2 focus-visible:ring-wine/60 rounded-full"
-        >
-          <span aria-hidden>←</span> BACK TO THE HOUSE
-        </a>
-
-        <header className="text-center mt-8">
-          <p className="micro tracking-[0.3em] text-taupe">A LITTLE HELP STARTING OUT</p>
-          <h1 className="script text-wine text-[clamp(2.6rem,9vw,4.5rem)] leading-tight mt-3">Our gift list</h1>
-          <p className="font-serif font-light tracking-[0.14em] text-mocha mt-3">
-            {info ? fullDate(info.date) : "11.11.2026"} · {couple}
-          </p>
+    <SocialShell info={info} active="gifts">
+      <main className="mx-auto w-full max-w-5xl px-3 pb-8 pt-4 sm:px-6 sm:pt-6">
+        <header className="mb-4 flex flex-wrap items-end justify-between gap-x-4 gap-y-2 px-1 sm:mb-5 sm:px-0">
+          <div><p className="micro text-[8px] tracking-[0.23em] text-taupe sm:text-[9px]">A LITTLE HELP STARTING OUT</p><h1 className="mt-1 font-serif text-[27px] font-semibold leading-none text-[#493631] sm:text-[34px]">Our gift list</h1></div>
+          <p className="max-w-[250px] text-right font-serif text-[11px] italic leading-snug text-taupe sm:text-sm">A few thoughtful things for our home together.</p>
         </header>
 
-        {/* The monetary-gift note — wording the couple edits in the binder */}
-        <section className="mt-10 rounded-[22px] border border-wine/25 bg-wine/[0.05] p-7 md:p-8 text-center shadow-[0_12px_30px_-18px_rgba(110,31,46,.4)]">
-          <span aria-hidden className="script text-wine text-3xl leading-none">♡</span>
-          <p className="font-serif italic text-body text-mocha mt-3 leading-relaxed text-balance">{note}</p>
+        <section className="mb-4 rounded-[20px] border border-[#DCC9C1] bg-[#F6EFEB] px-4 py-3.5 shadow-[0_10px_26px_-22px_rgba(88,37,45,.4)] sm:mb-5 sm:px-5">
+          <div className="flex items-start gap-2.5"><span aria-hidden className="mt-0.5 text-lg text-[#8E5960]">♡</span><p className="font-serif text-[13px] italic leading-relaxed text-[#5B4540] sm:text-sm">{note}</p></div>
         </section>
 
-        {/* Compact one-row transfer card: number and IBAN side by side, tap to copy,
-            so the gift list starts immediately below as the guest scrolls. */}
-        {benefitNo || ibanNo ? (
-          <section className="mt-5 rounded-[22px] border border-taupe/25 bg-[#FCFAF6] p-4 md:p-5 shadow-[0_12px_30px_-18px_rgba(61,47,38,.45)]">
-            <div className="flex items-center justify-between gap-3">
-              <p className="micro text-wine tracking-[0.2em]">PREFER A TRANSFER?</p>
-              <p className="micro text-taupe/80 tracking-[0.12em]">TAP TO COPY</p>
-            </div>
-            <div className={`grid gap-2.5 mt-3 ${benefitNo && ibanNo ? "grid-cols-2" : "grid-cols-1"}`}>
-              <CopyCell label="BENEFITPAY · NUMBER" value={benefitNo} />
-              <CopyCell label="BANK TRANSFER · IBAN" value={ibanNo} />
-            </div>
-            <p className="micro !text-[9px] text-taupe/80 text-center mt-3 tracking-[0.1em]">
-              BOTH ACCOUNTS ARE NAMED JSGOTMARRIED — PLEASE CHECK THE NAME BEFORE YOU CONFIRM ✦
-            </p>
+        {loading ? (
+          <section role="status" aria-label="Loading transfer details" className="mb-5 rounded-[18px] border border-[#E2D4CD] bg-[#FFFCF8] p-3.5">
+            <div className="h-3 w-40 animate-pulse rounded-full bg-taupe/15" /><div className="mt-3 grid grid-cols-2 gap-2.5"><div className="h-[4.5rem] animate-pulse rounded-xl bg-taupe/10" /><div className="h-[4.5rem] animate-pulse rounded-xl bg-taupe/10" /></div>
+          </section>
+        ) : benefit || iban ? (
+          <section className="mb-5 rounded-[18px] border border-[#E2D4CD] bg-[#FFFCF8] p-3.5 shadow-[0_10px_24px_-20px_rgba(61,47,38,.45)] sm:p-4">
+            <div className="mb-2 flex items-center justify-between gap-2"><p className="micro text-[8px] tracking-[0.16em] text-[#6B1D2A]">PREFER A TRANSFER?</p><p className="micro text-[8px] tracking-[0.1em] text-taupe">TAP TO COPY</p></div>
+            <div className={`grid gap-2.5 ${benefit && iban ? "grid-cols-2" : "grid-cols-1"}`}><CopyCell label="BENEFITPAY · NUMBER" value={benefit} /><CopyCell label="BANK TRANSFER · IBAN" value={iban} /></div>
           </section>
         ) : (
-          <p className="micro text-taupe mt-5 text-center tracking-[0.14em]">
-            PREFER A TRANSFER? THE BENEFITPAY DETAILS ARE IN YOUR PERSONAL INVITATION LINK.
-          </p>
+          <p className="mb-5 text-center text-[9px] tracking-[0.1em] text-taupe">PREFER A TRANSFER? DETAILS ARE IN YOUR PERSONAL INVITATION LINK.</p>
         )}
+
+        {!loading && <div className="mb-3 flex items-center justify-between gap-3 px-1">
+          <p className="micro text-[8px] tracking-[0.12em] text-taupe sm:text-[9px]">{openCount} AVAILABLE <span aria-hidden>·</span> {claimedCount} CHOSEN</p>
+          <p className="micro text-[8px] tracking-[0.12em] text-taupe sm:text-[9px]">{pct}% GIFTED</p>
+        </div>}
+        {!loading && <div aria-label={`${pct}% of gifts chosen`} className="mb-4 h-1.5 overflow-hidden rounded-full bg-[#E9DDD6]"><div className="h-full rounded-full bg-[#788568] transition-[width] duration-700" style={{ width: `${pct}%` }} /></div>}
+
+        {notice && <p role="status" className={`mb-4 rounded-xl px-4 py-2.5 text-xs ${notice.kind === "ok" ? "bg-[#EAF0E6] text-[#526B56]" : "bg-[#F9E7E5] text-[#8B3030]"}`}>{notice.text}</p>}
 
         {loading ? (
-          <p className="text-center text-ink/45 font-serif italic mt-12">Opening the gift list…</p>
+          <ul aria-label="Loading gifts" className="grid grid-cols-3 gap-2 sm:gap-3">{Array.from({ length: 6 }, (_, index) => <li key={index} className="aspect-[4/5] animate-pulse rounded-[18px] bg-[#E8DDD4]" />)}</ul>
+        ) : items.length ? (
+          <ul aria-label="Gift list" className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-5">
+            {items.map((gift) => <GiftCard key={gift.id} gift={gift} busy={busyId === gift.id} onChoose={() => { setNotice(null); setAskId(gift.id); }} />)}
+          </ul>
         ) : (
-          <>
-            <div className="mt-10 flex items-center justify-between micro text-taupe tracking-[0.12em]">
-              <span>
-                {open.length} STILL OPEN · {taken.length} FOUND
-              </span>
-              <span>{pct}% FOUND</span>
-            </div>
-            <div className="h-2 rounded-full bg-ink/10 mt-2 overflow-hidden">
-              <div className="h-full rounded-full bg-moss transition-all duration-700" style={{ width: `${pct}%` }} />
-            </div>
-
-            {notice && (
-              <p
-                className={`mt-5 rounded-xl px-4 py-3 text-sm ${
-                  notice.kind === "ok" ? "bg-moss/10 text-moss" : "bg-burgundy/10 text-burgundy"
-                }`}
-              >
-                {notice.text}
-              </p>
-            )}
-
-            <ul className="mt-6 space-y-3">
-              {open.map((g) => (
-                <li
-                  key={g.id}
-                  className="rounded-2xl border border-taupe/25 bg-[#FCFAF6] p-4 md:p-5 shadow-[0_8px_22px_-16px_rgba(61,47,38,.5)]"
-                >
-                  {askId === g.id ? (
-                    <div className="space-y-3">
-                      <p className="font-serif text-lg text-mocha">
-                        Mark <b>{g.title}</b> as bought — thank you!
-                      </p>
-                      <input
-                        autoFocus
-                        value={guestName}
-                        onChange={(e) => setGuestName(e.target.value)}
-                        placeholder="Your name (optional)"
-                        maxLength={120}
-                        className="w-full bg-white/70 rounded-full px-5 py-3 outline-none border border-ink/10 focus:border-wine text-sm"
-                        onKeyDown={(e) => e.key === "Enter" && confirmClaim()}
-                      />
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={confirmClaim}
-                          disabled={busyId === g.id}
-                          className="micro rounded-full bg-wine text-lace px-6 py-3 tracking-[0.14em] hover:bg-mocha transition-colors disabled:opacity-50"
-                        >
-                          {busyId === g.id ? "SAVING…" : "YES, I'VE BOUGHT THIS"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setAskId(null);
-                            setGuestName("");
-                          }}
-                          className="micro rounded-full border border-ink/15 px-6 py-3 tracking-[0.14em] text-taupe hover:bg-ink/5 transition-colors"
-                        >
-                          CANCEL
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-4">
-                      <GiftImage gift={g} claimed={false} />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-serif text-lg text-mocha leading-snug">{g.title}</p>
-                        {g.note && <p className="font-serif italic text-[13px] md:text-sm text-taupe mt-1 leading-snug">{g.note}</p>}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setNotice(null);
-                            setAskId(g.id);
-                          }}
-                          disabled={busyId === g.id}
-                          className="mt-2.5 micro rounded-full border border-wine/35 px-5 py-2.5 text-wine tracking-[0.12em] hover:bg-wine hover:text-lace transition-colors disabled:opacity-50"
-                        >
-                          I&apos;VE BOUGHT THIS
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </li>
-              ))}
-
-              {taken.map((g) => (
-                <li key={g.id} className="rounded-2xl border border-taupe/15 bg-oat/50 p-4 md:p-5 opacity-85">
-                  <div className="flex items-center gap-4">
-                    <GiftImage gift={g} claimed />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-serif text-lg text-ink/45 line-through leading-snug">{g.title}</p>
-                      <p className="micro text-moss tracking-[0.12em] mt-1">
-                        {g.claimed_by ? `BOUGHT BY ${g.claimed_by}` : "ALREADY FOUND A HOME ♡"}
-                      </p>
-                      {isMyClaim(g.id) && (
-                        <button
-                          type="button"
-                          onClick={() => undo(g.id)}
-                          disabled={busyId === g.id}
-                          className="mt-2 micro rounded-full border border-ink/15 px-4 py-2 text-taupe tracking-[0.1em] hover:bg-ink/5 transition-colors disabled:opacity-50"
-                        >
-                          MADE A MISTAKE? RELEASE
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-
-            {!items.length && (
-              <p className="text-center text-ink/45 font-serif italic mt-12">
-                The couple haven&apos;t opened their list yet — check back soon.
-              </p>
-            )}
-            {open.length === 0 && items.length > 0 && (
-              <p className="text-center font-serif italic text-mocha mt-10">
-                Every single gift has found a home. Thank you for loving them this well. ♡
-              </p>
-            )}
-          </>
+          <p className="rounded-2xl border border-[#E2D4CD] bg-white/70 px-4 py-10 text-center font-serif italic text-taupe">The couple is still adding their gift ideas. Please check again soon.</p>
         )}
 
-        <p className="micro text-center text-taupe mt-12 tracking-[0.16em]">
-          {info?.hashtags?.join("  ") || "#JSGotMarried"}
-        </p>
-      </div>
-    </main>
+        <p className="mt-6 text-center text-[9px] tracking-[0.08em] text-taupe/80">Chosen gifts are marked unavailable for all guests.</p>
+      </main>
+
+      {askId && selectedGift && <>
+        <button type="button" aria-label="Close gift confirmation" onClick={() => setAskId(null)} className="fixed inset-0 z-[60] bg-[#29181A]/20" />
+        <section role="dialog" aria-modal="true" aria-labelledby="gift-confirm-title" className="fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-[70] mx-auto w-full max-w-xl px-3 sm:bottom-[calc(4.75rem+env(safe-area-inset-bottom))]">
+          <div className="rounded-[22px] border border-[#DDC7C0] bg-[#FFFCF8] p-4 shadow-[0_18px_55px_-20px_rgba(48,23,25,.6)] sm:p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0"><p className="micro text-[8px] tracking-[0.18em] text-[#8B6660]">GIFT CONFIRMATION</p><h2 id="gift-confirm-title" className="mt-1 font-serif text-lg font-semibold leading-tight text-[#493631]">{selectedGift.title}</h2></div>
+              <button type="button" onClick={() => setAskId(null)} aria-label="Close confirmation" className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#F4EAE6] text-lg text-[#725B55]">×</button>
+            </div>
+            <p className="mt-3 font-serif text-[15px] leading-snug text-[#493631]">Mark this item as your gift to the couple?</p>
+            {guestName ? <p className="mt-1 text-[11px] text-taupe">Marking as <b className="font-medium text-[#6B1D2A]">{guestName}</b></p> : <div className="mt-2 flex items-center justify-between gap-2"><p className="text-[11px] text-taupe">Please add your name before confirming.</p><button type="button" onClick={() => window.dispatchEvent(new Event(OPEN_GUEST_NAME_EVENT))} className="shrink-0 text-[11px] font-semibold text-[#6B1D2A] underline underline-offset-2">Add name</button></div>}
+            <p className="mt-3 rounded-xl bg-[#F5ECE7] px-3 py-2 text-[10px] leading-relaxed text-[#72514E]">Once confirmed, guests can’t undo this choice. Only the couple can release a gift from their binder.</p>
+            <div className="mt-3 flex items-center justify-end gap-2"><button type="button" onClick={() => setAskId(null)} className="rounded-full px-4 py-2 text-xs font-medium text-taupe hover:bg-[#F5ECE7]">Not now</button><button type="button" onClick={() => void confirmClaim()} disabled={!guestName.trim() || busyId === askId || Boolean(selectedGift.claimed)} className="rounded-full bg-[#6B1D2A] px-5 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-[#521522] disabled:cursor-not-allowed disabled:opacity-45">{busyId === askId ? "Saving…" : "Confirm gift"}</button></div>
+          </div>
+        </section>
+      </>}
+    </SocialShell>
   );
 }

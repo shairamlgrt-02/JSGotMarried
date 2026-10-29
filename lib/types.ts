@@ -318,12 +318,12 @@ export type Faq = { id: string; question: string; answer: string; order: number 
 export type GiftItem = {
   id: string;
   title: string;
-  /** Optional one-line detail ("king-size, crisp cotton") — the polite, specific "what's included". */
+  /** Optional short, sweet note alongside the gift name. */
   note: string;
   /** Optional picture of the gift: an uploaded data URL (binder) or a pasted hosted image link. */
   image_url: string;
   claimed: boolean;
-  /** What the guest typed as their name — shown in the binder and as "Bought by …" on the page. */
+  /** What the guest typed as their name — visible to the couple in the binder only. */
   claimed_by: string;
   claimed_at?: string | null;
   order: number;
