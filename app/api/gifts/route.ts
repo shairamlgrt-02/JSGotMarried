@@ -61,7 +61,9 @@ async function readBoard(db: Db) {
     benefit = String(infoData.benefitpay_number || "").trim();
     iban = String(infoData.benefitpay_iban || "").trim();
   }
-  return { items, note: note || DEFAULT_REGISTRY_NOTE, benefit, iban };
+  // Claimant names are private to the couple's binder; the public board only needs availability.
+  const publicItems = items.map((item) => ({ ...item, claimed_by: "" }));
+  return { items: publicItems, note: note || DEFAULT_REGISTRY_NOTE, benefit, iban };
 }
 
 /**
@@ -77,7 +79,7 @@ export async function GET(req: Request) {
     if (light) {
       const res = await db
         .from("gift_items")
-        .select("id, claimed, claimed_by, claimed_at, \"order\"")
+        .select("id, claimed, claimed_at, \"order\"")
         .order("order", { ascending: true });
       if (res.error) {
         if (isMissingTable(res.error.message)) return NextResponse.json({ items: [] });
@@ -95,8 +97,7 @@ export async function GET(req: Request) {
  * POST /api/gifts
  *  · { action: "claim", id, name }   — guest marks a gift bought. The `claimed = false` guard in
  *    the WHERE clause settles two-guest races: only one update can win, the loser gets 409.
- *  · { action: "release", id }       — puts a gift back (the UI only offers it for same-device
- *    claims, and the binder can release any of them).
+ *  · { action: "release", id }       — binder-authenticated only; guest release is never allowed.
  *  · { action: "note", note }        — binder only; edits the public monetary-gift wording.
  */
 export async function POST(req: Request) {
@@ -128,6 +129,7 @@ export async function POST(req: Request) {
     const id = clip(b.id, 80);
     if (!id) return NextResponse.json({ error: "A gift id is required." }, { status: 400 });
     const name = clip(b.name, 120);
+    if (!name) return NextResponse.json({ error: "Please add your name before choosing a gift." }, { status: 400 });
     const { data, error } = await db
       .from("gift_items")
       .update({ claimed: true, claimed_by: name, claimed_at: new Date().toISOString() })
@@ -139,16 +141,15 @@ export async function POST(req: Request) {
       // Zero rows: unknown id, or someone else won the claim in the last moment.
       const existing = await db.from("gift_items").select("*").eq("id", id).maybeSingle();
       if (!existing.data) return NextResponse.json({ error: "That gift is no longer on the list." }, { status: 404 });
-      const row = existing.data as GiftItem;
-      return NextResponse.json(
-        { error: row.claimed_by ? `“${row.title}” was just bought by ${row.claimed_by}.` : `“${row.title}” was just bought by someone else.` },
-        { status: 409 },
-      );
+      const title = (existing.data as GiftItem).title;
+      return NextResponse.json({ error: `“${title}” is no longer available.` }, { status: 409 });
     }
     return NextResponse.json({ ok: true, item: data[0] });
   }
 
   if (action === "release") {
+    const authed = await isAuthed(cookies().get(COOKIE)?.value);
+    if (!authed) return NextResponse.json({ error: "Only the couple can release a gift from the binder." }, { status: 401 });
     const id = clip(b.id, 80);
     if (!id) return NextResponse.json({ error: "A gift id is required." }, { status: 400 });
     const { data, error } = await db

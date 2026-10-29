@@ -166,7 +166,7 @@ export function GiftRegistry() {
           <input
             value={detail}
             onChange={(e) => setDetail(e.target.value)}
-            placeholder="Optional detail (size, colour, what's included…)"
+            placeholder="Optional short, sweet note…"
             className={`${inputCls} flex-[2]`}
           />
           <Btn type="submit" variant="dark">

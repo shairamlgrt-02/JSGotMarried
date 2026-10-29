@@ -3,9 +3,11 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useTable } from "@/lib/hooks";
-import { fullDate } from "@/components/public/Envelope";
+import { SEED } from "@/lib/seed";
+import SocialShell from "@/components/public/SocialShell";
 import { deleteMoment, loadMoments, publishMoment, updateMoment, type WeddingMoment } from "@/lib/moments";
 import { browserSupabase } from "@/lib/supabase-browser";
+import { cleanGuestName, GUEST_NAME_EVENT, GUEST_NAME_KEY } from "@/lib/guest-identity";
 import { DEFAULT_GUEST_AVATAR, GUEST_AVATARS, guestAvatarEmoji, normalizeGuestAvatarId, type GuestAvatarId } from "@/lib/guest-avatars";
 import {
   MAX_TOTAL_BYTES,
@@ -501,7 +503,7 @@ function ConversationPrompt() {
 
 export default function UploadPage() {
   const { rows: infoRows } = useTable("wedding_info");
-  const info = infoRows[0];
+  const info = infoRows[0] ?? SEED.wedding_info[0];
   const configured = useMemo(() => mediaConfigured(), []);
   const galleryInput = useRef<HTMLInputElement>(null);
   const storyInput = useRef<HTMLInputElement>(null);
@@ -546,7 +548,6 @@ export default function UploadPage() {
   const touchStartY = useRef<number | null>(null);
 
   const couple = info?.bride && info?.groom ? `${info.groom} & ${info.bride}` : "the couple";
-  const hashtag = info?.hashtags?.[0] || "";
   const remainingBytes = Math.max(0, MAX_TOTAL_BYTES - quota.bytes);
 
   const refreshFeed = useCallback(async (quiet = false) => {
@@ -582,13 +583,24 @@ export default function UploadPage() {
 
   useEffect(() => {
     try {
-      setDisplayName(localStorage.getItem("jsos:moment-name-v1") || "");
+      setDisplayName(localStorage.getItem(GUEST_NAME_KEY) || "");
       const savedAvatar = localStorage.getItem("jsos:moment-avatar-v1");
       if (savedAvatar) setAvatar(normalizeGuestAvatarId(savedAvatar));
     } catch { /* private mode */ }
     void refreshFeed();
     return () => draftRef.current.forEach((item) => URL.revokeObjectURL(item.previewUrl));
   }, [refreshFeed]);
+
+  useEffect(() => {
+    const syncName = (event: Event) => {
+      const value = (event as CustomEvent<string>).detail;
+      if (typeof value === "string") setDisplayName(cleanGuestName(value));
+      else { try { setDisplayName(localStorage.getItem(GUEST_NAME_KEY) || ""); } catch { /* private mode */ } }
+    };
+    window.addEventListener(GUEST_NAME_EVENT, syncName);
+    window.addEventListener("storage", syncName);
+    return () => { window.removeEventListener(GUEST_NAME_EVENT, syncName); window.removeEventListener("storage", syncName); };
+  }, []);
 
   useEffect(() => {
     if (loading || initialScrollDone.current || !posts.length) return;
@@ -731,9 +743,10 @@ export default function UploadPage() {
     setDisplayName(cleanName);
     setAvatar(selectedAvatar);
     try {
-      localStorage.setItem("jsos:moment-name-v1", cleanName);
+      localStorage.setItem(GUEST_NAME_KEY, cleanName);
       localStorage.setItem("jsos:moment-avatar-v1", selectedAvatar);
     } catch { /* private mode */ }
+    window.dispatchEvent(new CustomEvent(GUEST_NAME_EVENT, { detail: cleanName }));
     setNamePromptMode(null);
     if (mode === "story") showStoryPicker();
     if (mode === "chat") void sharePost(cleanName, selectedAvatar);
@@ -849,7 +862,8 @@ export default function UploadPage() {
       draftRef.current.forEach((item) => URL.revokeObjectURL(item.previewUrl));
       setDraftMedia([]);
       setNotice("Sent to the group chat ♡ Chat photos and videos are optimized and stay out of Stories.");
-      try { localStorage.setItem("jsos:moment-name-v1", authorName); } catch { /* private mode */ }
+      try { localStorage.setItem(GUEST_NAME_KEY, authorName); } catch { /* private mode */ }
+      window.dispatchEvent(new CustomEvent(GUEST_NAME_EVENT, { detail: authorName }));
       window.setTimeout(() => setNotice(""), 4500);
     } catch (e) {
       setError((e as Error).message || "That didn't send — please try again.");
@@ -927,24 +941,12 @@ export default function UploadPage() {
   };
 
   return (
+    <SocialShell info={info} active="chat">
     <main className="relative min-h-screen paper-bg text-ink" style={{ backgroundImage: "radial-gradient(ellipse at 4% 12%,rgba(205,148,156,.13),transparent 29%),radial-gradient(ellipse at 80% 88%,rgba(218,190,126,.10),transparent 30%)" }} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-      <div className="relative z-[1] mx-auto max-w-2xl px-3 pb-14 pt-4 sm:px-5 sm:pt-6">
-        <header className="mb-4 flex items-center justify-between gap-4 border-b border-taupe/20 pb-3">
-          <div className="min-w-0">
-            <a href="/" className="micro inline-flex items-center gap-1.5 text-taupe no-underline transition-colors hover:text-wine">
-              <span aria-hidden>←</span> BACK TO THE HOUSE
-            </a>
-            <h1 className="mt-1 font-serif text-2xl leading-tight text-wine sm:text-[1.7rem]">Wedding chat</h1>
-            <p className="mt-0.5 truncate text-xs text-taupe">{info ? fullDate(info.date) : "11.11.2026"} · {couple}{hashtag ? ` · ${hashtag}` : ""}</p>
-          </div>
-          <button type="button" onClick={() => setNamePromptMode("edit")} title={displayName.trim() ? `Edit name and avatar: ${displayName}` : "Add your name and choose an avatar"} aria-label={displayName.trim() ? `Edit your name and avatar, currently ${displayName}` : "Add your name and choose an avatar"} className="flex max-w-[112px] shrink-0 items-center gap-1.5 rounded-full border border-[#D8B9AE] bg-white/75 px-2.5 py-2 text-[10px] font-medium text-[#70434A] shadow-sm transition-colors hover:bg-[#F7ECE9] sm:max-w-[150px] sm:px-3 sm:text-xs">
-            <AvatarBadge avatar={avatar} className="h-5 w-5 border border-[#E4D2CB] bg-white text-sm text-[#6B1D2A]" /><span className="truncate">{displayName.trim() ? `As ${firstName(displayName)}` : "Name"}</span><span aria-hidden>✎</span>
-          </button>
-        </header>
-
-        <div className="mb-4 flex items-center justify-between gap-3 overflow-hidden rounded-2xl border border-[#E1C8C2] bg-[#F2E5E2] px-4 py-2.5 text-[#6B1D2A] shadow-[0_8px_20px_-16px_rgba(107,29,42,.45)] sm:px-5">
-          <div className="flex min-w-0 items-center gap-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-[#D7B5AD] bg-white/60 text-lg text-[#9A604E]" aria-hidden>✦</span><p className="micro truncate !tracking-[0.16em]">YOUR DAY, THROUGH EVERYONE&apos;S EYES</p></div>
-          <span className="script hidden shrink-0 text-3xl leading-none text-[#9A604E] sm:block">every moment matters</span>
+      <div className="relative z-[1] mx-auto max-w-2xl px-3 pb-24 pt-4 sm:px-5 sm:pt-6">
+        <div className="mb-4 rounded-2xl border border-[#E1C8C2] bg-[#F2E5E2] px-4 py-3 text-[#6B1D2A] shadow-[0_8px_20px_-16px_rgba(107,29,42,.45)] sm:px-5">
+          <h1 className="font-serif text-xl font-semibold leading-tight sm:text-2xl">Upload Wedding Photos &amp; Messages</h1>
+          <p className="mt-1 text-[11px] text-[#806B65]">Share a photo, voice note or message with everyone.</p>
         </div>
 
         {!configured && (
@@ -967,9 +969,6 @@ export default function UploadPage() {
               <div className="min-w-0"><h2 className="font-serif text-xl leading-tight text-[#46362C]">Wedding conversation</h2><p className="text-[11px] text-taupe">Chat, share updates &amp; relive the night</p></div>
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
-              <button type="button" onClick={() => setNamePromptMode("edit")} title={displayName.trim() ? `Edit name and avatar: ${displayName}` : "Add your name and choose an avatar"} aria-label={displayName.trim() ? `Edit your name and avatar, currently ${displayName}` : "Add your name and choose an avatar"} className="flex max-w-[88px] items-center gap-1 truncate rounded-full border border-[#E3D1CB] bg-white/80 px-2 py-1 text-[9px] font-medium text-[#70434A] hover:bg-[#F7ECE9] sm:max-w-[120px] sm:text-[10px]">
-                <AvatarBadge avatar={avatar} className="h-4 w-4 border border-[#E3D1CB] bg-white text-[10px] text-[#6B1D2A]" /><span className="truncate">{displayName.trim() ? `As ${firstName(displayName)}` : "Name"}</span><span aria-hidden>✎</span>
-              </button>
               <span title={liveStatus === "live" ? "Live" : liveStatus === "offline" ? "Offline" : "Connecting"} className="inline-flex items-center gap-1.5 text-[10px] text-taupe"><span className={`h-2 w-2 rounded-full ${liveStatus === "live" ? "bg-[#4D8A57]" : liveStatus === "offline" ? "bg-[#B66A62]" : "bg-[#C49A57]"}`} /><span className="hidden sm:inline">{liveStatus === "live" ? "LIVE" : liveStatus === "offline" ? "OFFLINE" : "CONNECTING"}</span></span>
               <button type="button" onClick={() => { setPulling(true); void refreshFeed(true); }} title="Refresh chat" aria-label="Refresh chat" className="grid h-8 w-8 place-items-center rounded-full border border-[#E3D1CB] text-lg text-[#806F68] transition-colors hover:bg-[#F5E9E6]">↻</button>
             </div>
@@ -989,7 +988,7 @@ export default function UploadPage() {
             {unreadCount > 0 && <button type="button" onClick={() => { if (chatScroll.current) chatScroll.current.scrollTop = chatScroll.current.scrollHeight; setUnreadCount(0); }} className="sticky bottom-1 mx-auto rounded-full bg-[#6B1D2A] px-4 py-2 text-xs font-medium text-white shadow-lg">{unreadCount} new {unreadCount === 1 ? "message" : "messages"} ↓</button>}
           </div>
 
-          <div className="sticky bottom-0 z-20 border-t border-[#E8DCD7] bg-[#FFFCF8] p-3 shadow-[0_-8px_18px_-18px_rgba(54,43,35,.45)] sm:p-4">
+          <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-20 border-t border-[#E8DCD7] bg-[#FFFCF8] p-3 shadow-[0_-8px_18px_-18px_rgba(54,43,35,.45)] sm:p-4">
             {emojiOpen && <div className="mb-2 flex flex-wrap gap-1.5 rounded-xl bg-[#F7F1E8] p-2" aria-label="Choose an emoji">{["🤍", "😂", "🥹", "🎉", "📸", "😍", "🙌", "✨", "💃", "🕺", "🥂", "❤️"].map((emoji) => <button key={emoji} type="button" onClick={() => { setBody((text) => `${text}${emoji}`); messageInput.current?.focus(); }} className="grid h-9 w-9 place-items-center rounded-lg text-xl transition-colors hover:bg-white" aria-label={`Add ${emoji}`}>{emoji}</button>)}</div>}
             {attachmentMenu && <div className="mb-2 flex flex-wrap gap-2 rounded-xl bg-[#F7F1E8] p-2" aria-label="Attachment options"><button type="button" onClick={() => galleryInput.current?.click()} className="rounded-full bg-white px-3 py-2 text-xs text-[#70434A] shadow-sm">▧ Upload files</button><button type="button" onClick={() => cameraInput.current?.click()} className="rounded-full bg-white px-3 py-2 text-xs text-[#70434A] shadow-sm">◉ Take a photo</button><button type="button" onClick={() => videoInput.current?.click()} className="rounded-full bg-white px-3 py-2 text-xs text-[#70434A] shadow-sm">▷ Record video</button></div>}
             {draftMedia.length > 0 && <div className="mb-2 flex gap-2 overflow-x-auto pb-1">{draftMedia.map((item, index) => <div key={`${item.file.name}-${index}`} className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-[#E3D1CB] bg-[#F5F0E9]">
@@ -1023,5 +1022,6 @@ export default function UploadPage() {
         {namePromptMode && <NamePromptDialog key={namePromptMode} mode={namePromptMode} initialName={displayName} initialAvatar={avatar} onClose={() => setNamePromptMode(null)} onSave={saveNamePrompt} />}
       </AnimatePresence>
     </main>
+    </SocialShell>
   );
 }
