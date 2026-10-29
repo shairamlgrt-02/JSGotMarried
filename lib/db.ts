@@ -549,6 +549,22 @@ export async function refreshFaqCopy(): Promise<CopyRefreshReport> {
   window.dispatchEvent(new CustomEvent(EVT, { detail: "faq" }));
   return copyReport(SEED.faq as { id: string }[], stored as { id: string }[]);
 }
+
+/** Update the official family shades and guest dress-code note while preserving all other attire edits. */
+export async function refreshFamilyAttireColors(): Promise<number> {
+  const stored = await listStored("attire");
+  const attireSeeds = (SEED.attire as TableMap["attire"][]).filter((row) =>
+    row.group === "shai_family" || row.group === "jeg_family" || row.group === "guests",
+  );
+  const updates = attireSeeds.map((seed) => {
+    const current = stored.find((row) => row.id === seed.id);
+    if (!current) return seed;
+    if (seed.group === "guests") return { ...current, notes: seed.notes };
+    return { ...current, colors: seed.colors };
+  });
+  await upsert("attire", updates);
+  return updates.filter((row) => row.group !== "guests").length;
+}
 /**
  * Latest wording of the five Our Story chapters — titles and text only. A chapter's photo is the
  * couple's own upload, so it is carried across instead of being blanked by the starter row.

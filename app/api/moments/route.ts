@@ -40,19 +40,30 @@ function validStoragePath(path: string, deviceId: string) {
     /^[a-z0-9-]{18,50}\.[a-z0-9]{1,8}$/i.test(parts[2]);
 }
 
-async function toPublicPost(db: NonNullable<ReturnType<typeof serverSupabase>>, row: Row): Promise<WeddingMoment> {
-  const media = await Promise.all((Array.isArray(row.media) ? row.media : []).map(async (item) => {
-    if (!item?.path) return null;
-    const { data, error } = await db.storage.from(BUCKET).createSignedUrl(item.path, SIGNED_URL_SECONDS);
-    if (error || !data?.signedUrl) return null;
-    return { url: data.signedUrl, contentType: item.contentType || "application/octet-stream" };
-  }));
+async function signedMediaMap(db: NonNullable<ReturnType<typeof serverSupabase>>, paths: string[], expiresIn = SIGNED_URL_SECONDS) {
+  const unique = [...new Set(paths.filter(Boolean))];
+  const urls = new Map<string, string>();
+  if (!unique.length) return urls;
+  // Keep batches below Storage's per-request object limit, including larger binder pages.
+  for (let offset = 0; offset < unique.length; offset += 100) {
+    const { data, error } = await db.storage.from(BUCKET).createSignedUrls(unique.slice(offset, offset + 100), expiresIn);
+    if (error || !data) throw error || new Error("Could not sign media URLs.");
+    for (const row of data) if (row.path && row.signedUrl) urls.set(row.path, row.signedUrl);
+  }
+  return urls;
+}
+
+function toPublicPost(row: Row, urls: Map<string, string>): WeddingMoment {
+  const media = (Array.isArray(row.media) ? row.media : []).flatMap((item) => {
+    const url = item?.path ? urls.get(item.path) : undefined;
+    return url ? [{ url, contentType: item.contentType || "application/octet-stream" }] : [];
+  });
   return {
     id: row.id,
     displayName: row.display_name || "A guest",
     body: row.body || "",
     overlayText: row.overlay_text || "",
-    media: media.filter((x): x is NonNullable<typeof x> => Boolean(x)),
+    media,
     createdAt: row.created_at,
   };
 }
@@ -73,7 +84,7 @@ export async function GET(req: NextRequest) {
   const admin = url.searchParams.get("admin") === "1";
   if (admin && !(await isAuthed(cookies().get(COOKIE)?.value))) return json({ error: "Sign in to the binder to open the guest gallery." }, 401);
   const requested = Number(url.searchParams.get("limit"));
-  const limit = Math.max(1, Math.min(admin ? 24 : 3, Number.isFinite(requested) && requested > 0 ? requested : 3));
+  const limit = Math.max(1, Math.min(24, Number.isFinite(requested) && requested > 0 ? requested : 12));
   const before = url.searchParams.get("before");
   let query = db.from(TABLE).select("id, display_name, body, overlay_text, media, device_id, created_at").order("created_at", { ascending: false }).limit(limit);
   if (before && Number.isFinite(Date.parse(before))) query = query.lt("created_at", before);
@@ -81,9 +92,15 @@ export async function GET(req: NextRequest) {
   if (error) return json({ error: "The moments feed is not set up yet. Run the wedding-media and moments sections of supabase/schema.sql." }, 503);
 
   const rows = (data ?? []) as Row[];
-  const posts = await Promise.all(rows.map((row) => toPublicPost(db, row)));
-  const hasMore = rows.length === limit;
-  return json({ posts, nextCursor: hasMore ? rows[rows.length - 1]?.created_at ?? null : null });
+  try {
+    const paths = rows.flatMap((row) => Array.isArray(row.media) ? row.media.map((item) => item.path) : []);
+    const urls = await signedMediaMap(db, paths);
+    const posts = rows.map((row) => toPublicPost(row, urls));
+    const hasMore = rows.length === limit;
+    return json({ posts, nextCursor: hasMore ? rows[rows.length - 1]?.created_at ?? null : null });
+  } catch {
+    return json({ error: "The moments feed could not load its photos and videos. Please try again." }, 503);
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -110,9 +127,15 @@ export async function POST(req: NextRequest) {
     const contentType = String(item.contentType ?? "");
     if (!validStoragePath(path, deviceId) || !/^(image|video)\/[a-z0-9.+-]+$/i.test(contentType))
       return json({ error: "One of those media files could not be verified. Please choose it again." }, 400);
-    const { error } = await db.storage.from(BUCKET).createSignedUrl(path, 60);
-    if (error) return json({ error: "A photo or video is still uploading. Please wait and try again." }, 400);
     media.push({ path, contentType });
+  }
+  if (media.length) {
+    try {
+      const urls = await signedMediaMap(db, media.map((item) => item.path), 60);
+      if (media.some((item) => !urls.has(item.path))) throw new Error("An upload is missing.");
+    } catch {
+      return json({ error: "A photo or video is still uploading. Please wait and try again." }, 400);
+    }
   }
   if (!text && !media.length) return json({ error: "Add a note, photo or video before sharing." }, 400);
 
@@ -126,7 +149,14 @@ export async function POST(req: NextRequest) {
     .select("id, display_name, body, overlay_text, media, device_id, created_at")
     .single();
   if (error || !data) return json({ error: "Your post couldn't be saved just now. Please try again." }, 503);
-  return json({ post: await toPublicPost(db, data as Row) }, 201);
+  const row = data as Row;
+  try {
+    const urls = await signedMediaMap(db, row.media.map((item) => item.path));
+    return json({ post: toPublicPost(row, urls) }, 201);
+  } catch {
+    // The post is already stored. Return its text now rather than prompting a retry that could duplicate it.
+    return json({ post: toPublicPost(row, new Map()), mediaPending: true }, 201);
+  }
 }
 
 export async function DELETE(req: NextRequest) {

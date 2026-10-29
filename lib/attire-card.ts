@@ -252,7 +252,7 @@ function paintCard(ctx: CanvasRenderingContext2D, data: AttireCardData, figures:
   drawTracked(ctx, "RESERVED SHADES", WIDTH / 2, reservedTitleY, '600 17px "Cormorant Garamond", Georgia, serif', WINE, 3);
 
   const reserved = uniqueReservedColors(data.reserved);
-  const reservedNames = reserved.length ? reserved.map((color) => color.name).join(" · ") : "Black · white & ivory · burgundy · copper";
+  const reservedNames = reserved.length ? reserved.map((color) => color.name).join(" · ") : "Black · white & ivory · burgundy";
   setFont(ctx, '500 20px "Cormorant Garamond", Georgia, serif', INK);
   const reservedLines = wrapLines(ctx, reservedNames, WIDTH - 190);
   reservedLines.slice(0, 2).forEach((line, index) => drawText(ctx, line, WIDTH / 2, reservedTitleY + 31 + index * 26, '500 20px "Cormorant Garamond", Georgia, serif', INK));
@@ -264,7 +264,7 @@ function paintCard(ctx: CanvasRenderingContext2D, data: AttireCardData, figures:
   const avoid = [
     ["Black", "reserved for the groom"],
     ["White & ivory", "reserved for the bride"],
-    ["Burgundy & copper", "reserved for the families"],
+    ["Burgundy", "reserved for the families"],
     ["Pastels", "save these for brunch"],
     ["T-shirts & jeans", "too casual for black tie"],
     ["Mini skirts", "floor-length looks, please"],
