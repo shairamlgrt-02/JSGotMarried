@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Ambience from "@/components/public/Ambience";
-import { EASE_OUT, Reveal } from "@/components/public/fx";
+import { EASE_OUT } from "@/components/public/fx";
 import { Flourish } from "@/components/public/ornaments";
 import { fullDate } from "@/components/public/Envelope";
 import { useCountdown } from "@/lib/hooks";
@@ -47,7 +47,7 @@ function HomeTile({
   return (
     <motion.article
       layout
-      initial={reduceMotion ? false : { opacity: 0, y: 18, scale: 0.98 }}
+      initial={false}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ delay, duration: 0.65, ease: EASE_OUT, layout: { duration: 0.42, ease: EASE_OUT } }}
       className={`relative min-w-0 overflow-hidden rounded-[28px] shadow-[0_18px_42px_-32px_rgba(75,43,37,.42)] ring-1 ring-white/55 ${toneClasses[tile.tone]} ${active ? "sm:col-span-2 lg:col-span-2" : ""}`}
@@ -119,7 +119,7 @@ function CountdownPill({ date }: { date: string }) {
   if (!ready) return null;
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8, scale: 0.97 }}
+      initial={false}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ delay: 0.22, duration: 0.6, ease: EASE_OUT }}
       className="inline-flex items-center gap-2.5 rounded-full bg-white/75 px-5 py-2.5 text-wine shadow-[0_8px_22px_-16px_rgba(91,36,45,.55)] ring-1 ring-white/85 backdrop-blur-sm"
@@ -192,7 +192,7 @@ export default function Hub({ info }: { info: WeddingInfo }) {
         >♡</motion.span>
 
         <div className="relative mx-auto flex w-full max-w-5xl flex-col items-center">
-          <Reveal>
+          <motion.div initial={false} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: EASE_OUT }}>
             <p className="micro inline-flex items-center gap-2 rounded-full bg-white/65 px-4 py-2 text-[9px] tracking-[0.28em] text-taupe shadow-sm ring-1 ring-white/85 backdrop-blur-sm">
               <span aria-hidden className="text-wine">✧</span> THE WEDDING SITE OF
             </p>
@@ -204,7 +204,7 @@ export default function Hub({ info }: { info: WeddingInfo }) {
             <p className="mx-auto mt-4 max-w-md font-serif text-base italic leading-relaxed text-[#77615A] sm:text-lg">
               We can&apos;t wait to celebrate together. Find everything you need for the day below.
             </p>
-          </Reveal>
+          </motion.div>
 
           <div className="mt-6">
             <CountdownPill date={info.date} />
@@ -232,7 +232,7 @@ export default function Hub({ info }: { info: WeddingInfo }) {
             </motion.div>
           </section>
 
-          <Reveal delay={0.25}>
+          <motion.div initial={false} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.45, ease: EASE_OUT }}>
             <a
               href="/preview"
               className="mt-9 inline-flex items-center gap-2 rounded-full bg-white/55 px-5 py-2.5 font-serif text-sm italic text-taupe no-underline shadow-sm ring-1 ring-white/75 transition-all hover:-translate-y-0.5 hover:bg-white/85 hover:text-wine focus:outline-none focus-visible:ring-2 focus-visible:ring-wine/60"
@@ -240,7 +240,7 @@ export default function Hub({ info }: { info: WeddingInfo }) {
               Preview the full invitation <span aria-hidden className="text-base not-italic">→</span>
             </a>
             <p className="micro mt-6 text-[9px] tracking-[0.22em] text-taupe/80">{info.hashtags.join("  ")}</p>
-          </Reveal>
+          </motion.div>
         </div>
       </main>
     </>
