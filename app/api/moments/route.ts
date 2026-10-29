@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { COOKIE, isAuthed } from "@/lib/auth";
 import { serverSupabase } from "@/lib/supabase-server";
 import type { WeddingMoment } from "@/lib/moments";
-import { DEFAULT_GUEST_AVATAR, isGuestAvatarId } from "@/lib/guest-avatars";
+import { normalizeGuestAvatarId } from "@/lib/guest-avatars";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -83,7 +83,7 @@ function toPublicPost(row: Row, urls: Map<string, string>, canManage = false): W
   return {
     id: row.id,
     displayName: row.display_name || "A guest",
-    avatar: isGuestAvatarId(row.avatar) ? row.avatar : DEFAULT_GUEST_AVATAR,
+    avatar: normalizeGuestAvatarId(row.avatar),
     body: row.body || "",
     overlayText: row.overlay_text || "",
     media,
@@ -155,7 +155,7 @@ export async function POST(req: NextRequest) {
   const deviceId = String(body.deviceId ?? "").trim();
   if (!validDeviceId(deviceId)) return json({ error: "Please refresh the page and try again." }, 400);
   const displayName = safeName(body.displayName);
-  const avatar = isGuestAvatarId(body.avatar) ? body.avatar : DEFAULT_GUEST_AVATAR;
+  const avatar = normalizeGuestAvatarId(body.avatar);
   const text = safeText(body.body, 1200);
   const overlayText = safeText(body.overlayText, 120);
   const showInFeed = body.showInFeed !== false;

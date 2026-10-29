@@ -6,7 +6,7 @@ import { useTable } from "@/lib/hooks";
 import { fullDate } from "@/components/public/Envelope";
 import { deleteMoment, loadMoments, publishMoment, updateMoment, type WeddingMoment } from "@/lib/moments";
 import { browserSupabase } from "@/lib/supabase-browser";
-import { DEFAULT_GUEST_AVATAR, GUEST_AVATARS, guestAvatarEmoji, isGuestAvatarId, type GuestAvatarId } from "@/lib/guest-avatars";
+import { DEFAULT_GUEST_AVATAR, GUEST_AVATARS, guestAvatarEmoji, normalizeGuestAvatarId, type GuestAvatarId } from "@/lib/guest-avatars";
 import {
   MAX_TOTAL_BYTES,
   UPLOAD_ACCEPT,
@@ -46,6 +46,8 @@ function AvatarFace({ avatar, className = "" }: { avatar: GuestAvatarId; classNa
 function AvatarBadge({ avatar, className = "" }: { avatar: GuestAvatarId; className?: string }) {
   return <span className={`grid shrink-0 place-items-center overflow-hidden rounded-full ${className}`}><AvatarFace avatar={avatar} /></span>;
 }
+
+const CHAT_WALLPAPER = `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="190" height="190" viewBox="0 0 190 190"><g fill="none" stroke="#a99988" stroke-opacity=".25" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><path d="M18 22h30a6 6 0 0 1 6 6v15a6 6 0 0 1-6 6H34l-9 7v-7h-7a6 6 0 0 1-6-6V28a6 6 0 0 1 6-6Z"/><path d="M119 20c-9-10-23 2-2 18 21-16 7-28-2-18Z"/><path d="m86 78 2.5 6.5L95 87l-6.5 2.5L86 96l-2.5-6.5L77 87l6.5-2.5L86 78Z"/><circle cx="151" cy="78" r="13"/><circle cx="151" cy="78" r="8"/><path d="M26 119h29a6 6 0 0 1 6 6v16a6 6 0 0 1-6 6H43l-9 7v-7h-8a6 6 0 0 1-6-6v-16a6 6 0 0 1 6-6Z"/><path d="M117 117v23m-8-8h16m-13-11 10 17m0-17-10 17"/><path d="M158 134c-7-8-18 2-2 14 16-12 5-22-2-14Z"/><circle cx="89" cy="151" r="12"/><path d="M85 151h8m-4-4v8"/></g></svg>`)}")`;
 
 const POSTER_TONES = [
   { ink: "#6B1D2A", edge: "#D8A7A8", wash: "#F8ECEA", deep: "#8F4650" },
@@ -489,8 +491,9 @@ function ConversationPrompt() {
           <p className="mt-1 text-[10px] leading-relaxed text-[#806B65] sm:text-[11px]">{conversationPrompts[index]?.message}</p>
         </motion.div>
       </AnimatePresence>
-      <button type="button" onClick={scrollToConversation} aria-label="Scroll to the wedding conversation" title="Join the conversation" className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-[#E7D3CB] bg-white/75 text-[#6B1D2A] transition-colors hover:bg-[#F5E9E6]">
-        <motion.span aria-hidden animate={reduceMotion ? undefined : { y: [0, -4, 4, 0, 0] }} transition={reduceMotion ? undefined : { duration: 2.1, repeat: Infinity, repeatDelay: 1.4, times: [0, 0.2, 0.43, 0.64, 1], ease: "easeInOut" }} className="text-xl leading-none">↓</motion.span>
+      <button type="button" onClick={scrollToConversation} aria-label="Chat with us — scroll to the wedding conversation" title="Join the conversation" className="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-[#E7D3CB] bg-white/75 px-3 text-[10px] font-medium text-[#6B1D2A] transition-colors hover:bg-[#F5E9E6]">
+        <span>Chat with us</span>
+        <motion.span aria-hidden animate={reduceMotion ? undefined : { y: [0, -4, 4, 0, 0] }} transition={reduceMotion ? undefined : { duration: 2.1, repeat: Infinity, repeatDelay: 1.4, times: [0, 0.2, 0.43, 0.64, 1], ease: "easeInOut" }} className="text-lg leading-none">↓</motion.span>
       </button>
     </motion.div>
   );
@@ -581,7 +584,7 @@ export default function UploadPage() {
     try {
       setDisplayName(localStorage.getItem("jsos:moment-name-v1") || "");
       const savedAvatar = localStorage.getItem("jsos:moment-avatar-v1");
-      if (isGuestAvatarId(savedAvatar)) setAvatar(savedAvatar);
+      if (savedAvatar) setAvatar(normalizeGuestAvatarId(savedAvatar));
     } catch { /* private mode */ }
     void refreshFeed();
     return () => draftRef.current.forEach((item) => URL.revokeObjectURL(item.previewUrl));
@@ -972,7 +975,7 @@ export default function UploadPage() {
             </div>
           </div>
 
-          <div ref={chatScroll} role="log" aria-label="Chat messages" aria-live="polite" onScroll={(event) => { const node = event.currentTarget; if (node.scrollHeight - node.scrollTop - node.clientHeight < 60) setUnreadCount(0); }} className="relative flex h-[min(56vh,560px)] min-h-[300px] flex-col gap-2 overflow-y-auto bg-[#F5F0E9] px-3 py-3 sm:px-4">
+          <div ref={chatScroll} role="log" aria-label="Chat messages" aria-live="polite" onScroll={(event) => { const node = event.currentTarget; if (node.scrollHeight - node.scrollTop - node.clientHeight < 60) setUnreadCount(0); }} style={{ backgroundColor: "#F7F3EA", backgroundImage: CHAT_WALLPAPER, backgroundSize: "190px 190px" }} className="relative flex h-[min(56vh,560px)] min-h-[300px] flex-col gap-2 overflow-y-auto px-3 py-3 sm:px-4">
             {nextCursor && <button type="button" onClick={() => void loadOlder()} disabled={loadingMore} className="mx-auto mb-2 rounded-full border border-[#D8C7C1] bg-white/85 px-4 py-1.5 text-[10px] text-taupe shadow-sm disabled:opacity-50">{loadingMore ? "LOADING OLDER MESSAGES…" : "LOAD EARLIER MESSAGES"}</button>}
             {loading ? (
               <div className="mt-auto space-y-3" aria-label="Loading chat messages"><div className="h-12 w-2/3 animate-pulse rounded-2xl bg-white/70" /><div className="ml-auto h-12 w-1/2 animate-pulse rounded-2xl bg-[#E5EEE2]" /><div className="h-12 w-3/5 animate-pulse rounded-2xl bg-white/70" /></div>
