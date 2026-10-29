@@ -142,7 +142,7 @@ on conflict (id) do update set
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
 
--- ── anonymous guest photo & video uploads (/upload, QR codes on the table cards) ─────────────────
+-- ── anonymous guest photos, videos & voice notes (/upload, QR codes on the table cards) ──────────
 -- A PRIVATE bucket: guests add memories straight from their phone with the anon key, but no anon
 -- policy lets them list, read or delete — only the service-role key (the binder) can view them.
 -- The bucket's 1 GB file_size_limit is the server-side backstop; the 25-files / 1 GB per-guest
@@ -155,7 +155,9 @@ values (
   1073741824,
   array[
     'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif',
-    'video/mp4', 'video/quicktime', 'video/webm', 'video/x-m4v', 'application/octet-stream'
+    'video/mp4', 'video/quicktime', 'video/webm', 'video/x-m4v',
+    'audio/mp4', 'audio/webm', 'audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/x-m4a', 'audio/aac',
+    'application/octet-stream'
   ]
 )
 on conflict (id) do update set
@@ -193,6 +195,14 @@ create index if not exists wedding_moments_device_created_idx on public.wedding_
 alter table public.wedding_moments enable row level security;
 revoke all on public.wedding_moments from anon, authenticated;
 grant all on public.wedding_moments to service_role;
+
+-- Guests may listen to server-originated live chat events. They cannot publish Realtime events;
+-- the server uses its service-role client to broadcast only after validating a saved post.
+drop policy if exists "Guests can receive wedding newsfeed broadcasts" on realtime.messages;
+create policy "Guests can receive wedding newsfeed broadcasts"
+  on realtime.messages for select
+  to anon
+  using (topic = 'wedding-newsfeed');
 
 -- ── attire palette (round 22): Garnet goes to the Maid of Honor, the Matron of Honor and the bride's
 -- sister-in-law; the four bridesmaids wear Turquoise, Citrine, Sapphire and Ruby (Amethyst retired) ──

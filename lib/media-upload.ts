@@ -1,5 +1,5 @@
 /**
- * Guest photo & video uploads (the /upload page and the QR codes on the table cards).
+ * Guest chat attachments (the /upload page and the QR codes on the table cards).
  *
  * Guests upload straight from their phone to a PRIVATE Supabase Storage bucket using the public
  * anon key — the Next.js server never proxies the bytes, so a long phone video doesn't hit a
@@ -23,7 +23,7 @@ export const MAX_FILE_BYTES = MAX_TOTAL_BYTES;
 
 /** Mime families the picker and the validator accept (iPhone HEIC included — it is the default iPhone format). */
 const ACCEPTED_PREFIXES = ["image/", "video/"];
-export const UPLOAD_ACCEPT = "image/*,video/*,.heic,.heif,.mov";
+export const UPLOAD_ACCEPT = "image/*,video/*,audio/*,.heic,.heif,.mov,.m4a,.mp3,.wav,.ogg,.webm,.aac";
 
 const QUOTA_KEY = "jsos:upload-quota-v1";
 const GUEST_KEY = "jsos:upload-guest-id";
@@ -43,7 +43,7 @@ export function formatBytes(bytes: number): string {
 }
 
 export function isAcceptedFile(file: File): boolean {
-  return ACCEPTED_PREFIXES.some((prefix) => file.type.startsWith(prefix)) || /\.(heic|heif|mov)$/i.test(file.name);
+  return ACCEPTED_PREFIXES.some((prefix) => file.type.startsWith(prefix)) || file.type.startsWith("audio/") || /\.(heic|heif|mov|m4a|mp3|wav|ogg|webm|aac)$/i.test(file.name);
 }
 
 /** A stable per-device guest id, so a guest's 25 files land together under one storage folder. */
@@ -148,7 +148,14 @@ export function uploadMediaFile(file: File, path: string, onProgress?: UploadPro
     xhr.open("POST", `${base.replace(/\/$/, "")}/storage/v1/object/${MEDIA_BUCKET}/${path}`);
     xhr.setRequestHeader("Authorization", `Bearer ${anonKey}`);
     xhr.setRequestHeader("apikey", anonKey);
-    xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+    const declaredType = file.type.split(";")[0]?.trim() || "";
+    const extension = file.name.split(".").pop()?.toLowerCase();
+    const fallbackTypes: Record<string, string> = {
+      heic: "image/heic", heif: "image/heif", mov: "video/quicktime", m4a: "audio/mp4",
+      mp3: "audio/mpeg", wav: "audio/wav", ogg: "audio/ogg", aac: "audio/aac",
+    };
+    const contentType = /^(image|video|audio)\//i.test(declaredType) ? declaredType : fallbackTypes[extension || ""] || declaredType || "application/octet-stream";
+    xhr.setRequestHeader("Content-Type", contentType);
     xhr.setRequestHeader("x-upsert", "false");
     xhr.upload.onprogress = (event) => {
       if (onProgress && event.lengthComputable) {
