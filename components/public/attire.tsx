@@ -46,7 +46,7 @@ function TinFigure({ style, color, tap, className = "" }: { style: FigureStyle; 
 
 const AVOID = [
   ["Black", "the groom’s"], ["White & ivory", "the bride’s"],
-  ["Burgundy & copper", "our families’"], ["Pastels", "save for brunch"],
+  ["Burgundy", "our families’"], ["Pastels", "save for brunch"],
   ["Tees, jeans & casual", "black tie — cotton stays under the jacket"], ["Mini skirts", "floor-length, please"],
   ["Ball gowns & trains", "slim silhouettes, please"], ["Sneakers & sandals", "dress shoes, please"],
 ] as const;

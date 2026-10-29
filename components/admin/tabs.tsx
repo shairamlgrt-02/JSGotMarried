@@ -1,7 +1,7 @@
 "use client";
 import { Reorder, useDragControls } from "framer-motion";
 import { useMemo, useState } from "react";
-import { getMode, pushSeedSafely, refreshFaqCopy, refreshStoryCopy, resetLocal, uid } from "@/lib/db";
+import { getMode, pushSeedSafely, refreshFaqCopy, refreshFamilyAttireColors, refreshStoryCopy, resetLocal, uid } from "@/lib/db";
 import { entourageGroups } from "@/lib/entourage";
 import { STATUS, cleanInviteNote, formatDateTimeStamp, genCodeFor, inviteHref, inviteLink, inviteMessage, inviteStatus, joinPlusOnes, MAX_RSVP_SEATS, mergeHousehold, normalizeLinkSearch, planHouseholdMerges, splitPlusOnes, tallyInvites, cleanCode, whatsappHref, whoIsItFor, type InviteText } from "@/lib/guests";
 import { useCountdown, useTable } from "@/lib/hooks";
@@ -1033,11 +1033,31 @@ export function Vendors() {
 
 /* ═════════════ 8. ATTIRE ═════════════ */
 export function AttireEditor() {
-  const { rows, save } = useTable("attire");
+  const { rows, save, error } = useTable("attire");
+  const [refreshingFamilies, setRefreshingFamilies] = useState(false);
+  const [refreshMessage, setRefreshMessage] = useState("");
   const sorted = [...rows].sort((a, b) => a.order - b.order);
+  const refreshFamilies = async () => {
+    setRefreshingFamilies(true);
+    setRefreshMessage("");
+    try {
+      const count = await refreshFamilyAttireColors();
+      setRefreshMessage(`${count} family colour swatches refreshed to burgundy and the guest dress-code note updated. Your labels, other notes, palette and fabric photos were kept.`);
+    } catch (e) {
+      setRefreshMessage(`Could not refresh the family colours: ${(e as Error).message}`);
+    } finally {
+      setRefreshingFamilies(false);
+    }
+  };
   return (
     <>
-      <PageHead kicker="Palette shown on the Dress Code section" title="Attire & colors." />
+      <PageHead kicker="Palette shown on the Dress Code section" title="Attire & colors.">
+        <Btn variant="ghost" onClick={() => void refreshFamilies()} disabled={refreshingFamilies}>
+          {refreshingFamilies ? "Refreshing…" : "Refresh family colours & note"}
+        </Btn>
+      </PageHead>
+      {refreshMessage && <p role="status" className="-mt-4 mb-5 rounded-xl border border-wine/15 bg-wine/5 px-4 py-3 text-sm text-ink/70">{refreshMessage}</p>}
+      {error && <p role="alert" className="-mt-4 mb-5 rounded-xl bg-burgundy/10 px-4 py-3 text-sm text-burgundy">{error}</p>}
       <div className="grid md:grid-cols-2 gap-5">
         {sorted.map((a: Attire) => (
           <Card key={a.id}>

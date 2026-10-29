@@ -124,6 +124,138 @@ function MomentCard({ post, expanded, onExpand }: { post: WeddingMoment; expande
   );
 }
 
+type StoryItem = {
+  id: string;
+  media: WeddingMoment["media"][number];
+  body: string;
+  overlayText: string;
+  createdAt: string;
+};
+type StoryGroup = { key: string; displayName: string; items: StoryItem[]; latestAt: string };
+
+function StoriesRail({ posts }: { posts: WeddingMoment[] }) {
+  const [active, setActive] = useState<{ group: number; item: number } | null>(null);
+  const groups = useMemo(() => {
+    const byName = new Map<string, StoryGroup>();
+    for (const post of posts) {
+      if (!post.media.length) continue;
+      const key = post.displayName.trim().toLocaleLowerCase();
+      let group = byName.get(key);
+      if (!group) {
+        group = { key, displayName: post.displayName, items: [], latestAt: post.createdAt };
+        byName.set(key, group);
+      }
+      if (new Date(post.createdAt).getTime() > new Date(group.latestAt).getTime()) group.latestAt = post.createdAt;
+      post.media.forEach((media, index) => group!.items.push({
+        id: `${post.id}-${index}`,
+        media,
+        body: post.body,
+        overlayText: post.overlayText,
+        createdAt: post.createdAt,
+      }));
+    }
+    return [...byName.values()]
+      .map((group) => ({ ...group, items: group.items.sort((a, b) => a.createdAt.localeCompare(b.createdAt)) }))
+      .sort((a, b) => b.latestAt.localeCompare(a.latestAt));
+  }, [posts]);
+
+  const currentGroup = active ? groups[active.group] : undefined;
+  const currentItem = currentGroup?.items[active?.item ?? 0];
+  const advance = useCallback((direction: 1 | -1 = 1) => {
+    setActive((current) => {
+      if (!current) return current;
+      const group = groups[current.group];
+      if (!group) return null;
+      const next = current.item + direction;
+      if (next >= 0 && next < group.items.length) return { ...current, item: next };
+      const nextGroup = current.group + direction;
+      if (nextGroup >= 0 && nextGroup < groups.length) {
+        return { group: nextGroup, item: direction > 0 ? 0 : groups[nextGroup].items.length - 1 };
+      }
+      return null;
+    });
+  }, [groups]);
+
+  useEffect(() => {
+    if (!currentItem || currentItem.media.contentType.startsWith("video/")) return;
+    const timer = window.setTimeout(() => advance(), 5200);
+    return () => window.clearTimeout(timer);
+  }, [active, currentItem, advance]);
+
+  useEffect(() => {
+    if (!active) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setActive(null);
+      if (event.key === "ArrowRight") advance();
+      if (event.key === "ArrowLeft") advance(-1);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [active, advance]);
+
+  if (!groups.length) return null;
+  return (
+    <section aria-label="Stories from guests" className="mb-5 overflow-hidden rounded-2xl border border-taupe/20 bg-white/75 px-3 py-3 shadow-sm sm:px-4">
+      <div className="mb-2 flex items-center justify-between px-1">
+        <h2 className="font-serif text-lg text-mocha">Stories</h2>
+        <span className="micro text-taupe">MOMENTS FROM EVERYONE</span>
+      </div>
+      <div className="flex gap-4 overflow-x-auto pb-1 [scrollbar-width:thin]">
+        {groups.map((group, index) => {
+          const first = group.items[0];
+          const initials = group.displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "♡";
+          return (
+            <button key={group.key} type="button" onClick={() => setActive({ group: index, item: 0 })} className="group flex w-[68px] shrink-0 flex-col items-center gap-1.5 text-center">
+              <span className="relative grid h-[62px] w-[62px] place-items-center rounded-full bg-[conic-gradient(from_220deg,#8b3d50,#e7c6a2,#a07b52,#8b3d50)] p-[2px] transition-transform group-hover:scale-105">
+                <span className="relative grid h-full w-full place-items-center overflow-hidden rounded-full border-2 border-white bg-[#efe3d3] font-serif text-wine">
+                  {first.media.contentType.startsWith("image/") ? <img src={first.media.url} alt="" className="h-full w-full object-cover" loading="lazy" /> : <span className="text-xl">{initials}</span>}
+                </span>
+                {group.items.some((item) => item.media.contentType.startsWith("video/")) && <span className="absolute bottom-0 right-0 grid h-5 w-5 place-items-center rounded-full border-2 border-white bg-wine text-[9px] text-white">▶</span>}
+              </span>
+              <span className="w-full truncate text-[11px] text-ink/75">{firstName(group.displayName)}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <AnimatePresence>
+        {active && currentGroup && currentItem && (
+          <motion.div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-[#17110f]/95 p-3 text-white sm:p-6"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${currentGroup.displayName}'s stories`}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => setActive(null)}
+          >
+            <motion.div initial={{ scale: 0.98, y: 8 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.98 }} onClick={(event) => event.stopPropagation()} className="relative flex h-[min(82vh,760px)] w-full max-w-[430px] flex-col overflow-hidden rounded-[26px] bg-[#241b19] shadow-2xl">
+              <div className="absolute inset-x-3 top-3 z-20 flex gap-1">
+                {currentGroup.items.map((item, index) => <span key={item.id} className="h-1 flex-1 overflow-hidden rounded-full bg-white/35"><span className={`block h-full rounded-full ${index <= (active?.item ?? 0) ? "bg-white" : "bg-transparent"}`} /></span>)}
+              </div>
+              <div className="absolute inset-x-4 top-7 z-20 flex items-center gap-3">
+                <div className="grid h-9 w-9 place-items-center rounded-full border border-white/50 bg-white/10 font-serif">{currentGroup.displayName.slice(0, 1).toUpperCase()}</div>
+                <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{currentGroup.displayName}</p><p className="text-[10px] text-white/65">{relativeTime(currentItem.createdAt)}</p></div>
+                <button type="button" aria-label="Close stories" onClick={() => setActive(null)} className="grid h-9 w-9 place-items-center rounded-full bg-black/25 text-2xl">×</button>
+              </div>
+              <div className="relative flex min-h-0 flex-1 items-center justify-center bg-black/25">
+                <button type="button" aria-label="Previous story" onClick={() => advance(-1)} className="absolute inset-y-16 left-0 z-10 w-1/5 cursor-w-resize" />
+                {currentItem.media.contentType.startsWith("video/") ? (
+                  <video key={currentItem.id} src={currentItem.media.url} controls autoPlay muted playsInline onEnded={() => advance()} className="max-h-full max-w-full object-contain" />
+                ) : (
+                  <img key={currentItem.id} src={currentItem.media.url} alt="A shared wedding moment" className="max-h-full max-w-full object-contain" />
+                )}
+                <button type="button" aria-label="Next story" onClick={() => advance()} className="absolute inset-y-16 right-0 z-10 w-1/5 cursor-e-resize" />
+                {currentItem.overlayText && <p className="absolute bottom-16 left-4 right-4 z-10 rounded-xl bg-black/55 px-4 py-3 text-center font-serif text-lg shadow-lg backdrop-blur-sm">{currentItem.overlayText}</p>}
+              </div>
+              {currentItem.body && <p className="max-h-24 overflow-y-auto px-5 py-3 text-center text-sm leading-relaxed text-white/85">{currentItem.body}</p>}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </section>
+  );
+}
+
 export default function UploadPage() {
   const { rows: infoRows } = useTable("wedding_info");
   const info = infoRows[0];
@@ -166,7 +298,7 @@ export default function UploadPage() {
     if (!quiet) setLoading(true);
     setError("");
     try {
-      const page = await loadMoments({ limit: 3 });
+      const page = await loadMoments({ limit: 12 });
       setPosts(page.posts);
       setNextCursor(page.nextCursor);
       newestAt.current = page.posts[0]?.createdAt || new Date().toISOString();
@@ -276,7 +408,7 @@ export default function UploadPage() {
     if (!nextCursor || loadingMore) return;
     setLoadingMore(true);
     try {
-      const page = await loadMoments({ before: nextCursor, limit: 3 });
+      const page = await loadMoments({ before: nextCursor, limit: 12 });
       setPosts((current) => {
         const seen = new Set(current.map((post) => post.id));
         return [...current, ...page.posts.filter((post) => !seen.has(post.id))];
@@ -306,32 +438,27 @@ export default function UploadPage() {
 
   return (
     <main className="min-h-screen paper-bg text-ink" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-      <div className="mx-auto max-w-3xl px-4 pb-16 pt-8 sm:px-6 md:pt-12">
-        <a href="/" className="micro inline-flex items-center gap-2 tracking-[0.18em] text-taupe no-underline transition-colors hover:text-wine">
-          <span aria-hidden>←</span> BACK TO THE HOUSE
-        </a>
-        <header className="mt-6 overflow-hidden rounded-[30px] border border-taupe/20 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,.9),rgba(248,242,231,.85)_68%,rgba(239,227,211,.7))] px-5 py-8 text-center shadow-[0_20px_55px_-38px_rgba(61,47,38,.7)] sm:px-8 sm:py-10">
-          <p className="micro tracking-[0.3em] text-taupe">A LITTLE CORNER OF OUR WEDDING</p>
-          <h1 className="script mt-2 text-[clamp(2.8rem,10vw,5rem)] leading-tight text-wine">The memory wall</h1>
-          <p className="mt-2 font-serif font-light tracking-[0.1em] text-mocha">
-            {info ? fullDate(info.date) : "11.11.2026"} · {couple}
-          </p>
-          {hashtag && <p className="mt-2 font-serif text-wine">{hashtag}</p>}
-          <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-ink/60">
-            Leave a little note, share a photo or video, and enjoy the moments everyone is adding to our story.
-          </p>
-          <div className="mt-5 flex items-center justify-center gap-2 text-wine/60" aria-hidden>
-            <span>✦</span><span className="h-px w-10 bg-wine/20" /><span className="script text-2xl">♡</span><span className="h-px w-10 bg-wine/20" /><span>✦</span>
+      <div className="mx-auto max-w-2xl px-3 pb-14 pt-4 sm:px-5 sm:pt-6">
+        <header className="mb-4 flex items-center justify-between gap-4 border-b border-taupe/20 pb-3">
+          <div className="min-w-0">
+            <a href="/" className="micro inline-flex items-center gap-1.5 text-taupe no-underline transition-colors hover:text-wine">
+              <span aria-hidden>←</span> BACK TO THE HOUSE
+            </a>
+            <h1 className="mt-1 font-serif text-2xl leading-tight text-wine sm:text-[1.7rem]">Memory Wall</h1>
+            <p className="mt-0.5 truncate text-xs text-taupe">{info ? fullDate(info.date) : "11.11.2026"} · {couple}{hashtag ? ` · ${hashtag}` : ""}</p>
           </div>
+          <span className="hidden shrink-0 font-serif text-3xl text-wine/45 sm:block" aria-hidden>♡</span>
         </header>
 
         {!configured && (
-          <div className="mt-6 rounded-2xl border border-taupe/25 bg-white/70 p-5 text-center text-sm text-ink/65">
+          <div className="mb-4 rounded-2xl border border-taupe/25 bg-white/70 p-5 text-center text-sm text-ink/65">
             The private album is not connected yet. Please let the couple know so they can finish the one-time setup.
           </div>
         )}
 
-        <section aria-label="Write a post" className="mt-6 rounded-[26px] border border-taupe/25 bg-[#FCFAF6] p-4 shadow-[0_14px_36px_-24px_rgba(61,47,38,.55)] sm:p-6">
+        <StoriesRail posts={posts} />
+
+        <section aria-label="Write a post" className="mt-4 rounded-[22px] border border-taupe/25 bg-[#FCFAF6] p-4 shadow-[0_14px_36px_-24px_rgba(61,47,38,.55)] sm:p-6">
           <div className="flex items-start gap-3">
             <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-wine text-lace font-serif text-xl">♡</div>
             <div className="min-w-0 flex-1">
@@ -420,11 +547,11 @@ export default function UploadPage() {
           {notice && <motion.p initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="mt-3 text-sm text-moss">{notice}</motion.p>}
         </section>
 
-        <section aria-label="Wedding moments" className="mt-9">
+        <section aria-label="Wedding moments" className="mt-6">
           <div className="mb-4 flex items-end justify-between gap-3 px-1">
             <div>
               <p className="micro tracking-[0.22em] text-taupe">THE SHARED ALBUM</p>
-              <h2 className="mt-1 font-serif text-2xl text-mocha">Little moments, together</h2>
+              <h2 className="mt-1 font-serif text-2xl text-mocha">Newsfeed</h2>
             </div>
             <button type="button" onClick={refreshFromTop} disabled={loading || pulling} className="micro rounded-full border border-taupe/25 px-3 py-2 text-taupe hover:border-wine hover:text-wine disabled:opacity-50">
               {pulling ? "REFRESHING…" : "↻ REFRESH"}
