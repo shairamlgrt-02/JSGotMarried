@@ -174,8 +174,8 @@ create policy "anon can insert wedding media"
   with check (bucket_id = 'wedding-media');
 
 -- Public social-style guest moments (/upload). Media remains in the private bucket; the server
--- reads this metadata and emits short-lived signed URLs. Guests can create posts only through
--- /api/moments, which validates uploaded object paths; no anon SELECT/UPDATE/DELETE is granted.
+-- reads this metadata and emits short-lived signed URLs. Guests create, edit, and delete only
+-- their device-owned posts through /api/moments; no anon table SELECT/UPDATE/DELETE is granted.
 create table if not exists public.wedding_moments (
   id uuid primary key default gen_random_uuid(),
   device_id text not null,
@@ -183,8 +183,11 @@ create table if not exists public.wedding_moments (
   body text not null default '',
   overlay_text text not null default '',
   media jsonb not null default '[]'::jsonb,
+  show_in_feed boolean not null default true,
   created_at timestamptz not null default now()
 );
+-- Safe for wedding projects that already created the Memory Wall table.
+alter table public.wedding_moments add column if not exists show_in_feed boolean not null default true;
 create index if not exists wedding_moments_created_at_idx on public.wedding_moments (created_at desc);
 create index if not exists wedding_moments_device_created_idx on public.wedding_moments (device_id, created_at desc);
 alter table public.wedding_moments enable row level security;

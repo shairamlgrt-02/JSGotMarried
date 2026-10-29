@@ -446,25 +446,28 @@ The tab also renders the **guest-upload QR code** (`https://your-site/upload`) a
 
 ## Guest moments & private media (`/upload`)
 The public Memory Wall is a social-style wedding feed: guests can post a note, photos, videos, or
-both; add an optional line over their media; and use the phone camera from the page. It shows the
-newest three posts first, lets guests expand a `+N` media tile or load older posts, and checks for
-new posts once a minute. Pull down or tap Refresh to reload. The binder's Social Studio tab has a
-moderation gallery where the couple can browse and remove posts.
+both; add optional text over media; and use the phone camera from the page. Media also appears in a
+Stories rail grouped by poster. Guests can uncheck **Also show this in the Newsfeed** to publish
+photos/videos as Stories only. Feed thumbnails open a full-size viewer; each poster can edit their
+caption/overlay or delete their own posts from the device they used to publish. The page loads 12
+feed posts at a time, checks for new feed posts once a minute, and lets guests refresh manually.
+The binder's Social Studio gallery can browse and remove every post.
 
 Media bytes stay in the **private** `wedding-media` Supabase Storage bucket. Guests upload directly
-with the anon key, which has insert-only Storage permission. `/api/moments` reads published post
-metadata server-side and issues short-lived signed media URLs for the shared feed; guests cannot
-list or browse raw bucket objects. The couple's service-role key remains server-side and can delete
-posts and their media.
+with the anon key, which has insert-only Storage permission. `/api/moments` reads post metadata
+server-side and issues short-lived signed media URLs; guests cannot list or browse raw bucket
+objects. The server checks the posting device ID before allowing a guest to edit or delete a post;
+the couple's service-role key remains server-side for the binder gallery.
 
 * **Limits:** up to 8 media items in a post, 25 files and 1 GB per device, enforced in
   `lib/media-upload.ts`; the bucket's own `file_size_limit` (1 GB) backs up the per-file limit.
 * **Accepted media:** photos and video including iPhone HEIC/HEIF and `.mov`.
 * **One-time setup:** run the `wedding-media` and `wedding_moments` sections of
-  `supabase/schema.sql`. In Vercel set `NEXT_PUBLIC_SUPABASE_URL` and
+  `supabase/schema.sql`. Re-run the moments section on existing projects to add the `show_in_feed`
+  migration (existing posts stay in the Newsfeed). In Vercel set `NEXT_PUBLIC_SUPABASE_URL` and
   `NEXT_PUBLIC_SUPABASE_ANON_KEY` for browser uploads, plus `SUPABASE_SERVICE_ROLE_KEY` as a
-  server-only secret for the signed feed and binder gallery. Never prefix the service-role key
-  with `NEXT_PUBLIC_`. Redeploy after changing environment variables.
+  server-only secret for signed media URLs and moderation. Never prefix the service-role key with
+  `NEXT_PUBLIC_`. Redeploy after changing environment variables.
 * Files land under `YYYY-MM-DD/<guest-id>/<uuid>.<ext>`, so one phone's uploads stay grouped.
 
 ## Gift registry (`Gift List` tab → public `/gifts`)

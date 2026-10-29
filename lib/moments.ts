@@ -10,6 +10,9 @@ export type WeddingMoment = {
   overlayText: string;
   media: MomentMedia[];
   createdAt: string;
+  showInFeed: boolean;
+  /** Present only when the request proves this post belongs to the current device (or is admin). */
+  canManage?: boolean;
 };
 
 export type MomentPage = {
@@ -18,12 +21,20 @@ export type MomentPage = {
   newCount?: number;
 };
 
-/** Public feed: only published posts; URLs are temporary signed URLs for the private bucket. */
-export async function loadMoments(options: { before?: string; limit?: number; admin?: boolean } = {}): Promise<MomentPage> {
+/** Public feed or Stories: media URLs are temporary signed URLs for the private bucket. */
+export async function loadMoments(options: {
+  before?: string;
+  limit?: number;
+  admin?: boolean;
+  stories?: boolean;
+  deviceId?: string;
+} = {}): Promise<MomentPage> {
   const params = new URLSearchParams();
   if (options.before) params.set("before", options.before);
   if (options.limit) params.set("limit", String(options.limit));
   if (options.admin) params.set("admin", "1");
+  if (options.stories) params.set("stories", "1");
+  if (options.deviceId) params.set("deviceId", options.deviceId);
   const response = await fetch(`/api/moments?${params.toString()}`, { cache: "no-store" });
   const data = (await response.json().catch(() => ({}))) as MomentPage & { error?: string };
   if (!response.ok) throw new Error(data.error || "Could not load wedding moments.");
@@ -43,6 +54,7 @@ export async function publishMoment(input: {
   body: string;
   overlayText: string;
   media: { path: string; contentType: string }[];
+  showInFeed: boolean;
 }): Promise<WeddingMoment> {
   const response = await fetch("/api/moments", {
     method: "POST",
@@ -54,8 +66,26 @@ export async function publishMoment(input: {
   return data.post;
 }
 
-export async function deleteMoment(id: string): Promise<void> {
-  const response = await fetch(`/api/moments?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+export async function updateMoment(input: {
+  id: string;
+  deviceId: string;
+  body: string;
+  overlayText: string;
+}): Promise<WeddingMoment> {
+  const response = await fetch(`/api/moments?id=${encodeURIComponent(input.id)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const data = (await response.json().catch(() => ({}))) as { post?: WeddingMoment; error?: string };
+  if (!response.ok || !data.post) throw new Error(data.error || "Could not update this moment.");
+  return data.post;
+}
+
+export async function deleteMoment(id: string, deviceId?: string): Promise<void> {
+  const params = new URLSearchParams({ id });
+  if (deviceId) params.set("deviceId", deviceId);
+  const response = await fetch(`/api/moments?${params.toString()}`, { method: "DELETE" });
   const data = (await response.json().catch(() => ({}))) as { error?: string };
-  if (!response.ok) throw new Error(data.error || "Could not remove this post.");
+  if (!response.ok) throw new Error(data.error || "Could not remove this moment.");
 }

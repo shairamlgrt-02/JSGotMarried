@@ -14,6 +14,7 @@ const json = (body: unknown, status = 200) =>
   NextResponse.json(body, { status, headers: { "Cache-Control": "no-store, max-age=0" } });
 const safeName = (value: unknown) => String(value ?? "").replace(/[<>\u0000-\u001f]/g, "").trim().slice(0, 60) || "A guest";
 const safeText = (value: unknown, max: number) => String(value ?? "").replace(/\u0000/g, "").trim().slice(0, max);
+const validDeviceId = (value: unknown) => /^[a-zA-Z0-9_-]{6,100}$/.test(String(value ?? "").trim());
 
 type StoredMedia = { path: string; contentType: string };
 type Row = {
@@ -23,6 +24,7 @@ type Row = {
   overlay_text: string;
   media: StoredMedia[];
   device_id: string;
+  show_in_feed: boolean;
   created_at: string;
 };
 
@@ -53,7 +55,7 @@ async function signedMediaMap(db: NonNullable<ReturnType<typeof serverSupabase>>
   return urls;
 }
 
-function toPublicPost(row: Row, urls: Map<string, string>): WeddingMoment {
+function toPublicPost(row: Row, urls: Map<string, string>, canManage = false): WeddingMoment {
   const media = (Array.isArray(row.media) ? row.media : []).flatMap((item) => {
     const url = item?.path ? urls.get(item.path) : undefined;
     return url ? [{ url, contentType: item.contentType || "application/octet-stream" }] : [];
@@ -65,6 +67,8 @@ function toPublicPost(row: Row, urls: Map<string, string>): WeddingMoment {
     overlayText: row.overlay_text || "",
     media,
     createdAt: row.created_at,
+    showInFeed: row.show_in_feed !== false,
+    canManage,
   };
 }
 
@@ -76,17 +80,27 @@ export async function GET(req: NextRequest) {
   if (url.searchParams.has("since")) {
     const since = url.searchParams.get("since") || "";
     if (!Number.isFinite(Date.parse(since))) return json({ error: "Invalid refresh cursor." }, 400);
-    const { count, error } = await db.from(TABLE).select("id", { count: "exact", head: true }).gt("created_at", since);
+    const { count, error } = await db.from(TABLE).select("id", { count: "exact", head: true })
+      .eq("show_in_feed", true).gt("created_at", since);
     if (error) return json({ error: "The moments feed is not set up yet. Please let the couple know." }, 503);
     return json({ newCount: count ?? 0 });
   }
 
   const admin = url.searchParams.get("admin") === "1";
   if (admin && !(await isAuthed(cookies().get(COOKIE)?.value))) return json({ error: "Sign in to the binder to open the guest gallery." }, 401);
+  const stories = url.searchParams.get("stories") === "1";
+  const rawDeviceId = url.searchParams.get("deviceId") || "";
+  const deviceId = validDeviceId(rawDeviceId) ? rawDeviceId : "";
   const requested = Number(url.searchParams.get("limit"));
-  const limit = Math.max(1, Math.min(24, Number.isFinite(requested) && requested > 0 ? requested : 12));
+  const fallbackLimit = stories ? 48 : 12;
+  const limit = Math.max(1, Math.min(admin ? 24 : stories ? 60 : 24, Number.isFinite(requested) && requested > 0 ? requested : fallbackLimit));
   const before = url.searchParams.get("before");
-  let query = db.from(TABLE).select("id, display_name, body, overlay_text, media, device_id, created_at").order("created_at", { ascending: false }).limit(limit);
+  let query = db.from(TABLE)
+    .select("id, display_name, body, overlay_text, media, device_id, show_in_feed, created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (stories) query = query.not("media", "eq", "[]");
+  else if (!admin) query = query.eq("show_in_feed", true);
   if (before && Number.isFinite(Date.parse(before))) query = query.lt("created_at", before);
   const { data, error } = await query;
   if (error) return json({ error: "The moments feed is not set up yet. Run the wedding-media and moments sections of supabase/schema.sql." }, 503);
@@ -95,7 +109,7 @@ export async function GET(req: NextRequest) {
   try {
     const paths = rows.flatMap((row) => Array.isArray(row.media) ? row.media.map((item) => item.path) : []);
     const urls = await signedMediaMap(db, paths);
-    const posts = rows.map((row) => toPublicPost(row, urls));
+    const posts = rows.map((row) => toPublicPost(row, urls, admin || Boolean(deviceId && row.device_id === deviceId)));
     const hasMore = rows.length === limit;
     return json({ posts, nextCursor: hasMore ? rows[rows.length - 1]?.created_at ?? null : null });
   } catch {
@@ -114,10 +128,11 @@ export async function POST(req: NextRequest) {
   }
 
   const deviceId = String(body.deviceId ?? "").trim();
-  if (!/^[a-zA-Z0-9_-]{6,100}$/.test(deviceId)) return json({ error: "Please refresh the page and try again." }, 400);
+  if (!validDeviceId(deviceId)) return json({ error: "Please refresh the page and try again." }, 400);
   const displayName = safeName(body.displayName);
   const text = safeText(body.body, 1200);
   const overlayText = safeText(body.overlayText, 120);
+  const showInFeed = body.showInFeed !== false;
   const rawMedia = Array.isArray(body.media) ? body.media : [];
   if (rawMedia.length > 8) return json({ error: "A post can have up to 8 photos or videos." }, 400);
   const media: StoredMedia[] = [];
@@ -137,37 +152,78 @@ export async function POST(req: NextRequest) {
       return json({ error: "A photo or video is still uploading. Please wait and try again." }, 400);
     }
   }
-  if (!text && !media.length) return json({ error: "Add a note, photo or video before sharing." }, 400);
+  if (!text && !media.length) return json({ error: "Add a note, photo or video before posting." }, 400);
+  if (!showInFeed && !media.length) return json({ error: "Stories need at least one photo or video." }, 400);
 
-  // Soft per-device limit; the client has a larger file quota, while this prevents accidental floods.
+  // Soft per-device limit; this prevents accidental floods of feed posts or stories.
   const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { count } = await db.from(TABLE).select("id", { count: "exact", head: true }).eq("device_id", deviceId).gt("created_at", dayAgo);
   if ((count ?? 0) >= 30) return json({ error: "You've shared lots of lovely moments today. Please try again tomorrow." }, 429);
 
   const { data, error } = await db.from(TABLE)
-    .insert({ device_id: deviceId, display_name: displayName, body: text, overlay_text: overlayText, media })
-    .select("id, display_name, body, overlay_text, media, device_id, created_at")
+    .insert({ device_id: deviceId, display_name: displayName, body: text, overlay_text: overlayText, media, show_in_feed: showInFeed })
+    .select("id, display_name, body, overlay_text, media, device_id, show_in_feed, created_at")
     .single();
   if (error || !data) return json({ error: "Your post couldn't be saved just now. Please try again." }, 503);
   const row = data as Row;
   try {
     const urls = await signedMediaMap(db, row.media.map((item) => item.path));
-    return json({ post: toPublicPost(row, urls) }, 201);
+    return json({ post: toPublicPost(row, urls, true) }, 201);
   } catch {
     // The post is already stored. Return its text now rather than prompting a retry that could duplicate it.
-    return json({ post: toPublicPost(row, new Map()), mediaPending: true }, 201);
+    return json({ post: toPublicPost(row, new Map(), true), mediaPending: true }, 201);
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  const db = configuredDb();
+  if (!db) return json({ error: "The private moments album needs its server key configured." }, 503);
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: "We couldn't read those edits. Please try again." }, 400);
+  }
+  const id = req.nextUrl.searchParams.get("id") || "";
+  const deviceId = String(body.deviceId ?? "").trim();
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: "A valid post is required." }, 400);
+  if (!validDeviceId(deviceId)) return json({ error: "Please refresh the page and try again." }, 400);
+  const { data: existing, error: lookupError } = await db.from(TABLE).select("id, device_id, media")
+    .eq("id", id).maybeSingle();
+  if (lookupError) return json({ error: "That post couldn't be loaded." }, 503);
+  if (!existing) return json({ error: "That post has already been removed." }, 404);
+  if (existing.device_id !== deviceId) return json({ error: "You can only edit a post from this device." }, 403);
+
+  const text = safeText(body.body, 1200);
+  const overlayText = safeText(body.overlayText, 120);
+  const media = (Array.isArray(existing.media) ? existing.media : []) as StoredMedia[];
+  if (!text && !media.length) return json({ error: "A text-only post needs a note." }, 400);
+  const { data, error } = await db.from(TABLE).update({ body: text, overlay_text: overlayText })
+    .eq("id", id)
+    .select("id, display_name, body, overlay_text, media, device_id, show_in_feed, created_at")
+    .single();
+  if (error || !data) return json({ error: "Your edits couldn't be saved. Please try again." }, 503);
+  const row = data as Row;
+  try {
+    const urls = await signedMediaMap(db, row.media.map((item) => item.path));
+    return json({ post: toPublicPost(row, urls, true) });
+  } catch {
+    return json({ post: toPublicPost(row, new Map(), true), mediaPending: true });
   }
 }
 
 export async function DELETE(req: NextRequest) {
-  if (!(await isAuthed(cookies().get(COOKIE)?.value))) return json({ error: "Sign in to the binder to remove a post." }, 401);
   const db = configuredDb();
   if (!db) return json({ error: "The private moments album needs its server key configured." }, 503);
+  const admin = await isAuthed(cookies().get(COOKIE)?.value);
   const id = req.nextUrl.searchParams.get("id") || "";
+  const deviceId = req.nextUrl.searchParams.get("deviceId") || "";
   if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: "A valid post is required." }, 400);
-  const { data: row, error } = await db.from(TABLE).select("id, media").eq("id", id).maybeSingle();
+  if (!admin && !validDeviceId(deviceId)) return json({ error: "Only the person who posted this moment can remove it." }, 401);
+  const { data: row, error } = await db.from(TABLE).select("id, media, device_id").eq("id", id).maybeSingle();
   if (error) return json({ error: "That post couldn't be loaded." }, 503);
   if (!row) return json({ error: "That post has already been removed." }, 404);
+  if (!admin && row.device_id !== deviceId) return json({ error: "You can only remove a post from this device." }, 403);
   const paths = (Array.isArray(row.media) ? row.media : []).map((m: StoredMedia) => m.path).filter(Boolean);
   if (paths.length) {
     const { error: removeError } = await db.storage.from(BUCKET).remove(paths);

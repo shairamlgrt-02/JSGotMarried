@@ -551,8 +551,9 @@ export function applyMergeTags(
  * RSVP chase (a gentle reminder, then the kind-but-firm final call before the deadline), the
  * thank-yous (one general, plus separate letters for the wedding team's 3:30 PM call time and
  * the guests' 5:30 PM majlis arrival, each carrying the adults-only ceremony and livestream
- * notes), the replies for after the deadline (fill-in-your-details, missed-RSVP livestream and
- * the final guest-list-closed note), and the day-of role briefing. The binder's Templates tab
+ * notes), dress-code reassurance for guests, the replies for after the deadline
+ * (fill-in-your-details, missed-RSVP livestream and the final guest-list-closed note), and the
+ * day-of role briefing. The binder's Templates tab
  * lists them with one-click "add to my templates" buttons — added copies are ordinary templates,
  * free to edit or delete.
  *
@@ -787,6 +788,23 @@ A few little things to get you excited (and ready):
 🎁 *A note on gifts* — as we begin our new life together, any gift would be a wonderful help and is deeply appreciated. Our Note on Gifts (including BenefitPay details) is at the bottom of the invitation page above.
 
 See you very soon!
+With love,
+{couple_names}`,
+  },
+  {
+    id: "preset_dress_code_reassurance_guests",
+    name: "Broadcast · Dress Code Reassurance (Guests Only)",
+    label: "Guests only",
+    hint: "For the guest list only — a warm reminder that the dress code is a request, and nobody should miss the celebration over clothes.",
+    categories: ["wedding_guest"],
+    body: `Hi {first_name}! 🤍
+
+A little reminder about the dress code on your invitation: black tie in glossy greens and warm shining browns. Please know these are requests, not rules, and we truly hope they won't stop you from celebrating with us.
+
+Your presence means far more to us than what you wear. If black is what you have, please wear it. If you don't have a suit, a neat button-down shirt and trousers (rather than jeans) are absolutely fine. Please come nonetheless, feel comfortable, and have fun with us — no special shopping needed.
+
+If you have any questions, just reply to this message. We're always happy to help.
+
 With love,
 {couple_names}`,
   },
