@@ -446,8 +446,9 @@ export const MERGE_TAGS: MergeTag[] = [
   { tag: "{venue_address}",  label: "Venue Address",    hint: "Full venue address" },
   { tag: "{rsvp_deadline}",  label: "RSVP Deadline",    hint: "RSVP deadline date" },
   { tag: "{instagram}",      label: "Instagram Handle", hint: "Your @handle from Details → Social" },
+  { tag: "{instagram_link}", label: "Instagram Link", hint: "A clickable Instagram profile URL built from the saved handle" },
   { tag: "{venue_map_link}", label: "Venue Map Link",   hint: "The Google Maps link saved on the venue" },
-  { tag: "{upload_link}",    label: "Photo Upload Link", hint: "The /upload page where guests send their photos & videos" },
+  { tag: "{upload_link}",    label: "Wedding Chat Link", hint: "The /upload group chat for messages, media and voice notes" },
   { tag: "{gift_link}",      label: "Gift List Link",   hint: "The public /gifts registry where guests mark presents bought" },
   { tag: "{hashtag}",        label: "Hashtag",          hint: "Primary wedding hashtag" },
 ];
@@ -518,6 +519,7 @@ export function applyMergeTags(
     .replace(/\{venue_address\}/g, info.venue_address)
     .replace(/\{rsvp_deadline\}/g, rsvpDeadline)
     .replace(/\{instagram\}/g, info.instagram || "")
+    .replace(/\{instagram_link\}/g, info.instagram?.trim() ? `https://instagram.com/${info.instagram.trim().replace(/^@/, "")}` : "")
     .replace(/\{venue_map_link\}/g, info.venue_map_link || "")
     .replace(/\{upload_link\}/g, base ? `${base}/upload` : "/upload")
     .replace(/\{gift_link\}/g, base ? `${base}/gifts` : "/gifts")
@@ -788,6 +790,42 @@ A few little things to get you excited (and ready):
 🎁 *A note on gifts* — as we begin our new life together, any gift would be a wonderful help and is deeply appreciated. Our Note on Gifts (including BenefitPay details) is at the bottom of the invitation page above.
 
 See you very soon!
+With love,
+{couple_names}`,
+  },
+  {
+    id: "preset_broadcast_instagram_live_updates",
+    name: "Broadcast · Follow Us on Instagram (Live Updates)",
+    label: "Instagram",
+    hint: "Invite wedding guests to follow your Instagram for live wedding-day updates, Stories and behind-the-scenes moments.",
+    categories: ["wedding_guest"],
+    body: `Hi {first_name}! 🤍
+
+We'd love you to follow along with us on Instagram at {instagram}!
+
+We'll share little live updates, behind-the-scenes peeks and wedding-day moments there, so you can keep up with all the joy as it happens. Follow us here:
+{instagram_link}
+
+We can't wait to celebrate with you!
+
+With love,
+{couple_names}`,
+  },
+  {
+    id: "preset_broadcast_wedding_group_chat",
+    name: "Broadcast · Join Our Wedding Group Chat",
+    label: "Group chat",
+    hint: "Invite wedding guests to chat on the wedding website, share updates and photos/videos, or leave a voice note.",
+    categories: ["wedding_guest"],
+    body: `Hi {first_name}! 💌
+
+Our wedding website now has a little group chat for everyone! Come say hello, share an update, send photos or videos, leave a voice note, add emojis, or catch up with the other guests — whatever you'd like to share is welcome.
+
+Photos and videos also appear in the Stories at the top, so everyone can enjoy them. Join us here:
+{upload_link}
+
+No need to download an app or refresh the page; new messages appear live while you're there. We hope to see you in the chat! 🤍
+
 With love,
 {couple_names}`,
   },

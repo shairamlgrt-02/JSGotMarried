@@ -28,6 +28,7 @@ export async function loadMoments(options: {
   admin?: boolean;
   stories?: boolean;
   deviceId?: string;
+  id?: string;
 } = {}): Promise<MomentPage> {
   const params = new URLSearchParams();
   if (options.before) params.set("before", options.before);
@@ -35,6 +36,7 @@ export async function loadMoments(options: {
   if (options.admin) params.set("admin", "1");
   if (options.stories) params.set("stories", "1");
   if (options.deviceId) params.set("deviceId", options.deviceId);
+  if (options.id) params.set("id", options.id);
   const response = await fetch(`/api/moments?${params.toString()}`, { cache: "no-store" });
   const data = (await response.json().catch(() => ({}))) as MomentPage & { error?: string };
   if (!response.ok) throw new Error(data.error || "Could not load wedding moments.");

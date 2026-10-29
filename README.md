@@ -4,7 +4,7 @@ A digital art piece plus a wedding binder, in one Next.js app.
 
 | Part | URL | What it is |
 |---|---|---|
-| **Front door** | `/` | The compact, phone-first hub: tiles for the **gift list** (`/gifts`), the **photo & video upload album** (`/upload`), the code-locked **RSVP**, **Instagram** and the sealed **games & raffles** door (opens on the day), plus a live countdown pill and a quiet link to the full invitation at the bottom. Nothing private is on this page. |
+| **Front door** | `/` | The compact, phone-first hub: tiles for the **gift list** (`/gifts`), the **wedding group chat & Stories** (`/upload`), the code-locked **RSVP**, **Instagram** and the sealed **games & raffles** door (opens on the day), plus a live countdown pill and a quiet link to the full invitation at the bottom. Nothing private is on this page. |
 | **The invitation preview** | `/preview` | The one-page editorial site in the Midnight Botanical style as the world may see it: loader, hero + countdown, story chapters, 11.11, dress code, entourage, gallery, moments, hashtags. **No venue, no programme, no reply card, no FAQ.** Safe to post anywhere. |
 | **An invitation** | `/JS-7KQF` | The same site, unsealed for one household: the invitation wording, the pinned programme, the venue + map, the postcard, the RSVP card and the FAQ. This is the link you send. |
 | **RSVP** | `/rsvp` | The code door for guests who lost the link: type the **last 4 characters** of your code (or the whole thing) and you're taken to your own reply card. |
@@ -285,7 +285,7 @@ Shaira & Jeger
   new wording to every household.
 
 ### Ready-made templates (Templates tab)
-The RSVP chase, written once in the code so nobody starts from a blank box
+The ready-made guest messages, written once in the code so nobody starts from a blank box
 (`PRESET_TEMPLATES` in `lib/messaging.ts`). The **Templates** tab lists them under
 **Ready-made templates ✦** with a preview and a one-click **Add to my templates** — the added copy
 is an ordinary template, free to reword or delete; nothing is pushed behind your back:
@@ -302,15 +302,17 @@ is an ordinary template, free to reword or delete; nothing is pushed behind your
 | **RSVP · Missed the Deadline? Join via Livestream** | late / missed-RSVP households (pick when sending) | warm and understanding — the list is locked so no reception seat, but they are welcome at the majlis livestream with refreshments, "coffee soon" |
 | **RSVP · With Love — the Guest List Is Finalised** | Pending RSVP | loving but firm closure for non-responders — final numbers are due, the deadline has passed and the guest list is finalised; no hard feelings |
 | **Broadcast · 2 Weeks To Go (Attire · IG · Gifts)** | Confirmed (Yes) | the first countdown broadcast — `{instagram}`, the dress code on the invitation site, the Note on Gifts and `{invitation_link}` |
+| **Broadcast · Follow Us on Instagram (Live Updates)** | Wedding guests | invitation to follow `{instagram}` / `{instagram_link}` for live wedding-day updates and Stories |
+| **Broadcast · Join Our Wedding Group Chat** | Wedding guests | invites guests to chat, send emoji, photos/videos and voice notes at `{upload_link}` |
 | **Broadcast · 1 Week To Go (Map · Arrival Times)** | Confirmed (Yes) | the Google Maps pin (`{venue_map_link}`), the 3:30 PM wedding-team call time, the 5:30 PM majlis arrival and 7:00 PM hall entry |
 | **Broadcast · Tomorrow! (Tag Us)** | Confirmed (Yes) | the-eve hype — tag `{instagram}` and `{hashtag}` in every story and clip |
-| **Broadcast · The Morning After (Share Your Photos)** | Confirmed (Yes) | thank-you + the `{upload_link}` (`/upload`) so guests send up to 25 photos and videos straight to the private album |
+| **Broadcast · The Morning After (Share Your Photos)** | Confirmed (Yes) | thank-you + the `{upload_link}` (`/upload`) so guests share wedding photos/videos and chat in the group |
 | **Day-of Role · We'd Love to Entrust You** | any role group | asks a household to serve in `{role}` — pair it with the Guest Roles tab |
 
 Each arrives with its recipient groups pre-ticked (Compose fills the rest in one click), and the
 merge tags — `{first_name}`, `{seats}` ("2 seats" / "1 seat" / "a seat"), `{rsvp_deadline}`,
 `{rsvp_link}`, `{invitation_link}`, `{wedding_date}`, `{couple_names}`, `{role}`, `{instagram}`,
-`{venue_map_link}`, `{upload_link}`… — fill themselves in per household, exactly like the tracker's
+`{instagram_link}`, `{venue_map_link}`, `{upload_link}`… — fill themselves in per household, exactly like the tracker's
 logs expect. The chase messages use `{rsvp_link}`: the
 guest's own page, landed **straight on the reply card** (`…/JS-7KQF#rsvp` — the site's own deep
 link, the same handoff the `/rsvp` door uses), while the thank-you keeps the plain invitation link
@@ -444,30 +446,34 @@ preview has a checkerboard/dark/light backdrop to check contrast before download
 The tab also renders the **guest-upload QR code** (`https://your-site/upload`) as a downloadable
 1024 px PNG — for the twelve double-sided table cards and the two A4 welcome/photo-area signs.
 
-## Guest moments & private media (`/upload`)
-The public Memory Wall is a social-style wedding feed: guests can post a note, photos, videos, or
-both; add optional text over media; and use the phone camera from the page. Media also appears in a
-Stories rail grouped by poster. Guests can uncheck **Also show this in the Newsfeed** to publish
-photos/videos as Stories only. Feed thumbnails open a full-size viewer; each poster can edit their
-caption/overlay or delete their own posts from the device they used to publish. The page loads 12
-feed posts at a time, checks for new feed posts once a minute, and lets guests refresh manually.
-The binder's Social Studio gallery can browse and remove every post.
+## Wedding group chat, Stories & private media (`/upload`)
+The `/upload` page is the guests' wedding group chat: text messages, emoji, photo/video attachments,
+and recorded or attached voice notes appear as WhatsApp-style bubbles in time order. New and edited
+messages are delivered live over a private Supabase Realtime Broadcast channel; clients receive only
+a post ID, then request the public-safe post from `/api/moments` for signed private-media URLs.
+Reconnects also reload the latest messages, and a manual refresh remains available as a fallback.
+
+Every photo and video is also grouped by poster in the Stories rail at the top. When sharing visual
+media, guests can uncheck **Also share this in the group chat** to post it to Stories only. Text and
+voice-note messages remain in the chat. Guests can edit/delete their own messages from the device
+they used to post; the binder's Social Studio gallery can browse and moderate every post.
 
 Media bytes stay in the **private** `wedding-media` Supabase Storage bucket. Guests upload directly
 with the anon key, which has insert-only Storage permission. `/api/moments` reads post metadata
 server-side and issues short-lived signed media URLs; guests cannot list or browse raw bucket
 objects. The server checks the posting device ID before allowing a guest to edit or delete a post;
-the couple's service-role key remains server-side for the binder gallery.
+the couple's service-role key remains server-side for moderation and broadcasts.
 
-* **Limits:** up to 8 media items in a post, 25 files and 1 GB per device, enforced in
+* **Limits:** up to 8 attachments per message, 25 files and 1 GB per device, enforced in
   `lib/media-upload.ts`; the bucket's own `file_size_limit` (1 GB) backs up the per-file limit.
-* **Accepted media:** photos and video including iPhone HEIC/HEIF and `.mov`.
+* **Accepted media:** photos, video (including iPhone HEIC/HEIF and `.mov`) and common audio formats.
 * **One-time setup:** run the `wedding-media` and `wedding_moments` sections of
-  `supabase/schema.sql`. Re-run the moments section on existing projects to add the `show_in_feed`
-  migration (existing posts stay in the Newsfeed). In Vercel set `NEXT_PUBLIC_SUPABASE_URL` and
-  `NEXT_PUBLIC_SUPABASE_ANON_KEY` for browser uploads, plus `SUPABASE_SERVICE_ROLE_KEY` as a
-  server-only secret for signed media URLs and moderation. Never prefix the service-role key with
-  `NEXT_PUBLIC_`. Redeploy after changing environment variables.
+  `supabase/schema.sql`. Re-run both on existing projects to add the audio MIME types and the
+  `show_in_feed` / Realtime listener-policy migrations. Existing posts stay visible in the chat.
+  In Vercel set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` for browser uploads
+  and live subscriptions, plus `SUPABASE_SERVICE_ROLE_KEY` as a server-only secret for signed media
+  URLs, moderation and broadcasts. Never prefix the service-role key with `NEXT_PUBLIC_`.
+  Redeploy after changing environment variables.
 * Files land under `YYYY-MM-DD/<guest-id>/<uuid>.<ext>`, so one phone's uploads stay grouped.
 
 ## Gift registry (`Gift List` tab → public `/gifts`)

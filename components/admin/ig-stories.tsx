@@ -398,7 +398,7 @@ export function IgStories({ embedded = false }: { embedded?: boolean }) {
         </div>
       </Card>
 
-      <Card title="Guest photo & video upload — QR for the tables">
+      <Card title="Wedding chat & media — QR for the tables">
         <div className="grid md:grid-cols-[220px_1fr] gap-6 items-start">
           <div>
             {qr ? (

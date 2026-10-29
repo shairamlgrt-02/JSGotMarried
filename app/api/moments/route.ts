@@ -55,6 +55,23 @@ async function signedMediaMap(db: NonNullable<ReturnType<typeof serverSupabase>>
   return urls;
 }
 
+async function broadcastMomentChange(db: NonNullable<ReturnType<typeof serverSupabase>>, operation: "INSERT" | "UPDATE" | "DELETE", id: string) {
+  const channel = db.channel("wedding-newsfeed", { config: { private: true } });
+  try {
+    // Private broadcast authorization needs an explicit JWT on the HTTP transport.
+    if (process.env.SUPABASE_SERVICE_ROLE_KEY) await db.realtime.setAuth(process.env.SUPABASE_SERVICE_ROLE_KEY);
+    // A private Realtime broadcast carries only the post ID. Each guest then fetches the post
+    // through this API, which signs private media URLs and applies normal feed visibility rules.
+    const result = await channel.httpSend("moments_changed", { operation, id, at: new Date().toISOString() });
+    if (!result.success) throw new Error(`Realtime broadcast failed (${result.status}).`);
+  } catch (error) {
+    // Posting must still succeed if Realtime is temporarily unavailable; clients can refresh later.
+    console.warn("Could not broadcast a wedding newsfeed update.", error);
+  } finally {
+    try { await db.removeChannel(channel); } catch { /* best-effort cleanup */ }
+  }
+}
+
 function toPublicPost(row: Row, urls: Map<string, string>, canManage = false): WeddingMoment {
   const media = (Array.isArray(row.media) ? row.media : []).flatMap((item) => {
     const url = item?.path ? urls.get(item.path) : undefined;
@@ -89,6 +106,8 @@ export async function GET(req: NextRequest) {
   const admin = url.searchParams.get("admin") === "1";
   if (admin && !(await isAuthed(cookies().get(COOKIE)?.value))) return json({ error: "Sign in to the binder to open the guest gallery." }, 401);
   const stories = url.searchParams.get("stories") === "1";
+  const requestedId = url.searchParams.get("id") || "";
+  if (requestedId && !/^[0-9a-f-]{36}$/i.test(requestedId)) return json({ error: "A valid post is required." }, 400);
   const rawDeviceId = url.searchParams.get("deviceId") || "";
   const deviceId = validDeviceId(rawDeviceId) ? rawDeviceId : "";
   const requested = Number(url.searchParams.get("limit"));
@@ -99,9 +118,10 @@ export async function GET(req: NextRequest) {
     .select("id, display_name, body, overlay_text, media, device_id, show_in_feed, created_at")
     .order("created_at", { ascending: false })
     .limit(limit);
-  if (stories) query = query.not("media", "eq", "[]");
+  if (requestedId) query = query.eq("id", requestedId);
+  else if (stories) query = query.not("media", "eq", "[]");
   else if (!admin) query = query.eq("show_in_feed", true);
-  if (before && Number.isFinite(Date.parse(before))) query = query.lt("created_at", before);
+  if (!requestedId && before && Number.isFinite(Date.parse(before))) query = query.lt("created_at", before);
   const { data, error } = await query;
   if (error) return json({ error: "The moments feed is not set up yet. Run the wedding-media and moments sections of supabase/schema.sql." }, 503);
 
@@ -110,7 +130,7 @@ export async function GET(req: NextRequest) {
     const paths = rows.flatMap((row) => Array.isArray(row.media) ? row.media.map((item) => item.path) : []);
     const urls = await signedMediaMap(db, paths);
     const posts = rows.map((row) => toPublicPost(row, urls, admin || Boolean(deviceId && row.device_id === deviceId)));
-    const hasMore = rows.length === limit;
+    const hasMore = !requestedId && rows.length === limit;
     return json({ posts, nextCursor: hasMore ? rows[rows.length - 1]?.created_at ?? null : null });
   } catch {
     return json({ error: "The moments feed could not load its photos and videos. Please try again." }, 503);
@@ -140,7 +160,7 @@ export async function POST(req: NextRequest) {
     const item = raw as Partial<StoredMedia>;
     const path = String(item.path ?? "");
     const contentType = String(item.contentType ?? "");
-    if (!validStoragePath(path, deviceId) || !/^(image|video)\/[a-z0-9.+-]+$/i.test(contentType))
+    if (!validStoragePath(path, deviceId) || !/^(image|video|audio)\/[a-z0-9.+-]+$/i.test(contentType))
       return json({ error: "One of those media files could not be verified. Please choose it again." }, 400);
     media.push({ path, contentType });
   }
@@ -153,7 +173,7 @@ export async function POST(req: NextRequest) {
     }
   }
   if (!text && !media.length) return json({ error: "Add a note, photo or video before posting." }, 400);
-  if (!showInFeed && !media.length) return json({ error: "Stories need at least one photo or video." }, 400);
+  if (!showInFeed && !media.some((item) => item.contentType.startsWith("image/") || item.contentType.startsWith("video/"))) return json({ error: "Stories need at least one photo or video." }, 400);
 
   // Soft per-device limit; this prevents accidental floods of feed posts or stories.
   const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -166,6 +186,7 @@ export async function POST(req: NextRequest) {
     .single();
   if (error || !data) return json({ error: "Your post couldn't be saved just now. Please try again." }, 503);
   const row = data as Row;
+  await broadcastMomentChange(db, "INSERT", row.id);
   try {
     const urls = await signedMediaMap(db, row.media.map((item) => item.path));
     return json({ post: toPublicPost(row, urls, true) }, 201);
@@ -204,6 +225,7 @@ export async function PATCH(req: NextRequest) {
     .single();
   if (error || !data) return json({ error: "Your edits couldn't be saved. Please try again." }, 503);
   const row = data as Row;
+  await broadcastMomentChange(db, "UPDATE", row.id);
   try {
     const urls = await signedMediaMap(db, row.media.map((item) => item.path));
     return json({ post: toPublicPost(row, urls, true) });
@@ -231,5 +253,6 @@ export async function DELETE(req: NextRequest) {
   }
   const { error: deleteError } = await db.from(TABLE).delete().eq("id", id);
   if (deleteError) return json({ error: "The post couldn't be removed. Please try again." }, 503);
+  await broadcastMomentChange(db, "DELETE", id);
   return json({ ok: true });
 }
