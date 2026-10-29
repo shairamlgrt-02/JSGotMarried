@@ -7,7 +7,6 @@ import { fullDate } from "@/components/public/Envelope";
 import { deleteMoment, loadMoments, publishMoment, updateMoment, type WeddingMoment } from "@/lib/moments";
 import { browserSupabase } from "@/lib/supabase-browser";
 import {
-  MAX_FILES_PER_GUEST,
   MAX_TOTAL_BYTES,
   UPLOAD_ACCEPT,
   addToQuota,
@@ -17,7 +16,9 @@ import {
   objectPath,
   readQuota,
   uploadMediaFile,
-  validateSelection,
+  validateChatSelection,
+  validateStorySelection,
+  optimizeChatMedia,
 } from "@/lib/media-upload";
 
 type DraftMedia = {
@@ -208,7 +209,7 @@ type StoryItem = {
 };
 type StoryGroup = { key: string; displayName: string; items: StoryItem[]; latestAt: string };
 
-function StoriesRail({ posts, onEdit, onDelete, onAddStory, uploadEnabled }: { posts: WeddingMoment[]; onEdit: (post: WeddingMoment) => void; onDelete: (post: WeddingMoment) => void; onAddStory: () => void; uploadEnabled: boolean }) {
+function StoriesRail({ posts, onEdit, onDelete, onAddStory, uploadEnabled, uploading, progress }: { posts: WeddingMoment[]; onEdit: (post: WeddingMoment) => void; onDelete: (post: WeddingMoment) => void; onAddStory: () => void; uploadEnabled: boolean; uploading: boolean; progress: number }) {
   const [active, setActive] = useState<{ group: number; item: number } | null>(null);
   const groups = useMemo(() => {
     const byName = new Map<string, StoryGroup>();
@@ -278,9 +279,8 @@ function StoriesRail({ posts, onEdit, onDelete, onAddStory, uploadEnabled }: { p
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#6B1D2A] text-lg text-[#F8EBCF] shadow-sm" aria-hidden>✦</span>
         <div className="min-w-0 flex-1">
           <h2 className="font-serif text-xl leading-tight text-[#6B1D2A]">Stories</h2>
-          <p className="mt-1 text-sm leading-relaxed text-[#765E59]">Photos and videos shared here appear in Stories for everyone to enjoy. Upload up to 25 files and 1 GB total per device, with up to 8 attachments in each message.</p>
-          <button type="button" onClick={onAddStory} disabled={!uploadEnabled} className="mt-3 rounded-full bg-[#6B1D2A] px-4 py-2 text-xs font-medium tracking-wide text-white shadow-sm transition-colors hover:bg-[#4E1722] disabled:cursor-not-allowed disabled:opacity-45">＋ ADD TO STORIES</button>
-          <p className="mt-2 text-[10px] text-taupe">You can choose to share them in the group chat too.</p>
+          <p className="mt-1 text-sm leading-relaxed text-[#765E59]">Stories are a separate place for photos and videos. Add a Story here; it will not appear in the group chat. Stories have a 1 GB total limit per device.</p>
+          <button type="button" onClick={onAddStory} disabled={!uploadEnabled} className="mt-3 rounded-full bg-[#6B1D2A] px-4 py-2 text-xs font-medium tracking-wide text-white shadow-sm transition-colors hover:bg-[#4E1722] disabled:cursor-not-allowed disabled:opacity-45">{uploading ? `UPLOADING ${progress}%…` : "＋ ADD TO STORIES"}</button>
         </div>
       </div>
     </section>
@@ -288,8 +288,8 @@ function StoriesRail({ posts, onEdit, onDelete, onAddStory, uploadEnabled }: { p
   return (
     <section aria-label="Stories from guests" className="mb-5 overflow-hidden rounded-[22px] border border-[#D8B9AE] bg-[#FBF3EF] px-3 py-3 shadow-[0_12px_30px_-22px_rgba(107,29,42,.45)] sm:px-4 sm:py-4">
       <div className="mb-3 flex items-center justify-between gap-3 px-1">
-        <div className="flex min-w-0 items-center gap-2.5"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#6B1D2A] text-sm text-[#F8EBCF] shadow-sm" aria-hidden>✦</span><div className="min-w-0"><h2 className="font-serif text-lg leading-none text-[#6B1D2A]">Stories</h2><p className="mt-1 text-[10px] text-[#765E59]">Photos &amp; videos · max 25 files and 1 GB per device</p></div></div>
-        <button type="button" onClick={onAddStory} disabled={!uploadEnabled} className="shrink-0 rounded-full border border-[#6B1D2A]/20 bg-white/75 px-3 py-2 text-[10px] font-medium text-[#6B1D2A] shadow-sm transition-colors hover:bg-[#6B1D2A] hover:text-white disabled:cursor-not-allowed disabled:opacity-45">＋ ADD STORY</button>
+        <div className="flex min-w-0 items-center gap-2.5"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#6B1D2A] text-sm text-[#F8EBCF] shadow-sm" aria-hidden>✦</span><div className="min-w-0"><h2 className="font-serif text-lg leading-none text-[#6B1D2A]">Stories</h2><p className="mt-1 text-[10px] text-[#765E59]">Photos &amp; videos · 1 GB per device</p></div></div>
+        <button type="button" onClick={onAddStory} disabled={!uploadEnabled} className="shrink-0 rounded-full border border-[#6B1D2A]/20 bg-white/75 px-3 py-2 text-[10px] font-medium text-[#6B1D2A] shadow-sm transition-colors hover:bg-[#6B1D2A] hover:text-white disabled:cursor-not-allowed disabled:opacity-45">{uploading ? `UPLOADING ${progress}%` : "＋ ADD STORY"}</button>
       </div>
       <div className="flex gap-4 overflow-x-auto pb-1 [scrollbar-width:thin]">
         {groups.map((group, index) => {
@@ -372,8 +372,6 @@ export default function UploadPage() {
   draftRef.current = draftMedia;
   const [displayName, setDisplayName] = useState("");
   const [body, setBody] = useState("");
-  const [overlayText, setOverlayText] = useState("");
-  const [showInFeed, setShowInFeed] = useState(true);
   const [recording, setRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [emojiOpen, setEmojiOpen] = useState(false);
@@ -386,7 +384,7 @@ export default function UploadPage() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [posting, setPosting] = useState(false);
-  const [uploadIndex, setUploadIndex] = useState<number | null>(null);
+  const [storyUploading, setStoryUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [pulling, setPulling] = useState(false);
   const [liveStatus, setLiveStatus] = useState<"connecting" | "live" | "offline">("connecting");
@@ -400,10 +398,7 @@ export default function UploadPage() {
 
   const couple = info?.bride && info?.groom ? `${info.groom} & ${info.bride}` : "the couple";
   const hashtag = info?.hashtags?.[0] || "";
-  const unuploadedDraft = draftMedia.filter((item) => !item.path);
-  const draftBytes = unuploadedDraft.reduce((sum, item) => sum + item.file.size, 0);
-  const remainingFiles = Math.max(0, MAX_FILES_PER_GUEST - quota.count - unuploadedDraft.length);
-  const remainingBytes = Math.max(0, MAX_TOTAL_BYTES - quota.bytes - draftBytes);
+  const remainingBytes = Math.max(0, MAX_TOTAL_BYTES - quota.bytes);
 
   const refreshFeed = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true);
@@ -509,11 +504,7 @@ export default function UploadPage() {
   }, [configured, liveStatus, refreshFeed]);
 
   const addFiles = (files: File[]): boolean => {
-    const quotaWithDraft = {
-      count: quota.count + unuploadedDraft.length,
-      bytes: quota.bytes + draftBytes,
-    };
-    const result = validateSelection(files, quotaWithDraft);
+    const result = validateChatSelection(files);
     const room = Math.max(0, MAX_POST_MEDIA - draftMedia.length);
     const accepted = result.accepted.slice(0, room);
     const notices = [...result.errors];
@@ -522,12 +513,7 @@ export default function UploadPage() {
     else setError("");
     if (notices.length) setNotice(notices.join(" "));
     if (accepted.length) {
-      setDraftMedia((current) => [...current, ...accepted.map((file) => ({
-        file,
-        previewUrl: URL.createObjectURL(file),
-        progress: 0,
-        status: "waiting" as const,
-      }))]);
+      setDraftMedia((current) => [...current, ...accepted.map((file) => ({ file, previewUrl: URL.createObjectURL(file), progress: 0, status: "waiting" as const }))]);
     }
     return accepted.length > 0;
   };
@@ -542,8 +528,44 @@ export default function UploadPage() {
 
   const chooseStoryFiles = (picked: FileList | null) => {
     setAttachmentMenu(false);
-    if (picked?.length && addFiles(Array.from(picked))) setShowInFeed(false);
+    if (picked?.length) void uploadStories(Array.from(picked));
     if (storyInput.current) storyInput.current.value = "";
+  };
+
+  const uploadStories = async (files: File[]) => {
+    const validation = validateStorySelection(files, quota);
+    const accepted = validation.accepted;
+    if (!accepted.length) {
+      setError(validation.errors[0] || "Choose a photo or video to add to Stories.");
+      return;
+    }
+    setPosting(true);
+    setStoryUploading(true);
+    setError("");
+    setNotice("");
+    try {
+      const published: WeddingMoment[] = [];
+      for (const file of accepted) {
+        const path = objectPath(file, deviceId);
+        setUploadProgress(0);
+        await uploadMediaFile(file, path, (percent) => setUploadProgress(percent));
+        setQuota(addToQuota([file]));
+        const post = await publishMoment({
+          deviceId, displayName: displayName.trim(), body: "", overlayText: "",
+          media: [{ path, contentType: mediaContentType(file) }], showInFeed: false, showInStories: true,
+        });
+        published.push(post);
+      }
+      setStoryPosts((current) => [...published.reverse(), ...current].slice(0, 48));
+      const skipped = validation.errors.length ? ` ${validation.errors.length} file(s) were skipped.` : "";
+      setNotice(`${accepted.length === 1 ? "Added to Stories" : `Added ${accepted.length} items to Stories`} — not shared in the group chat. ♡${skipped}`);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Your Story could not be uploaded. Please try again.");
+    } finally {
+      setPosting(false);
+      setStoryUploading(false);
+      setUploadProgress(0);
+    }
   };
 
   const openStoryPicker = () => storyInput.current?.click();
@@ -611,11 +633,10 @@ export default function UploadPage() {
     if (item) URL.revokeObjectURL(item.previewUrl);
     const remaining = draftMedia.filter((_, i) => i !== index);
     setDraftMedia(remaining);
-    if (!remaining.some((draft) => draft.file.type.startsWith("image/") || draft.file.type.startsWith("video/"))) setShowInFeed(true);
   };
 
   const sharePost = async () => {
-    if (!configured || posting || (!body.trim() && !draftMedia.length) || (!showInFeed && !draftMedia.length)) return;
+    if (!configured || posting || (!body.trim() && !draftMedia.length)) return;
     setPosting(true);
     setError("");
     setNotice("");
@@ -624,22 +645,21 @@ export default function UploadPage() {
       for (let i = 0; i < draftMedia.length; i++) {
         let item = draftMedia[i];
         if (!item.path) {
-          const path = objectPath(item.file, deviceId);
-          setUploadIndex(i);
+          const optimizedFile = await optimizeChatMedia(item.file);
+          const path = objectPath(optimizedFile, deviceId);
           setUploadProgress(0);
           setDraftMedia((current) => current.map((x, n) => n === i ? { ...x, status: "uploading", progress: 0 } : x));
-          await uploadMediaFile(item.file, path, (percent) => {
+          await uploadMediaFile(optimizedFile, path, (percent) => {
             setUploadProgress(percent);
             setDraftMedia((current) => current.map((x, n) => n === i ? { ...x, progress: percent } : x));
           });
-          item = { ...item, path, progress: 100, status: "uploaded" };
+          item = { ...item, file: optimizedFile, path, progress: 100, status: "uploaded" };
           setDraftMedia((current) => current.map((x, n) => n === i ? item : x));
-          setQuota(addToQuota([item.file]));
         }
         readyMedia.push({ path: item.path!, contentType: mediaContentType(item.file) });
       }
 
-      const post = await publishMoment({ deviceId, displayName: displayName.trim(), body, overlayText, media: readyMedia, showInFeed });
+      const post = await publishMoment({ deviceId, displayName: displayName.trim(), body, overlayText: "", media: readyMedia, showInFeed: true, showInStories: false });
       if (post.showInFeed) {
         setPosts((current) => {
           const next = mergeChatMessages(current, [post]);
@@ -649,22 +669,17 @@ export default function UploadPage() {
         setUnreadCount(0);
         requestAnimationFrame(() => { if (chatScroll.current) chatScroll.current.scrollTop = chatScroll.current.scrollHeight; });
       }
-      if (post.media.some((item) => item.contentType.startsWith("image/") || item.contentType.startsWith("video/"))) setStoryPosts((current) => [post, ...current.filter((item) => item.id !== post.id)].slice(0, 48));
       setBody("");
-      setOverlayText("");
-      setShowInFeed(true);
       setEmojiOpen(false);
       draftRef.current.forEach((item) => URL.revokeObjectURL(item.previewUrl));
       setDraftMedia([]);
-      const hasStoryMedia = post.media.some((item) => item.contentType.startsWith("image/") || item.contentType.startsWith("video/"));
-      setNotice(post.showInFeed ? `Sent to the group chat${hasStoryMedia ? " · photo/video added to Stories" : ""} ♡` : "Shared to Stories only — it won't appear in the group chat ♡");
+      setNotice("Sent to the group chat ♡ Chat photos and videos are optimized and stay out of Stories.");
       try { localStorage.setItem("jsos:moment-name-v1", displayName.trim()); } catch { /* private mode */ }
       window.setTimeout(() => setNotice(""), 4500);
     } catch (e) {
       setError((e as Error).message || "That didn't send — please try again.");
     } finally {
       setPosting(false);
-      setUploadIndex(null);
       setUploadProgress(0);
     }
   };
@@ -761,7 +776,7 @@ export default function UploadPage() {
           </div>
         )}
 
-        <StoriesRail posts={storyPosts} onEdit={setEditingPost} onDelete={(post) => void removePost(post)} onAddStory={openStoryPicker} uploadEnabled={configured} />
+        <StoriesRail posts={storyPosts} onEdit={setEditingPost} onDelete={(post) => void removePost(post)} onAddStory={openStoryPicker} uploadEnabled={configured && !posting} uploading={storyUploading} progress={uploadProgress} />
 
         <section aria-label="Wedding group chat" className="mt-4 overflow-hidden rounded-[22px] border border-[#E3D1CB] bg-[#FFFCF8] shadow-[0_12px_32px_-22px_rgba(107,29,42,.5)]">
           <input ref={storyInput} type="file" accept="image/*,video/*,.heic,.heif,.mov" multiple hidden onChange={(event) => chooseStoryFiles(event.target.files)} />
@@ -802,17 +817,15 @@ export default function UploadPage() {
               {posting && <span className="absolute inset-x-0 bottom-0 bg-black/60 px-1 py-0.5 text-center text-[9px] text-white">{item.status === "uploading" ? `${uploadProgress}%` : item.status === "uploaded" ? "READY" : "WAITING"}</span>}
               {!posting && <button type="button" onClick={() => removeDraft(index)} aria-label={`Remove ${item.file.name}`} className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-black/65 text-sm text-white">×</button>}
             </div>)}</div>}
-            {draftMedia.some((item) => item.file.type.startsWith("image/") || item.file.type.startsWith("video/")) && <input value={overlayText} onChange={(event) => setOverlayText(event.target.value.slice(0, 120))} placeholder="Optional text over photos/videos" aria-label="Text over photo or video" className="mb-2 w-full rounded-xl border border-[#E5D8D2] bg-white px-3 py-2 text-xs text-ink outline-none focus:border-wine/40" />}
-            {draftMedia.some((item) => item.file.type.startsWith("image/") || item.file.type.startsWith("video/")) && <label className="mb-2 flex cursor-pointer items-start gap-2 rounded-xl bg-[#F8F2E7] px-3 py-2 text-xs text-ink/75"><input type="checkbox" checked={showInFeed} onChange={(event) => setShowInFeed(event.target.checked)} className="mt-0.5 accent-burgundy" /><span><b>{draftMedia.some((item) => item.file.type.startsWith("audio/")) ? "Also share this message in the group chat" : "Also share this in the group chat"}</b><span className="block text-[10px] text-taupe">Photos and videos appear in Stories either way.</span></span></label>}
             {recording && <div className="mb-2 flex items-center gap-2 rounded-xl bg-[#F9E7E5] px-3 py-2 text-xs text-[#8B3030]"><span className="h-2 w-2 animate-pulse rounded-full bg-red-600" />Recording voice note · {Math.floor(recordingSeconds / 60)}:{String(recordingSeconds % 60).padStart(2, "0")} · tap the mic to finish</div>}
             <div className="flex items-end gap-2">
               <button type="button" onClick={() => setEmojiOpen((open) => !open)} aria-label="Add emoji" title="Add emoji" className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-[#E3D1CB] bg-white text-xl text-[#806F68] hover:bg-[#F7F1E8]">☺</button>
               <textarea ref={messageInput} value={body} onChange={(event) => setBody(event.target.value.slice(0, 1200))} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void sharePost(); } }} placeholder="Message everyone…" aria-label="Write a message" rows={Math.min(4, Math.max(1, body.split("\n").length))} className="max-h-28 min-h-10 min-w-0 flex-1 resize-none rounded-2xl border border-[#E3D8D2] bg-white px-3 py-2.5 text-sm leading-relaxed text-ink outline-none placeholder:text-taupe/75 focus:border-[#C99A91]" />
               <button type="button" onClick={() => setAttachmentMenu((open) => !open)} aria-label="Add photo, video or audio" title="Add photo, video or audio" className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-[#E3D1CB] bg-white text-lg text-[#70434A] hover:bg-[#F7ECE9]">＋</button>
               <button type="button" onClick={() => void startVoiceNote()} disabled={posting || !configured} aria-label={recording ? "Finish voice note" : "Record voice note"} title={recording ? "Finish voice note" : "Record voice note"} className={`grid h-10 w-10 shrink-0 place-items-center rounded-full border ${recording ? "border-red-300 bg-red-50 text-red-700" : "border-[#E3D1CB] bg-white text-[#70434A] hover:bg-[#F7ECE9]"} disabled:opacity-40`}>{recording ? "■" : "🎙"}</button>
-              <button type="button" onClick={() => void sharePost()} disabled={posting || !configured || (!body.trim() && !draftMedia.length) || (!showInFeed && !draftMedia.length)} aria-label={posting ? "Sending message" : "Send message"} title="Send message" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#5D8061] text-lg text-white shadow-sm transition-colors hover:bg-[#47614D] disabled:cursor-not-allowed disabled:opacity-40">{posting ? "…" : "➤"}</button>
+              <button type="button" onClick={() => void sharePost()} disabled={posting || !configured || (!body.trim() && !draftMedia.length)} aria-label={posting ? "Sending message" : "Send message"} title="Send message" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#5D8061] text-lg text-white shadow-sm transition-colors hover:bg-[#47614D] disabled:cursor-not-allowed disabled:opacity-40">{posting ? "…" : "➤"}</button>
             </div>
-            <div className="mt-2 flex flex-wrap items-center justify-between gap-2 px-1 text-[9px] text-taupe/75"><span>{MAX_POST_MEDIA} attachments per message · every photo/video also appears in Stories</span><span>{formatBytes(quota.bytes + draftBytes)} / {formatBytes(MAX_TOTAL_BYTES)} used · private</span></div>
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2 px-1 text-[9px] text-taupe/75"><span>{MAX_POST_MEDIA} attachments per message · chat media stays in this chat</span><span>Stories: {formatBytes(quota.bytes)} / {formatBytes(MAX_TOTAL_BYTES)} used · private</span></div>
             {error && <p role="alert" className="mt-2 rounded-xl bg-burgundy/10 px-3 py-2 text-xs text-burgundy">{error}</p>}
             {notice && <motion.p role="status" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="mt-2 rounded-xl bg-[#EDF2E9] px-3 py-2 text-xs text-[#526B56]">{notice}</motion.p>}
           </div>
@@ -821,7 +834,7 @@ export default function UploadPage() {
         <div className="sr-only" aria-live="polite">{liveStatus === "live" ? "Live group chat connected" : liveStatus === "offline" ? "Live chat offline; manual refresh available" : "Connecting to live group chat"}</div>
 
         <footer className="mt-10 text-center">
-          <p className="micro text-taupe/75">{remainingFiles} uploads left on this device · {formatBytes(remainingBytes)} remaining</p>
+          <p className="micro text-taupe/75">Stories: {formatBytes(remainingBytes)} remaining on this device</p>
           <p className="mt-2 font-serif text-xs italic text-taupe/70">A little live chat and keepsake wall for {firstName(couple)} and everyone who loves them.</p>
         </footer>
       </div>

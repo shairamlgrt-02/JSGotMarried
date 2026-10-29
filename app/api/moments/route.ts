@@ -25,6 +25,7 @@ type Row = {
   media: StoredMedia[];
   device_id: string;
   show_in_feed: boolean;
+  show_in_stories: boolean;
   created_at: string;
 };
 
@@ -85,6 +86,7 @@ function toPublicPost(row: Row, urls: Map<string, string>, canManage = false): W
     media,
     createdAt: row.created_at,
     showInFeed: row.show_in_feed !== false,
+    showInStories: row.show_in_stories !== false,
     canManage,
   };
 }
@@ -115,11 +117,11 @@ export async function GET(req: NextRequest) {
   const limit = Math.max(1, Math.min(admin ? 24 : stories ? 60 : 24, Number.isFinite(requested) && requested > 0 ? requested : fallbackLimit));
   const before = url.searchParams.get("before");
   let query = db.from(TABLE)
-    .select("id, display_name, body, overlay_text, media, device_id, show_in_feed, created_at")
+    .select("id, display_name, body, overlay_text, media, device_id, show_in_feed, show_in_stories, created_at")
     .order("created_at", { ascending: false })
     .limit(limit);
   if (requestedId) query = query.eq("id", requestedId);
-  else if (stories) query = query.not("media", "eq", "[]");
+  else if (stories) query = query.eq("show_in_stories", true).not("media", "eq", "[]");
   else if (!admin) query = query.eq("show_in_feed", true);
   if (!requestedId && before && Number.isFinite(Date.parse(before))) query = query.lt("created_at", before);
   const { data, error } = await query;
@@ -153,6 +155,7 @@ export async function POST(req: NextRequest) {
   const text = safeText(body.body, 1200);
   const overlayText = safeText(body.overlayText, 120);
   const showInFeed = body.showInFeed !== false;
+  const showInStories = body.showInStories === true;
   const rawMedia = Array.isArray(body.media) ? body.media : [];
   if (rawMedia.length > 8) return json({ error: "A post can have up to 8 photos or videos." }, 400);
   const media: StoredMedia[] = [];
@@ -173,16 +176,13 @@ export async function POST(req: NextRequest) {
     }
   }
   if (!text && !media.length) return json({ error: "Add a note, photo or video before posting." }, 400);
-  if (!showInFeed && !media.some((item) => item.contentType.startsWith("image/") || item.contentType.startsWith("video/"))) return json({ error: "Stories need at least one photo or video." }, 400);
+  if (showInStories && !media.some((item) => item.contentType.startsWith("image/") || item.contentType.startsWith("video/"))) return json({ error: "Stories need at least one photo or video." }, 400);
+  if (!showInFeed && !showInStories) return json({ error: "Choose where this moment should appear." }, 400);
 
-  // Soft per-device limit; this prevents accidental floods of feed posts or stories.
-  const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { count } = await db.from(TABLE).select("id", { count: "exact", head: true }).eq("device_id", deviceId).gt("created_at", dayAgo);
-  if ((count ?? 0) >= 30) return json({ error: "You've shared lots of lovely moments today. Please try again tomorrow." }, 429);
 
   const { data, error } = await db.from(TABLE)
-    .insert({ device_id: deviceId, display_name: displayName, body: text, overlay_text: overlayText, media, show_in_feed: showInFeed })
-    .select("id, display_name, body, overlay_text, media, device_id, show_in_feed, created_at")
+    .insert({ device_id: deviceId, display_name: displayName, body: text, overlay_text: overlayText, media, show_in_feed: showInFeed, show_in_stories: showInStories })
+    .select("id, display_name, body, overlay_text, media, device_id, show_in_feed, show_in_stories, created_at")
     .single();
   if (error || !data) return json({ error: "Your post couldn't be saved just now. Please try again." }, 503);
   const row = data as Row;
@@ -221,7 +221,7 @@ export async function PATCH(req: NextRequest) {
   if (!text && !media.length) return json({ error: "A text-only post needs a note." }, 400);
   const { data, error } = await db.from(TABLE).update({ body: text, overlay_text: overlayText })
     .eq("id", id)
-    .select("id, display_name, body, overlay_text, media, device_id, show_in_feed, created_at")
+    .select("id, display_name, body, overlay_text, media, device_id, show_in_feed, show_in_stories, created_at")
     .single();
   if (error || !data) return json({ error: "Your edits couldn't be saved. Please try again." }, 503);
   const row = data as Row;

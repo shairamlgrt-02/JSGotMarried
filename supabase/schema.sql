@@ -145,8 +145,8 @@ on conflict (id) do update set
 -- ── anonymous guest photos, videos & voice notes (/upload, QR codes on the table cards) ──────────
 -- A PRIVATE bucket: guests add memories straight from their phone with the anon key, but no anon
 -- policy lets them list, read or delete — only the service-role key (the binder) can view them.
--- The bucket's 1 GB file_size_limit is the server-side backstop; the 25-files / 1 GB per-guest
--- cap is enforced on the device (lib/media-upload.ts) and remembered in localStorage.
+-- The bucket's 1 GB per-file limit is the server-side backstop. Stories have a separate 1 GB
+-- per-device quota; chat media is optimized client-side and excluded from that Stories quota.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'wedding-media',
@@ -186,10 +186,13 @@ create table if not exists public.wedding_moments (
   overlay_text text not null default '',
   media jsonb not null default '[]'::jsonb,
   show_in_feed boolean not null default true,
+  show_in_stories boolean not null default true,
   created_at timestamptz not null default now()
 );
--- Safe for wedding projects that already created the Memory Wall table.
+-- Safe for wedding projects that already created the Memory Wall table. Existing moments default
+-- to Stories-visible; new chat attachments explicitly opt out of Stories.
 alter table public.wedding_moments add column if not exists show_in_feed boolean not null default true;
+alter table public.wedding_moments add column if not exists show_in_stories boolean not null default true;
 create index if not exists wedding_moments_created_at_idx on public.wedding_moments (created_at desc);
 create index if not exists wedding_moments_device_created_idx on public.wedding_moments (device_id, created_at desc);
 alter table public.wedding_moments enable row level security;

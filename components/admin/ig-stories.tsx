@@ -426,7 +426,7 @@ export function IgStories({ embedded = false }: { embedded?: boolean }) {
                 <b>A4 signs</b> for the welcome table and photo area.
               </li>
               <li>
-                Each guest can send up to <b>25 files and 1 GB</b> from their phone — tracked on their device so the cap holds even
+                Stories have a <b>1 GB per-device limit</b>, tracked on each guest’s phone so the cap holds even
                 if they reopen the page.
               </li>
               <li>

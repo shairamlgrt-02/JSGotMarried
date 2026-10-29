@@ -453,9 +453,11 @@ messages are delivered live over a private Supabase Realtime Broadcast channel; 
 a post ID, then request the public-safe post from `/api/moments` for signed private-media URLs.
 Reconnects also reload the latest messages, and a manual refresh remains available as a fallback.
 
-Every photo and video is also grouped by poster in the Stories rail at the top. When sharing visual
-media, guests can uncheck **Also share this in the group chat** to post it to Stories only. Text and
-voice-note messages remain in the chat. Guests can edit/delete their own messages from the device
+Chat attachments stay in the group chat and never appear in Stories. Chat photos/videos are reduced
+to lower resolution before upload and do not use the Stories quota. Guests can use the separate
+**Add to Stories** uploader for Story-only photos/videos; Stories have a 1 GB total quota per device
+and no file-count cap. Stories appear in the rail at the top. Text and voice-note messages remain in
+the chat. Guests can edit/delete their own messages from the device
 they used to post; the binder's Social Studio gallery can browse and moderate every post.
 
 Media bytes stay in the **private** `wedding-media` Supabase Storage bucket. Guests upload directly
@@ -464,12 +466,11 @@ server-side and issues short-lived signed media URLs; guests cannot list or brow
 objects. The server checks the posting device ID before allowing a guest to edit or delete a post;
 the couple's service-role key remains server-side for moderation and broadcasts.
 
-* **Limits:** up to 8 attachments per message, 25 files and 1 GB per device, enforced in
-  `lib/media-upload.ts`; the bucket's own `file_size_limit` (1 GB) backs up the per-file limit.
+* **Limits:** up to 8 attachments per chat message. Chat photos and videos are optimized and excluded from the Stories quota. Stories are uploaded separately and have a 1 GB per-device quota enforced in `lib/media-upload.ts`; the bucket’s own `file_size_limit` (1 GB) backs up the per-file limit.
 * **Accepted media:** photos, video (including iPhone HEIC/HEIF and `.mov`) and common audio formats.
 * **One-time setup:** run the `wedding-media` and `wedding_moments` sections of
   `supabase/schema.sql`. Re-run both on existing projects to add the audio MIME types and the
-  `show_in_feed` / Realtime listener-policy migrations. Existing posts stay visible in the chat.
+  `show_in_feed`, `show_in_stories` / Realtime listener-policy migrations. Existing posts default to Stories-visible; chat visibility is unchanged.
   In Vercel set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` for browser uploads
   and live subscriptions, plus `SUPABASE_SERVICE_ROLE_KEY` as a server-only secret for signed media
   URLs, moderation and broadcasts. Never prefix the service-role key with `NEXT_PUBLIC_`.
@@ -550,7 +551,7 @@ app/admin/…                  binder + login
 app/api/…                    login, data CRUD, rsvp, the calendar .ics, gift claims (/api/gifts)
 components/admin/gifts.tsx   the binder's Gift List tab — registry CRUD, reorder, release claims, note
 lib/gifts.ts                 gift-registry client logic — board loading, race-safe claim/release, local mode
-lib/media-upload.ts          the /upload limits, per-guest quota and XHR upload with progress
+lib/media-upload.ts          Stories-only device quota, chat-media optimization and XHR upload progress
 lib/guests.ts                codes: matching, statuses, bulk paste, links
 lib/invite-gate.ts           what a sealed visitor may read (server side)
 components/public/…          sections + effects (Lenis, cursor, vines, magnetic, split text)
@@ -564,7 +565,7 @@ lib/roles.ts                 the day-of roles dictionary (Guest Roles tab, messa
 lib/messaging.ts             recipient groups, merge tags, ready-made templates (the RSVP chase + broadcasts)
 lib/ig-stories.ts            the 1080×1920 Instagram Story canvas templates (bingo, outfit arch, Add Yours) + transparent overlay frames
 lib/social-studio.ts         the Social Studio registry — 9:16 story series, 4:5 feed posts and 1:1 highlight covers from live binder data
-lib/media-upload.ts          the /upload limits, per-guest quota and XHR upload with progress
+lib/media-upload.ts          Stories-only device quota, chat-media optimization and XHR upload progress
 lib/qr.ts                    branded QR code + data-URL download helper (the upload table signs)
 lib/card-draw.ts             shared canvas lettering (paper, caps, wrap, pins) for the cards
 lib/bridesmaid-card.ts       the bridesmaids' A4 thank-you card — her jewel, the verse, her note, her role (binder → Bridesmaid Cards)

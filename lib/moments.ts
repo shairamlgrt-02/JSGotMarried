@@ -11,6 +11,7 @@ export type WeddingMoment = {
   media: MomentMedia[];
   createdAt: string;
   showInFeed: boolean;
+  showInStories: boolean;
   /** Present only when the request proves this post belongs to the current device (or is admin). */
   canManage?: boolean;
 };
@@ -57,6 +58,7 @@ export async function publishMoment(input: {
   overlayText: string;
   media: { path: string; contentType: string }[];
   showInFeed: boolean;
+  showInStories: boolean;
 }): Promise<WeddingMoment> {
   const response = await fetch("/api/moments", {
     method: "POST",

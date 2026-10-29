@@ -894,13 +894,13 @@ With all our excitement,
     id: "preset_broadcast_day_after",
     name: "Broadcast · The Morning After (Share Your Photos)",
     label: "Broadcast",
-    hint: "The thank-you broadcast for the day after — warm gratitude and the /upload link so guests send their photos and videos straight to the couple (up to 25 files).",
+    hint: "The thank-you broadcast for the day after — warm gratitude and the /upload link for the group chat or separate Stories uploader (Stories have a 1 GB per-device limit).",
     categories: ["confirmed_yes"],
     body: `Hi {first_name}! 🤍
 
 Thank you. Last night was the best night of our lives, and it was because you were in it — the hugs, the laughter, the dance floor (we saw everything 😄).
 
-Would you do us one last favour? Upload your favourite photos and videos from the day here — up to 25 files, straight from your phone:
+Would you do us one last favour? Share your favourite photos and videos from the day in the group chat, or use “Add to Stories” for a Story (up to 1 GB per device):
 {upload_link}
 
 Every clip is a little keepsake for us, and we cannot wait to relive the day through your eyes. Tag {instagram} and {hashtag} when you post, too!
