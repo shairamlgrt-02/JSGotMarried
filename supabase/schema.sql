@@ -42,6 +42,9 @@ create table if not exists guests (
 alter table guests add column if not exists code text default '';
 alter table guests add column if not exists approved boolean default null;
 alter table guests add column if not exists plus_one text default '';
+-- Independent category tags for each named plus-one, in the same order as `plus_one` names.
+-- JSON string keeps the older household row shape while letting the binder edit individuals.
+alter table guests add column if not exists plus_one_tags text not null default '[]';
 -- The invite-code ledger (Invite codes tab): `sent_at` is when the link left the binder (you
 -- copied or sent it), `viewed_at` is stamped by the server the first time a guest opens the
 -- link, and `note` is your own reminder about the household. All three are optional — the app

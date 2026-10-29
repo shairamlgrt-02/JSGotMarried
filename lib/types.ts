@@ -64,12 +64,12 @@ export type Guest = {
   /** First time the guest opened their personal link — the `opened` stage. */
   viewed_at?: string | null;
   /**
-   * Who this household belongs to — one or more tags from `GUEST_TAGS` (or the couple's own),
-   * stored as a CSV of tag ids so the column stays a plain `text` in Supabase. A maid of honor
-   * who is also the bride's cousin carries both, and each tag on its own is a group the couple
-   * can filter by and message. Replaces the old single `category`.
+   * Who this household's official guest belongs to — one or more group tags, stored as a CSV.
+   * Plus-ones have their own independent groups in `plus_one_tags`.
    */
   tags?: string;
+  /** JSON array of tag-id arrays aligned with the comma-separated names in `plus_one`. */
+  plus_one_tags?: string;
   /**
    * The household's day-of role — the task they are entrusted with on the wedding day ("usher",
    * "coffee_tea"…, or the couple's own words). One role per household; a preset id from
@@ -136,6 +136,24 @@ export function parseGuestTags(csv: string | null | undefined): string[] {
 /** A list of tag ids → the CSV we store. Blanks and repeats never reach the database. */
 export function formatGuestTags(tags: string[]): string {
   return parseGuestTags(tags.join(",")).join(",");
+}
+
+/** Parse independent group tags for each plus-one, in the same order as `splitPlusOnes(plus_one)`. */
+export function parsePlusOneTags(value: string | null | undefined): string[][] {
+  if (!value) return [];
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return Array.isArray(parsed)
+      ? parsed.map((tags) => Array.isArray(tags) ? parseGuestTags(tags.map(String).join(",")) : [])
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Serialize per-companion tags without allowing duplicate or blank ids. */
+export function formatPlusOneTags(tags: string[][]): string {
+  return JSON.stringify(tags.map((group) => parseGuestTags(group.join(","))));
 }
 
 /** Preset tags read "Bride's Family"; a custom tag shows the words that were typed. */
