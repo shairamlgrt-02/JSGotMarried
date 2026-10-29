@@ -926,8 +926,8 @@ export function ComposeTab({ go }: { go?: (tab: string) => void }) {
           <label className="block text-sm font-medium mb-3">Who it goes to</label>
           <GroupPicker value={selectedCats} onChange={setSelectedCats} />
           <p className="text-xs text-ink/50 mt-2">
-            Tags are the groups you set on each household in Guests &amp; RSVP — a guest in two tags is ticked in both,
-            and still receives a single message.
+            Items marked <b>Guest tags</b> target the people you tagged in Guests &amp; RSVP; the plain role/vendor groups
+            target their matching binder lists. A person in multiple selected groups still receives a single message.
           </p>
         </div>
 

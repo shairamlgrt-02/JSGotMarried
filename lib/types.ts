@@ -111,6 +111,35 @@ export const GUEST_TAGS = {
   neighbours:     { label: "Neighbours",         icon: "⌂" },
   online:         { label: "Online Friends",     icon: "☁" },
   vip:            { label: "VIP",                icon: "★" },
+
+  // Day-of teams — these are also in the message composer as role categories. The guest-tag
+  // versions let you classify a person entered in Guests & RSVP without creating a vendor row.
+  ushers_seating:          { label: "Ushers & Seating",          icon: "❦" },
+  registration_guestbook:  { label: "Registration & Guestbook",  icon: "✎" },
+  coffee_tea_station:      { label: "Coffee & Tea Station",      icon: "☕" },
+  snacks_refreshments:     { label: "Snacks & Refreshments",     icon: "◍" },
+  serveware_table_setup:   { label: "Serveware & Table Setup",   icon: "皿" },
+  souvenirs_tokens:        { label: "Souvenirs & Tokens",        icon: "❁" },
+  decor_setup_team:        { label: "Décor & Setup Team",        icon: "✿" },
+  sound_media_support:     { label: "Sound & Media Support",     icon: "♫" },
+  games_giveaways:         { label: "Games & Giveaways",         icon: "✧" },
+  photo_moments:           { label: "Photo Moments",            icon: "◎" },
+  kids_corner_keeper:      { label: "Kids' Corner Keeper",       icon: "☘" },
+  parking_directions:      { label: "Parking & Directions",     icon: "⌂" },
+  all_around_runner:       { label: "All-Around Runner",         icon: "✚" },
+  prayer_partner:          { label: "Prayer Partner",            icon: "✝" },
+  ring_bearer:             { label: "Ring Bearer",               icon: "◯" },
+  flower_girl:             { label: "Flower Girl",               icon: "❀" },
+
+  // Vendor/contact types — the guest-tag version is distinct from the Vendors-table recipient group.
+  vendor_all:              { label: "All Vendors",               icon: "◇" },
+  vendor_band_dj:          { label: "Band / DJ",                 icon: "♫" },
+  vendor_caterers:         { label: "Caterers",                  icon: "◈" },
+  vendor_venue:            { label: "Venue",                     icon: "⌂" },
+  vendor_photo_video:      { label: "Photo / Video",             icon: "◎" },
+  vendor_coordinator:      { label: "Coordinator",               icon: "◉" },
+  vendor_hmua:             { label: "HMUA",                      icon: "✧" },
+  vendor_dress_tailor:     { label: "Dress / Tailor",            icon: "✂" },
 } as const;
 
 export type GuestTagId = keyof typeof GUEST_TAGS;
