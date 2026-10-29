@@ -149,9 +149,9 @@ export default function Hub({ info }: { info: WeddingInfo }) {
           <Tile
             href="/upload"
             icon="📷"
-            title="Share your photos"
-            text="Send your photos and videos straight to our private album."
-            cta="Upload moments"
+            title="Memory wall"
+            text="Share a note, a photo or a little video with everyone."
+            cta="Visit the wall"
             delay={0.2}
           />
           <Tile

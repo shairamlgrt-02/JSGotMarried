@@ -164,13 +164,32 @@ on conflict (id) do update set
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
 
--- Anon may INSERT only, and only into this bucket. No SELECT/UPDATE/DELETE policy exists, so the
--- default-deny of RLS keeps every uploaded object invisible to other guests.
+-- Anon may INSERT only into this bucket. No direct SELECT/UPDATE/DELETE policy exists; published
+-- moments are browsed only through /api/moments, which verifies post metadata and issues short-lived
+-- signed URLs. Unattached uploads remain unlistable and unreadable to guests.
 drop policy if exists "anon can insert wedding media" on storage.objects;
 create policy "anon can insert wedding media"
   on storage.objects for insert
   to anon
   with check (bucket_id = 'wedding-media');
+
+-- Public social-style guest moments (/upload). Media remains in the private bucket; the server
+-- reads this metadata and emits short-lived signed URLs. Guests can create posts only through
+-- /api/moments, which validates uploaded object paths; no anon SELECT/UPDATE/DELETE is granted.
+create table if not exists public.wedding_moments (
+  id uuid primary key default gen_random_uuid(),
+  device_id text not null,
+  display_name text not null default 'A guest',
+  body text not null default '',
+  overlay_text text not null default '',
+  media jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now()
+);
+create index if not exists wedding_moments_created_at_idx on public.wedding_moments (created_at desc);
+create index if not exists wedding_moments_device_created_idx on public.wedding_moments (device_id, created_at desc);
+alter table public.wedding_moments enable row level security;
+revoke all on public.wedding_moments from anon, authenticated;
+grant all on public.wedding_moments to service_role;
 
 -- ── attire palette (round 22): Garnet goes to the Maid of Honor, the Matron of Honor and the bride's
 -- sister-in-law; the four bridesmaids wear Turquoise, Citrine, Sapphire and Ruby (Amethyst retired) ──

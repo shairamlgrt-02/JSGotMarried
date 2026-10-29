@@ -22,6 +22,7 @@ import {
   type IgStoryId,
 } from "@/lib/ig-stories";
 import { qrDataUrl, saveDataUrl } from "@/lib/qr";
+import { MomentGallery } from "./moment-gallery";
 import type { WeddingInfo } from "@/lib/types";
 
 /* The full-resolution story is drawn once fonts are ready; edits redraw the preview instantly. */
@@ -429,15 +430,18 @@ export function IgStories({ embedded = false }: { embedded?: boolean }) {
                 if they reopen the page.
               </li>
               <li>
-                One-time setup: run the <b>wedding-media bucket</b> section in <code className="bg-ink/10 px-1 rounded">supabase/schema.sql</code>,
-                and make sure <code className="bg-ink/10 px-1 rounded">NEXT_PUBLIC_SUPABASE_URL</code> and{" "}
-                <code className="bg-ink/10 px-1 rounded">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> are set (Supabase → Project Settings → API).
+                One-time setup: run the <b>wedding-media + wedding_moments</b> sections in <code className="bg-ink/10 px-1 rounded">supabase/schema.sql</code>.
+                In Vercel, set <code className="bg-ink/10 px-1 rounded">NEXT_PUBLIC_SUPABASE_URL</code>,{" "}
+                <code className="bg-ink/10 px-1 rounded">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>, and the server-only{" "}
+                <code className="bg-ink/10 px-1 rounded">SUPABASE_SERVICE_ROLE_KEY</code> (Supabase → Project Settings → API).
               </li>
-              <li>Storage is private — only the binder&apos;s service-role key can read the files; guests can add but never see each other&apos;s uploads.</li>
+              <li>The album stays private in Storage. Guests can post and browse signed feed previews; only the couple&apos;s server can list or remove original files. Never prefix the service-role key with <code>NEXT_PUBLIC_</code>.</li>
             </ul>
           </div>
         </div>
       </Card>
+
+      <MomentGallery />
     </div>
   );
 }
