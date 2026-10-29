@@ -182,6 +182,7 @@ create table if not exists public.wedding_moments (
   id uuid primary key default gen_random_uuid(),
   device_id text not null,
   display_name text not null default 'A guest',
+  avatar text not null default 'man',
   body text not null default '',
   overlay_text text not null default '',
   media jsonb not null default '[]'::jsonb,
@@ -193,6 +194,7 @@ create table if not exists public.wedding_moments (
 -- to Stories-visible; new chat attachments explicitly opt out of Stories.
 alter table public.wedding_moments add column if not exists show_in_feed boolean not null default true;
 alter table public.wedding_moments add column if not exists show_in_stories boolean not null default true;
+alter table public.wedding_moments add column if not exists avatar text not null default 'man';
 create index if not exists wedding_moments_created_at_idx on public.wedding_moments (created_at desc);
 create index if not exists wedding_moments_device_created_idx on public.wedding_moments (device_id, created_at desc);
 alter table public.wedding_moments enable row level security;

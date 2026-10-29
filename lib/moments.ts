@@ -1,3 +1,5 @@
+import type { GuestAvatarId } from "@/lib/guest-avatars";
+
 export type MomentMedia = {
   url: string;
   contentType: string;
@@ -6,6 +8,7 @@ export type MomentMedia = {
 export type WeddingMoment = {
   id: string;
   displayName: string;
+  avatar: GuestAvatarId;
   body: string;
   overlayText: string;
   media: MomentMedia[];
@@ -54,6 +57,7 @@ export async function countNewMoments(since: string): Promise<number> {
 export async function publishMoment(input: {
   deviceId: string;
   displayName: string;
+  avatar: GuestAvatarId;
   body: string;
   overlayText: string;
   media: { path: string; contentType: string }[];

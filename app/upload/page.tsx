@@ -6,6 +6,7 @@ import { useTable } from "@/lib/hooks";
 import { fullDate } from "@/components/public/Envelope";
 import { deleteMoment, loadMoments, publishMoment, updateMoment, type WeddingMoment } from "@/lib/moments";
 import { browserSupabase } from "@/lib/supabase-browser";
+import { DEFAULT_GUEST_AVATAR, GUEST_AVATARS, guestAvatarEmoji, isGuestAvatarId, type GuestAvatarId } from "@/lib/guest-avatars";
 import {
   MAX_TOTAL_BYTES,
   UPLOAD_ACCEPT,
@@ -31,6 +32,21 @@ type DraftMedia = {
 
 const MAX_POST_MEDIA = 8;
 const firstName = (name: string) => name.trim().split(/\s+/)[0] || "A guest";
+
+function AvatarFace({ avatar, className = "" }: { avatar: GuestAvatarId; className?: string }) {
+  if (avatar === "man") return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={`h-[72%] w-[72%] fill-current ${className}`}>
+      <circle cx="12" cy="7.2" r="4.2" />
+      <path d="M3.5 21c.4-5.1 3.7-8 8.5-8s8.1 2.9 8.5 8H3.5Z" />
+    </svg>
+  );
+  return <span aria-hidden="true" className={`leading-none ${className}`}>{guestAvatarEmoji(avatar)}</span>;
+}
+
+function AvatarBadge({ avatar, className = "" }: { avatar: GuestAvatarId; className?: string }) {
+  return <span className={`grid shrink-0 place-items-center overflow-hidden rounded-full ${className}`}><AvatarFace avatar={avatar} /></span>;
+}
+
 const POSTER_TONES = [
   { ink: "#6B1D2A", edge: "#D8A7A8", wash: "#F8ECEA", deep: "#8F4650" },
   { ink: "#47614D", edge: "#A9BEA9", wash: "#EDF3EC", deep: "#607E65" },
@@ -157,7 +173,8 @@ function MomentCard({ post, expanded, onExpand, onEdit, onDelete }: { post: Wedd
       className={`flex w-full ${mine ? "justify-end" : "justify-start"}`}
     >
       <div className={`max-w-[88%] min-w-[42%] rounded-2xl border px-3.5 py-2.5 shadow-sm sm:max-w-[78%] ${mine ? "rounded-br-md border-[#C6D8C5] bg-[#E9F2E7]" : "rounded-bl-md border-[#E7DAD5] bg-white"}`}>
-        <header className="mb-1 flex items-center gap-3">
+        <header className="mb-1 flex items-center gap-2">
+          <AvatarBadge avatar={post.avatar} className="h-6 w-6 border border-white/80 bg-white/75 text-base text-[#6B1D2A] shadow-sm" />
           <p className="min-w-0 flex-1 truncate text-xs font-semibold" style={{ color: mine ? "#526B56" : tone.ink }}>{mine ? "You" : post.displayName}</p>
           {mine && <div className="flex shrink-0 items-center gap-2">
             <button type="button" onClick={() => onEdit(post)} className="text-[9px] tracking-wide text-taupe hover:text-wine">EDIT</button>
@@ -201,18 +218,19 @@ function EditMomentDialog({ post, onClose, onSave }: { post: WeddingMoment; onCl
 
 type NamePromptMode = "story" | "chat" | "edit";
 
-function NamePromptDialog({ mode, initialName, onClose, onSave }: { mode: NamePromptMode; initialName: string; onClose: () => void; onSave: (name: string) => void }) {
+function NamePromptDialog({ mode, initialName, initialAvatar, onClose, onSave }: { mode: NamePromptMode; initialName: string; initialAvatar: GuestAvatarId; onClose: () => void; onSave: (name: string, avatar: GuestAvatarId) => void }) {
   const [name, setName] = useState(initialName);
+  const [avatar, setAvatar] = useState(initialAvatar);
   const isChatPrompt = mode === "chat";
-  const title = mode === "story" ? "Post as?" : mode === "chat" ? "What name should everyone see?" : "Edit your name";
+  const title = mode === "story" ? "Post as?" : mode === "chat" ? "What name should everyone see?" : "Edit your name & avatar";
   const description = mode === "story"
     ? "Your Story name also appears in the group chat. Your name is optional."
     : mode === "chat"
       ? "Add your name before sending your first message. You can change it any time."
-      : "This name appears on your group chat messages and Stories.";
+      : "Your avatar and name appear on your chat messages and Stories.";
   const save = (event: FormEvent) => {
     event.preventDefault();
-    onSave(name.trim());
+    onSave(name.trim(), avatar);
   };
   return (
     <motion.div className="fixed inset-0 z-[130] flex items-center justify-center bg-ink/65 p-4" role="dialog" aria-modal="true" aria-labelledby="name-prompt-title" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
@@ -223,7 +241,19 @@ function NamePromptDialog({ mode, initialName, onClose, onSave }: { mode: NamePr
         </div>
         <label htmlFor="moment-display-name" className="micro mb-1 block text-taupe">Your name{mode === "story" ? " (optional)" : ""}</label>
         <input id="moment-display-name" autoFocus value={name} onChange={(event) => setName(event.target.value.slice(0, 60))} placeholder={mode === "story" ? "Name (optional)" : "Your name"} maxLength={60} className="w-full rounded-xl border border-taupe/25 bg-white/90 px-3 py-2.5 text-sm text-ink outline-none focus:border-wine/50" />
-        <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={onClose} className="micro rounded-full border border-taupe/30 px-4 py-2 text-taupe">CANCEL</button><button type="submit" disabled={isChatPrompt && !name.trim()} className="micro rounded-full bg-wine px-5 py-2 text-lace disabled:cursor-not-allowed disabled:opacity-45">{mode === "edit" ? "SAVE NAME" : mode === "story" ? "CONTINUE" : "CONTINUE TO CHAT"}</button></div>
+        <fieldset className="mt-4">
+          <legend className="micro mb-2 text-taupe">Choose your avatar</legend>
+          <div className="grid grid-cols-4 gap-2">
+            {GUEST_AVATARS.map((choice) => {
+              const selected = avatar === choice.id;
+              return <button key={choice.id} type="button" onClick={() => setAvatar(choice.id)} aria-label={choice.label} aria-pressed={selected} className={`flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-xl border px-1 py-1.5 transition-colors ${selected ? "border-wine bg-wine/10 ring-1 ring-wine/25" : "border-taupe/20 bg-white/70 hover:bg-white"}`}>
+                <AvatarFace avatar={choice.id} className={choice.id === "man" ? "text-[#6B1D2A]" : "text-[22px]"} />
+                <span className="max-w-full truncate text-[8px] leading-none text-taupe">{choice.label}</span>
+              </button>;
+            })}
+          </div>
+        </fieldset>
+        <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={onClose} className="micro rounded-full border border-taupe/30 px-4 py-2 text-taupe">CANCEL</button><button type="submit" disabled={isChatPrompt && !name.trim()} className="micro rounded-full bg-wine px-5 py-2 text-lace disabled:cursor-not-allowed disabled:opacity-45">{mode === "edit" ? "SAVE" : mode === "story" ? "CONTINUE" : "CONTINUE TO CHAT"}</button></div>
       </motion.form>
     </motion.div>
   );
@@ -374,8 +404,8 @@ function StoriesRail({ posts, displayName, onEdit, onDelete, onAddStory, uploadE
                 <StoryCardPreview media={first.media} fallback={initials} tone={tone} />
               )}
               <span className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/75" />
-              <span className="absolute left-2.5 top-2.5 grid h-8 w-8 place-items-center overflow-hidden rounded-full border-2 border-[#1684FF] bg-white font-serif text-xs font-semibold shadow-md" style={{ color: tone.ink }}>
-                {first.media.contentType.startsWith("image/") ? <img src={first.media.url} alt="" className="h-full w-full object-cover" loading="lazy" /> : initials.slice(0, 1)}
+              <span className="absolute left-2.5 top-2.5 grid h-8 w-8 place-items-center overflow-hidden rounded-full border-2 border-[#1684FF] bg-white font-serif text-sm text-[#6B1D2A] shadow-md">
+                <AvatarFace avatar={first.post.avatar} />
               </span>
               {group.items.some((item) => item.media.contentType.startsWith("video/")) && <span className="absolute right-2 top-2 grid h-6 w-6 place-items-center rounded-full bg-black/45 text-[10px] text-white">▶</span>}
               <span className="absolute inset-x-2 bottom-2.5 line-clamp-2 text-[11px] font-semibold leading-tight text-white drop-shadow">{group.displayName}</span>
@@ -403,7 +433,7 @@ function StoriesRail({ posts, displayName, onEdit, onDelete, onAddStory, uploadE
                 {currentGroup.items.map((item, index) => <span key={item.id} className="h-1 flex-1 overflow-hidden rounded-full bg-white/35"><span className={`block h-full rounded-full ${index <= (active?.item ?? 0) ? "bg-white" : "bg-transparent"}`} /></span>)}
               </div>
               <div className="absolute inset-x-4 top-7 z-20 flex items-center gap-3">
-                <div className="grid h-9 w-9 place-items-center rounded-full border border-white/50 bg-white/10 font-serif">{currentGroup.displayName.slice(0, 1).toUpperCase()}</div>
+                <AvatarBadge avatar={currentItem.post.avatar} className="h-9 w-9 border border-white/50 bg-white/10 text-lg text-white" />
                 <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{currentGroup.displayName}</p><p className="text-[10px] text-white/65">{relativeTime(currentItem.createdAt)}</p></div>
                 {currentItem.post.canManage && <>
                   <button type="button" aria-label="Edit this story" onClick={() => { onEdit(currentItem.post); setActive(null); }} className="rounded-full bg-black/30 px-2.5 py-1.5 text-[10px] tracking-wide">EDIT</button>
@@ -485,6 +515,7 @@ export default function UploadPage() {
   const draftRef = useRef(draftMedia);
   draftRef.current = draftMedia;
   const [displayName, setDisplayName] = useState("");
+  const [avatar, setAvatar] = useState<GuestAvatarId>(DEFAULT_GUEST_AVATAR);
   const [namePromptMode, setNamePromptMode] = useState<NamePromptMode | null>(null);
   const [body, setBody] = useState("");
   const [recording, setRecording] = useState(false);
@@ -547,7 +578,11 @@ export default function UploadPage() {
   }, [deviceId]);
 
   useEffect(() => {
-    try { setDisplayName(localStorage.getItem("jsos:moment-name-v1") || ""); } catch { /* private mode */ }
+    try {
+      setDisplayName(localStorage.getItem("jsos:moment-name-v1") || "");
+      const savedAvatar = localStorage.getItem("jsos:moment-avatar-v1");
+      if (isGuestAvatarId(savedAvatar)) setAvatar(savedAvatar);
+    } catch { /* private mode */ }
     void refreshFeed();
     return () => draftRef.current.forEach((item) => URL.revokeObjectURL(item.previewUrl));
   }, [refreshFeed]);
@@ -666,7 +701,7 @@ export default function UploadPage() {
         await uploadMediaFile(file, path, (percent) => setUploadProgress(percent));
         setQuota(addToQuota([file]));
         const post = await publishMoment({
-          deviceId, displayName: displayName.trim(), body: "", overlayText: "",
+          deviceId, displayName: displayName.trim(), avatar, body: "", overlayText: "",
           media: [{ path, contentType: mediaContentType(file) }], showInFeed: false, showInStories: true,
         });
         published.push(post);
@@ -686,15 +721,19 @@ export default function UploadPage() {
   const showStoryPicker = () => storyInput.current?.click();
   const openStoryPicker = () => setNamePromptMode("story");
 
-  const saveNamePrompt = (name: string) => {
+  const saveNamePrompt = (name: string, selectedAvatar: GuestAvatarId) => {
     const mode = namePromptMode;
     if (!mode) return;
     const cleanName = name.trim();
     setDisplayName(cleanName);
-    try { localStorage.setItem("jsos:moment-name-v1", cleanName); } catch { /* private mode */ }
+    setAvatar(selectedAvatar);
+    try {
+      localStorage.setItem("jsos:moment-name-v1", cleanName);
+      localStorage.setItem("jsos:moment-avatar-v1", selectedAvatar);
+    } catch { /* private mode */ }
     setNamePromptMode(null);
     if (mode === "story") showStoryPicker();
-    if (mode === "chat") void sharePost(cleanName);
+    if (mode === "chat") void sharePost(cleanName, selectedAvatar);
   };
 
   const startVoiceNote = async () => {
@@ -762,9 +801,10 @@ export default function UploadPage() {
     setDraftMedia(remaining);
   };
 
-  const sharePost = async (providedName?: string) => {
+  const sharePost = async (providedName?: string, providedAvatar?: GuestAvatarId) => {
     if (!configured || posting || (!body.trim() && !draftMedia.length)) return;
     const authorName = (providedName ?? displayName).trim();
+    const authorAvatar = providedAvatar ?? avatar;
     if (!authorName && providedName === undefined) {
       setNamePromptMode("chat");
       return;
@@ -791,7 +831,7 @@ export default function UploadPage() {
         readyMedia.push({ path: item.path!, contentType: mediaContentType(item.file) });
       }
 
-      const post = await publishMoment({ deviceId, displayName: authorName, body, overlayText: "", media: readyMedia, showInFeed: true, showInStories: false });
+      const post = await publishMoment({ deviceId, displayName: authorName, avatar: authorAvatar, body, overlayText: "", media: readyMedia, showInFeed: true, showInStories: false });
       if (post.showInFeed) {
         setPosts((current) => {
           const next = mergeChatMessages(current, [post]);
@@ -894,8 +934,8 @@ export default function UploadPage() {
             <h1 className="mt-1 font-serif text-2xl leading-tight text-wine sm:text-[1.7rem]">Wedding chat</h1>
             <p className="mt-0.5 truncate text-xs text-taupe">{info ? fullDate(info.date) : "11.11.2026"} · {couple}{hashtag ? ` · ${hashtag}` : ""}</p>
           </div>
-          <button type="button" onClick={() => setNamePromptMode("edit")} title={displayName.trim() ? `Edit name: ${displayName}` : "Add your name"} aria-label={displayName.trim() ? `Edit your name, currently ${displayName}` : "Add your name"} className="flex max-w-[112px] shrink-0 items-center gap-1.5 rounded-full border border-[#D8B9AE] bg-white/75 px-2.5 py-2 text-[10px] font-medium text-[#70434A] shadow-sm transition-colors hover:bg-[#F7ECE9] sm:max-w-[150px] sm:px-3 sm:text-xs">
-            <span className="truncate">{displayName.trim() ? `As ${firstName(displayName)}` : "Add your name"}</span><span aria-hidden>✎</span>
+          <button type="button" onClick={() => setNamePromptMode("edit")} title={displayName.trim() ? `Edit name and avatar: ${displayName}` : "Add your name and choose an avatar"} aria-label={displayName.trim() ? `Edit your name and avatar, currently ${displayName}` : "Add your name and choose an avatar"} className="flex max-w-[112px] shrink-0 items-center gap-1.5 rounded-full border border-[#D8B9AE] bg-white/75 px-2.5 py-2 text-[10px] font-medium text-[#70434A] shadow-sm transition-colors hover:bg-[#F7ECE9] sm:max-w-[150px] sm:px-3 sm:text-xs">
+            <AvatarBadge avatar={avatar} className="h-5 w-5 border border-[#E4D2CB] bg-white text-sm text-[#6B1D2A]" /><span className="truncate">{displayName.trim() ? `As ${firstName(displayName)}` : "Add your name"}</span><span aria-hidden>✎</span>
           </button>
         </header>
 
@@ -924,8 +964,8 @@ export default function UploadPage() {
               <div className="min-w-0"><h2 className="font-serif text-xl leading-tight text-[#46362C]">Wedding conversation</h2><p className="text-[11px] text-taupe">Chat, share updates &amp; relive the night</p></div>
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
-              <button type="button" onClick={() => setNamePromptMode("edit")} title={displayName.trim() ? `Edit name: ${displayName}` : "Add your name"} aria-label={displayName.trim() ? `Edit your name, currently ${displayName}` : "Add your name"} className="flex max-w-[88px] items-center gap-1 truncate rounded-full border border-[#E3D1CB] bg-white/80 px-2 py-1 text-[9px] font-medium text-[#70434A] hover:bg-[#F7ECE9] sm:max-w-[120px] sm:text-[10px]">
-                <span className="truncate">{displayName.trim() ? `As ${firstName(displayName)}` : "Add name"}</span><span aria-hidden>✎</span>
+              <button type="button" onClick={() => setNamePromptMode("edit")} title={displayName.trim() ? `Edit name and avatar: ${displayName}` : "Add your name and choose an avatar"} aria-label={displayName.trim() ? `Edit your name and avatar, currently ${displayName}` : "Add your name and choose an avatar"} className="flex max-w-[88px] items-center gap-1 truncate rounded-full border border-[#E3D1CB] bg-white/80 px-2 py-1 text-[9px] font-medium text-[#70434A] hover:bg-[#F7ECE9] sm:max-w-[120px] sm:text-[10px]">
+                <AvatarBadge avatar={avatar} className="h-4 w-4 border border-[#E3D1CB] bg-white text-[10px] text-[#6B1D2A]" /><span className="truncate">{displayName.trim() ? `As ${firstName(displayName)}` : "Add name"}</span><span aria-hidden>✎</span>
               </button>
               <span title={liveStatus === "live" ? "Live" : liveStatus === "offline" ? "Offline" : "Connecting"} className="inline-flex items-center gap-1.5 text-[10px] text-taupe"><span className={`h-2 w-2 rounded-full ${liveStatus === "live" ? "bg-[#4D8A57]" : liveStatus === "offline" ? "bg-[#B66A62]" : "bg-[#C49A57]"}`} /><span className="hidden sm:inline">{liveStatus === "live" ? "LIVE" : liveStatus === "offline" ? "OFFLINE" : "CONNECTING"}</span></span>
               <button type="button" onClick={() => { setPulling(true); void refreshFeed(true); }} title="Refresh chat" aria-label="Refresh chat" className="grid h-8 w-8 place-items-center rounded-full border border-[#E3D1CB] text-lg text-[#806F68] transition-colors hover:bg-[#F5E9E6]">↻</button>
@@ -977,7 +1017,7 @@ export default function UploadPage() {
       </div>
       <AnimatePresence>
         {editingPost && <EditMomentDialog key={editingPost.id} post={editingPost} onClose={() => setEditingPost(null)} onSave={savePostEdit} />}
-        {namePromptMode && <NamePromptDialog key={namePromptMode} mode={namePromptMode} initialName={displayName} onClose={() => setNamePromptMode(null)} onSave={saveNamePrompt} />}
+        {namePromptMode && <NamePromptDialog key={namePromptMode} mode={namePromptMode} initialName={displayName} initialAvatar={avatar} onClose={() => setNamePromptMode(null)} onSave={saveNamePrompt} />}
       </AnimatePresence>
     </main>
   );

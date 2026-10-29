@@ -452,6 +452,8 @@ and recorded or attached voice notes appear as WhatsApp-style bubbles in time or
 messages are delivered live over a private Supabase Realtime Broadcast channel; clients receive only
 a post ID, then request the public-safe post from `/api/moments` for signed private-media URLs.
 Reconnects also reload the latest messages, and a manual refresh remains available as a fallback.
+Guests can choose from eight small avatar presets; the default is a man silhouette, and the choice
+is shared across Stories and chat.
 
 Chat attachments stay in the group chat and never appear in Stories. Chat photos/videos are reduced
 to lower resolution before upload and do not use the Stories quota. Guests can use the separate
@@ -470,7 +472,7 @@ the couple's service-role key remains server-side for moderation and broadcasts.
 * **Accepted media:** photos, video (including iPhone HEIC/HEIF and `.mov`) and common audio formats.
 * **One-time setup:** run the `wedding-media` and `wedding_moments` sections of
   `supabase/schema.sql`. Re-run both on existing projects to add the audio MIME types and the
-  `show_in_feed`, `show_in_stories` / Realtime listener-policy migrations. Existing posts default to Stories-visible; chat visibility is unchanged.
+  `show_in_feed`, `show_in_stories`, `avatar` / Realtime listener-policy migrations. Existing posts default to Stories-visible with the man-silhouette avatar; chat visibility is unchanged.
   In Vercel set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` for browser uploads
   and live subscriptions, plus `SUPABASE_SERVICE_ROLE_KEY` as a server-only secret for signed media
   URLs, moderation and broadcasts. Never prefix the service-role key with `NEXT_PUBLIC_`.

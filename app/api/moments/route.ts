@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { COOKIE, isAuthed } from "@/lib/auth";
 import { serverSupabase } from "@/lib/supabase-server";
 import type { WeddingMoment } from "@/lib/moments";
+import { DEFAULT_GUEST_AVATAR, isGuestAvatarId } from "@/lib/guest-avatars";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -20,6 +21,7 @@ type StoredMedia = { path: string; contentType: string };
 type Row = {
   id: string;
   display_name: string;
+  avatar: string;
   body: string;
   overlay_text: string;
   media: StoredMedia[];
@@ -81,6 +83,7 @@ function toPublicPost(row: Row, urls: Map<string, string>, canManage = false): W
   return {
     id: row.id,
     displayName: row.display_name || "A guest",
+    avatar: isGuestAvatarId(row.avatar) ? row.avatar : DEFAULT_GUEST_AVATAR,
     body: row.body || "",
     overlayText: row.overlay_text || "",
     media,
@@ -117,7 +120,7 @@ export async function GET(req: NextRequest) {
   const limit = Math.max(1, Math.min(admin ? 24 : stories ? 60 : 24, Number.isFinite(requested) && requested > 0 ? requested : fallbackLimit));
   const before = url.searchParams.get("before");
   let query = db.from(TABLE)
-    .select("id, display_name, body, overlay_text, media, device_id, show_in_feed, show_in_stories, created_at")
+    .select("id, display_name, avatar, body, overlay_text, media, device_id, show_in_feed, show_in_stories, created_at")
     .order("created_at", { ascending: false })
     .limit(limit);
   if (requestedId) query = query.eq("id", requestedId);
@@ -152,6 +155,7 @@ export async function POST(req: NextRequest) {
   const deviceId = String(body.deviceId ?? "").trim();
   if (!validDeviceId(deviceId)) return json({ error: "Please refresh the page and try again." }, 400);
   const displayName = safeName(body.displayName);
+  const avatar = isGuestAvatarId(body.avatar) ? body.avatar : DEFAULT_GUEST_AVATAR;
   const text = safeText(body.body, 1200);
   const overlayText = safeText(body.overlayText, 120);
   const showInFeed = body.showInFeed !== false;
@@ -181,8 +185,8 @@ export async function POST(req: NextRequest) {
 
 
   const { data, error } = await db.from(TABLE)
-    .insert({ device_id: deviceId, display_name: displayName, body: text, overlay_text: overlayText, media, show_in_feed: showInFeed, show_in_stories: showInStories })
-    .select("id, display_name, body, overlay_text, media, device_id, show_in_feed, show_in_stories, created_at")
+    .insert({ device_id: deviceId, display_name: displayName, avatar, body: text, overlay_text: overlayText, media, show_in_feed: showInFeed, show_in_stories: showInStories })
+    .select("id, display_name, avatar, body, overlay_text, media, device_id, show_in_feed, show_in_stories, created_at")
     .single();
   if (error || !data) return json({ error: "Your post couldn't be saved just now. Please try again." }, 503);
   const row = data as Row;
@@ -221,7 +225,7 @@ export async function PATCH(req: NextRequest) {
   if (!text && !media.length) return json({ error: "A text-only post needs a note." }, 400);
   const { data, error } = await db.from(TABLE).update({ body: text, overlay_text: overlayText })
     .eq("id", id)
-    .select("id, display_name, body, overlay_text, media, device_id, show_in_feed, show_in_stories, created_at")
+    .select("id, display_name, avatar, body, overlay_text, media, device_id, show_in_feed, show_in_stories, created_at")
     .single();
   if (error || !data) return json({ error: "Your edits couldn't be saved. Please try again." }, 503);
   const row = data as Row;
