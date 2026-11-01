@@ -2,7 +2,7 @@ export const GUEST_AVATARS = [
   { id: "man", label: "Man silhouette", emoji: "" },
   { id: "man-alt", label: "Man with beard", emoji: "🧔🏻" },
   { id: "woman", label: "Woman", emoji: "👩🏻" },
-  { id: "baby", label: "Baby", emoji: "👶" },
+  { id: "woman-alt", label: "Woman with curly hair", emoji: "👩🏽‍🦱" },
   { id: "cat", label: "Cat", emoji: "🐱" },
   { id: "bear", label: "Bear", emoji: "🐻" },
   { id: "heart", label: "Heart", emoji: "🤍" },
@@ -16,9 +16,9 @@ export function isGuestAvatarId(value: unknown): value is GuestAvatarId {
   return typeof value === "string" && GUEST_AVATARS.some((avatar) => avatar.id === value);
 }
 
-/** Map the earlier curly-haired preset to the new baby option without breaking saved choices. */
+/** Map the earlier baby preset to the closest current portrait without breaking saved choices. */
 export function normalizeGuestAvatarId(value: unknown): GuestAvatarId {
-  if (value === "woman-alt") return "baby";
+  if (value === "baby") return "woman-alt";
   return isGuestAvatarId(value) ? value : DEFAULT_GUEST_AVATAR;
 }
 

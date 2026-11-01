@@ -7,7 +7,7 @@ import { SEED } from "@/lib/seed";
 import SocialShell from "@/components/public/SocialShell";
 import { deleteMoment, loadMoments, publishMoment, updateMoment, type WeddingMoment } from "@/lib/moments";
 import { browserSupabase } from "@/lib/supabase-browser";
-import { cleanGuestName, GUEST_NAME_EVENT, GUEST_NAME_KEY } from "@/lib/guest-identity";
+import { cleanGuestName, GUEST_AVATAR_EVENT, GUEST_AVATAR_KEY, GUEST_NAME_EVENT, GUEST_NAME_KEY } from "@/lib/guest-identity";
 import { DEFAULT_GUEST_AVATAR, GUEST_AVATARS, guestAvatarEmoji, normalizeGuestAvatarId, type GuestAvatarId } from "@/lib/guest-avatars";
 import {
   MAX_TOTAL_BYTES,
@@ -584,7 +584,7 @@ export default function UploadPage() {
   useEffect(() => {
     try {
       setDisplayName(localStorage.getItem(GUEST_NAME_KEY) || "");
-      const savedAvatar = localStorage.getItem("jsos:moment-avatar-v1");
+      const savedAvatar = localStorage.getItem(GUEST_AVATAR_KEY);
       if (savedAvatar) setAvatar(normalizeGuestAvatarId(savedAvatar));
     } catch { /* private mode */ }
     void refreshFeed();
@@ -597,9 +597,23 @@ export default function UploadPage() {
       if (typeof value === "string") setDisplayName(cleanGuestName(value));
       else { try { setDisplayName(localStorage.getItem(GUEST_NAME_KEY) || ""); } catch { /* private mode */ } }
     };
+    const syncAvatar = (event: Event) => {
+      const value = (event as CustomEvent<string>).detail;
+      if (typeof value === "string") setAvatar(normalizeGuestAvatarId(value));
+      else { try { setAvatar(normalizeGuestAvatarId(localStorage.getItem(GUEST_AVATAR_KEY))); } catch { /* private mode */ } }
+    };
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === GUEST_NAME_KEY) setDisplayName(cleanGuestName(event.newValue));
+      if (event.key === GUEST_AVATAR_KEY) setAvatar(normalizeGuestAvatarId(event.newValue));
+    };
     window.addEventListener(GUEST_NAME_EVENT, syncName);
-    window.addEventListener("storage", syncName);
-    return () => { window.removeEventListener(GUEST_NAME_EVENT, syncName); window.removeEventListener("storage", syncName); };
+    window.addEventListener(GUEST_AVATAR_EVENT, syncAvatar);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener(GUEST_NAME_EVENT, syncName);
+      window.removeEventListener(GUEST_AVATAR_EVENT, syncAvatar);
+      window.removeEventListener("storage", onStorage);
+    };
   }, []);
 
   useEffect(() => {
@@ -744,9 +758,10 @@ export default function UploadPage() {
     setAvatar(selectedAvatar);
     try {
       localStorage.setItem(GUEST_NAME_KEY, cleanName);
-      localStorage.setItem("jsos:moment-avatar-v1", selectedAvatar);
+      localStorage.setItem(GUEST_AVATAR_KEY, selectedAvatar);
     } catch { /* private mode */ }
     window.dispatchEvent(new CustomEvent(GUEST_NAME_EVENT, { detail: cleanName }));
+    window.dispatchEvent(new CustomEvent(GUEST_AVATAR_EVENT, { detail: selectedAvatar }));
     setNamePromptMode(null);
     if (mode === "story") showStoryPicker();
     if (mode === "chat") void sharePost(cleanName, selectedAvatar);
@@ -862,8 +877,12 @@ export default function UploadPage() {
       draftRef.current.forEach((item) => URL.revokeObjectURL(item.previewUrl));
       setDraftMedia([]);
       setNotice("Sent to the group chat ♡ Chat photos and videos are optimized and stay out of Stories.");
-      try { localStorage.setItem(GUEST_NAME_KEY, authorName); } catch { /* private mode */ }
+      try {
+        localStorage.setItem(GUEST_NAME_KEY, authorName);
+        localStorage.setItem(GUEST_AVATAR_KEY, authorAvatar);
+      } catch { /* private mode */ }
       window.dispatchEvent(new CustomEvent(GUEST_NAME_EVENT, { detail: authorName }));
+      window.dispatchEvent(new CustomEvent(GUEST_AVATAR_EVENT, { detail: authorAvatar }));
       window.setTimeout(() => setNotice(""), 4500);
     } catch (e) {
       setError((e as Error).message || "That didn't send — please try again.");

@@ -1,5 +1,7 @@
 export const GUEST_NAME_KEY = "jsos:moment-name-v1";
+export const GUEST_AVATAR_KEY = "jsos:moment-avatar-v1";
 export const GUEST_NAME_EVENT = "jsos:guest-name-updated";
+export const GUEST_AVATAR_EVENT = "jsos:guest-avatar-updated";
 export const OPEN_GUEST_NAME_EVENT = "jsos:open-guest-name";
 
 export function cleanGuestName(value: unknown): string {
