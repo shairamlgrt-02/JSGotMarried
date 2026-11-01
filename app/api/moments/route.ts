@@ -11,6 +11,12 @@ export const runtime = "nodejs";
 const TABLE = "wedding_moments";
 const BUCKET = "wedding-media";
 const SIGNED_URL_SECONDS = 60 * 60 * 12;
+const MOMENTS_SETUP_ERROR = "The moments feed is not set up yet. Run the wedding-media and moments sections of supabase/schema.sql.";
+const isMissingMomentsSchema = (error: { code?: string; message?: string }) =>
+  ["42P01", "42703", "PGRST204", "PGRST205"].includes(error.code || "") ||
+  /relation .* does not exist|column .* does not exist|could not find the table|could not find the .* column|schema cache/i.test(error.message || "");
+const momentsReadError = (error: { code?: string; message?: string }) =>
+  isMissingMomentsSchema(error) ? MOMENTS_SETUP_ERROR : "The moments feed couldn't connect to its database. Please let the couple know.";
 const json = (body: unknown, status = 200) =>
   NextResponse.json(body, { status, headers: { "Cache-Control": "no-store, max-age=0" } });
 const safeName = (value: unknown) => String(value ?? "").replace(/[<>\u0000-\u001f]/g, "").trim().slice(0, 60) || "A guest";
@@ -104,7 +110,10 @@ export async function GET(req: NextRequest) {
     if (!Number.isFinite(Date.parse(since))) return json({ error: "Invalid refresh cursor." }, 400);
     const { count, error } = await db.from(TABLE).select("id", { count: "exact", head: true })
       .eq("show_in_feed", true).gt("created_at", since);
-    if (error) return json({ error: "The moments feed is not set up yet. Please let the couple know." }, 503);
+    if (error) {
+      console.error("[moments] feed count query failed", { code: error.code, message: error.message });
+      return json({ error: momentsReadError(error) }, 503);
+    }
     return json({ newCount: count ?? 0 });
   }
 
@@ -128,7 +137,10 @@ export async function GET(req: NextRequest) {
   else if (!admin) query = query.eq("show_in_feed", true);
   if (!requestedId && before && Number.isFinite(Date.parse(before))) query = query.lt("created_at", before);
   const { data, error } = await query;
-  if (error) return json({ error: "The moments feed is not set up yet. Run the wedding-media and moments sections of supabase/schema.sql." }, 503);
+  if (error) {
+    console.error("[moments] feed query failed", { code: error.code, message: error.message });
+    return json({ error: momentsReadError(error) }, 503);
+  }
 
   const rows = (data ?? []) as Row[];
   try {
@@ -188,7 +200,14 @@ export async function POST(req: NextRequest) {
     .insert({ device_id: deviceId, display_name: displayName, avatar, body: text, overlay_text: overlayText, media, show_in_feed: showInFeed, show_in_stories: showInStories })
     .select("id, display_name, avatar, body, overlay_text, media, device_id, show_in_feed, show_in_stories, created_at")
     .single();
-  if (error || !data) return json({ error: "Your post couldn't be saved just now. Please try again." }, 503);
+  if (error || !data) {
+    // Keep guest-facing responses clean, but leave enough detail in server logs to identify a
+    // missing moments migration or a permissions/configuration problem without logging post content.
+    if (error) console.error("[moments] post insert failed", { code: error.code, message: error.message });
+    if (error && isMissingMomentsSchema(error)) return json({ error: MOMENTS_SETUP_ERROR }, 503);
+    if (error?.code === "42501") return json({ error: "The moments feed is missing its server write permissions. Please let the couple know." }, 503);
+    return json({ error: "Your post couldn't be saved just now. Please try again." }, 503);
+  }
   const row = data as Row;
   await broadcastMomentChange(db, "INSERT", row.id);
   try {

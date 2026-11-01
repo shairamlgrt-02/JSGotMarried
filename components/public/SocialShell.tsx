@@ -2,7 +2,8 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { fullDate } from "@/components/public/Envelope";
 import { useCountdown } from "@/lib/hooks";
-import { cleanGuestName, GUEST_NAME_EVENT, GUEST_NAME_KEY, OPEN_GUEST_NAME_EVENT } from "@/lib/guest-identity";
+import { cleanGuestName, GUEST_AVATAR_EVENT, GUEST_AVATAR_KEY, GUEST_NAME_EVENT, GUEST_NAME_KEY, OPEN_GUEST_NAME_EVENT } from "@/lib/guest-identity";
+import { DEFAULT_GUEST_AVATAR, GUEST_AVATARS, guestAvatarEmoji, normalizeGuestAvatarId, type GuestAvatarId } from "@/lib/guest-avatars";
 import type { WeddingInfo } from "@/lib/types";
 
 type ActivePage = "home" | "gifts" | "chat" | "program" | "games";
@@ -29,25 +30,43 @@ function NavIcon({ name }: { name: "home" | "instagram" | "chat" | "program" | "
   return <svg viewBox="0 0 24 24" aria-hidden="true" {...shared}><path d="M6.5 9h11a4 4 0 0 1 3.8 5.2l-1 3.2a2.5 2.5 0 0 1-4.1 1.1L14 16h-4l-2.2 2.5a2.5 2.5 0 0 1-4.1-1.1l-1-3.2A4 4 0 0 1 6.5 9Z" /><path d="M7.5 11.5v4m-2-2h4m7.3-.5h.1m2 2h.1" /></svg>;
 }
 
-function NameEditor({ initialName, onClose, onSave }: { initialName: string; onClose: () => void; onSave: (name: string) => void }) {
+function AvatarMark({ avatar, className = "" }: { avatar: GuestAvatarId; className?: string }) {
+  if (avatar === "man") return <svg viewBox="0 0 24 24" aria-hidden="true" className={`h-[72%] w-[72%] fill-current ${className}`}><circle cx="12" cy="7.2" r="4.2" /><path d="M3.5 21c.4-5.1 3.7-8 8.5-8s8.1 2.9 8.5 8H3.5Z" /></svg>;
+  return <span aria-hidden="true" className={`leading-none ${className}`}>{guestAvatarEmoji(avatar)}</span>;
+}
+
+function NameEditor({ initialName, initialAvatar, onClose, onSave }: { initialName: string; initialAvatar: GuestAvatarId; onClose: () => void; onSave: (name: string, avatar: GuestAvatarId) => void }) {
   const [value, setValue] = useState(initialName);
+  const [avatar, setAvatar] = useState(initialAvatar);
   const input = useRef<HTMLInputElement>(null);
   useEffect(() => { input.current?.focus(); }, []);
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const name = cleanGuestName(value);
-    if (name) onSave(name);
+    if (name) onSave(name, avatar);
   };
   return (
     <div className="fixed inset-0 z-[100] flex items-end justify-center bg-[#29181A]/45 p-3 backdrop-blur-[2px] sm:items-center" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <form role="dialog" aria-modal="true" aria-labelledby="guest-name-title" onSubmit={submit} className="w-full max-w-md rounded-[26px] bg-[#FFFCF8] p-5 shadow-2xl ring-1 ring-white/90 sm:p-6">
+      <form role="dialog" aria-modal="true" aria-labelledby="guest-name-title" onSubmit={submit} className="max-h-[92svh] w-full max-w-md overflow-y-auto rounded-[26px] bg-[#FFFCF8] p-5 shadow-2xl ring-1 ring-white/90 sm:p-6">
         <div className="flex items-start justify-between gap-3">
           <div><p className="micro text-[9px] tracking-[0.2em] text-taupe">YOUR SHARED GUEST NAME</p><h2 id="guest-name-title" className="mt-1 font-serif text-2xl font-semibold text-[#5B3038]">What should we call you?</h2></div>
           <button type="button" onClick={onClose} aria-label="Close name editor" className="grid h-9 w-9 place-items-center rounded-full bg-[#F5ECE7] text-lg text-[#725B55]">×</button>
         </div>
         <p className="mt-2 text-xs leading-relaxed text-taupe">This name is shared between the wedding pages and your chat posts on this device.</p>
         <input ref={input} value={value} onChange={(event) => setValue(event.target.value.slice(0, 120))} maxLength={120} autoComplete="name" placeholder="Your name" className="mt-4 w-full rounded-2xl border border-[#DCCBC4] bg-white px-4 py-3 font-serif text-lg text-ink outline-none placeholder:italic placeholder:text-taupe/70 focus:border-[#9B5B64]" />
-        <div className="mt-4 flex justify-end gap-2"><button type="button" onClick={onClose} className="rounded-full px-4 py-2 text-xs font-medium text-taupe hover:bg-[#F5ECE7]">Cancel</button><button type="submit" disabled={!cleanGuestName(value)} className="rounded-full bg-[#6B1D2A] px-5 py-2.5 text-xs font-semibold tracking-wide text-white hover:bg-[#521522] disabled:opacity-40">Save name</button></div>
+        <fieldset className="mt-4">
+          <legend className="mb-2 text-[10px] font-medium tracking-[0.13em] text-taupe">CHOOSE YOUR AVATAR</legend>
+          <div className="grid grid-cols-4 gap-2">
+            {GUEST_AVATARS.map((choice) => {
+              const selected = avatar === choice.id;
+              return <button key={choice.id} type="button" onClick={() => setAvatar(choice.id)} aria-label={choice.label} aria-pressed={selected} className={`flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-xl border px-1 py-1.5 transition-colors ${selected ? "border-[#6B1D2A] bg-[#F5E8E5] ring-1 ring-[#6B1D2A]/25" : "border-[#E4D6D0] bg-white/75 hover:bg-white"}`}>
+                <AvatarMark avatar={choice.id} className={choice.id === "man" ? "text-[#6B1D2A]" : "text-[22px]"} />
+                <span className="max-w-full truncate text-[8px] leading-none text-taupe">{choice.label}</span>
+              </button>;
+            })}
+          </div>
+        </fieldset>
+        <div className="mt-4 flex justify-end gap-2"><button type="button" onClick={onClose} className="rounded-full px-4 py-2 text-xs font-medium text-taupe hover:bg-[#F5ECE7]">Cancel</button><button type="submit" disabled={!cleanGuestName(value)} className="rounded-full bg-[#6B1D2A] px-5 py-2.5 text-xs font-semibold tracking-wide text-white hover:bg-[#521522] disabled:opacity-40">Save name &amp; avatar</button></div>
       </form>
     </div>
   );
@@ -55,30 +74,48 @@ function NameEditor({ initialName, onClose, onSave }: { initialName: string; onC
 
 export default function SocialShell({ children, info, active }: { children: ReactNode; info: WeddingInfo; active: ActivePage }) {
   const [guestName, setGuestName] = useState("");
+  const [guestAvatar, setGuestAvatar] = useState<GuestAvatarId>(DEFAULT_GUEST_AVATAR);
   const [editingName, setEditingName] = useState(false);
   const firstName = guestName.trim().split(/\s+/)[0] || "";
   useEffect(() => {
-    try { setGuestName(localStorage.getItem(GUEST_NAME_KEY) || ""); } catch { /* private mode */ }
+    try {
+      setGuestName(cleanGuestName(localStorage.getItem(GUEST_NAME_KEY)));
+      setGuestAvatar(normalizeGuestAvatarId(localStorage.getItem(GUEST_AVATAR_KEY)));
+    } catch { /* private mode */ }
     const onName = (event: Event) => {
       const detail = (event as CustomEvent<string>).detail;
       try { setGuestName(cleanGuestName(detail ?? localStorage.getItem(GUEST_NAME_KEY))); } catch { setGuestName(cleanGuestName(detail)); }
     };
-    const onStorage = (event: StorageEvent) => { if (event.key === GUEST_NAME_KEY) setGuestName(cleanGuestName(event.newValue)); };
+    const onAvatar = (event: Event) => {
+      const detail = (event as CustomEvent<string>).detail;
+      try { setGuestAvatar(normalizeGuestAvatarId(detail ?? localStorage.getItem(GUEST_AVATAR_KEY))); } catch { setGuestAvatar(normalizeGuestAvatarId(detail)); }
+    };
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === GUEST_NAME_KEY) setGuestName(cleanGuestName(event.newValue));
+      if (event.key === GUEST_AVATAR_KEY) setGuestAvatar(normalizeGuestAvatarId(event.newValue));
+    };
     const onOpenName = () => setEditingName(true);
     window.addEventListener(GUEST_NAME_EVENT, onName);
+    window.addEventListener(GUEST_AVATAR_EVENT, onAvatar);
     window.addEventListener("storage", onStorage);
     window.addEventListener(OPEN_GUEST_NAME_EVENT, onOpenName);
     return () => {
       window.removeEventListener(GUEST_NAME_EVENT, onName);
+      window.removeEventListener(GUEST_AVATAR_EVENT, onAvatar);
       window.removeEventListener("storage", onStorage);
       window.removeEventListener(OPEN_GUEST_NAME_EVENT, onOpenName);
     };
   }, []);
 
-  const saveName = (name: string) => {
+  const saveIdentity = (name: string, avatar: GuestAvatarId) => {
     setGuestName(name);
-    try { localStorage.setItem(GUEST_NAME_KEY, name); } catch { /* private mode */ }
+    setGuestAvatar(avatar);
+    try {
+      localStorage.setItem(GUEST_NAME_KEY, name);
+      localStorage.setItem(GUEST_AVATAR_KEY, avatar);
+    } catch { /* private mode */ }
     window.dispatchEvent(new CustomEvent(GUEST_NAME_EVENT, { detail: name }));
+    window.dispatchEvent(new CustomEvent(GUEST_AVATAR_EVENT, { detail: avatar }));
     setEditingName(false);
   };
 
@@ -99,8 +136,8 @@ export default function SocialShell({ children, info, active }: { children: Reac
             <span className="min-w-0"><span className="micro block text-[7px] tracking-[0.22em] text-white/70 sm:text-[9px]">THE WEDDING OF</span><span className="script block truncate text-[23px] leading-[1.05] text-white sm:text-[32px]">{info.groom} &amp; {info.bride}</span></span>
           </a>
           <span className="hidden shrink-0 font-serif text-[11px] tracking-[0.16em] text-white/75 sm:block">{fullDate(info.date)}</span>
-          <button type="button" onClick={() => setEditingName(true)} title={guestName ? `Edit your name: ${guestName}` : "Add your name"} aria-label={guestName ? `Edit your name, currently ${guestName}` : "Add your name"} className="flex max-w-[104px] shrink-0 items-center gap-1.5 rounded-full border border-white/35 bg-white/10 px-2.5 py-2 text-[10px] font-medium text-white transition-colors hover:bg-white/20 sm:max-w-[150px] sm:px-3 sm:text-xs">
-            <span aria-hidden className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-white/15 text-sm">{guestName ? guestName.trim().slice(0, 1).toUpperCase() : "＋"}</span><span className="truncate">{guestName ? `As ${firstName}` : "Name"}</span><span aria-hidden>✎</span>
+          <button type="button" onClick={() => setEditingName(true)} title={guestName ? `Edit your name and avatar: ${guestName}` : "Add your name and choose an avatar"} aria-label={guestName ? `Edit your name and avatar, currently ${guestName}` : "Add your name and choose an avatar"} className="flex max-w-[104px] shrink-0 items-center gap-1.5 rounded-full border border-white/35 bg-white/10 px-2.5 py-2 text-[10px] font-medium text-white transition-colors hover:bg-white/20 sm:max-w-[150px] sm:px-3 sm:text-xs">
+            <span aria-hidden className="grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-full bg-white/15 text-sm"><AvatarMark avatar={guestAvatar} className="text-white" /></span><span className="truncate">{guestName ? `As ${firstName}` : "Name"}</span><span aria-hidden>✎</span>
           </button>
         </div>
       </header>
@@ -116,7 +153,7 @@ export default function SocialShell({ children, info, active }: { children: Reac
           })}
         </div>
       </nav>
-      {editingName && <NameEditor initialName={guestName} onClose={() => setEditingName(false)} onSave={saveName} />}
+      {editingName && <NameEditor initialName={guestName} initialAvatar={guestAvatar} onClose={() => setEditingName(false)} onSave={saveIdentity} />}
     </div>
   );
 }
