@@ -748,7 +748,10 @@ export default function UploadPage() {
   };
 
   const showStoryPicker = () => storyInput.current?.click();
-  const openStoryPicker = () => setNamePromptMode("story");
+  const openStoryPicker = () => {
+    if (displayName.trim()) showStoryPicker();
+    else setNamePromptMode("story");
+  };
 
   const saveNamePrompt = (name: string, selectedAvatar: GuestAvatarId) => {
     const mode = namePromptMode;
