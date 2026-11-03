@@ -218,14 +218,16 @@ function socialFooter(g: Ctx, ctx: SocialContext, onWine: boolean, w = STORY_W, 
 
 function pageBadge(g: Ctx, n: number, total: number) {
   if (total <= 1) return;
-  roundRect(g, STORY_W - 232, 118, 124, 46, 23);
+  // Keep the pagination badge in the top margin, clear of long editorial headings such as
+  // "Reserved for the Family" and "The Order of the Day".
+  roundRect(g, STORY_W - 232, 76, 124, 46, 23);
   g.fillStyle = WINE;
   g.fill();
   g.font = sans(22, 500);
   g.fillStyle = PAPER;
   g.textAlign = "center";
   g.textBaseline = "middle";
-  g.fillText(`${n} / ${total}`, STORY_W - 170, 142);
+  g.fillText(`${n} / ${total}`, STORY_W - 170, 100);
   g.textBaseline = "alphabetic";
 }
 
@@ -874,6 +876,65 @@ function announcementPost(ctx: SocialContext): HTMLCanvasElement[] {
   return [canvas];
 }
 
+/** A 4:5 feed companion to the story countdown, using the live/custom countdown setting above. */
+function countdownFeedPost(ctx: SocialContext): HTMLCanvasElement[] {
+  const { canvas, g } = postCanvas();
+  wineFill(g, POST_W, POST_H);
+  const cx = POST_W / 2;
+  const override = typeof ctx.countdownNumber === "number" && Number.isFinite(ctx.countdownNumber)
+    ? Math.max(0, Math.floor(ctx.countdownNumber))
+    : null;
+  const value = ctx.countdownBlank ? null : override ?? ctx.daysToGo;
+
+  caps(g, "Counting Every Moment", cx, 190, 28, "rgba(252,250,245,0.78)", 0.38);
+  fit(g, ctx.couple, cx, 340, 100, (s) => script(s), PAPER, 860);
+  caps(g, ctx.dateLabel, cx, 408, 24, "rgba(252,250,245,0.72)", 0.34);
+  diamondRule(g, cx, 455, 190, "rgba(252,250,245,0.42)");
+
+  if (value !== null && value > 1) {
+    g.font = serif(310, "600");
+    g.fillStyle = PAPER;
+    g.textAlign = "center";
+    g.fillText(String(value), cx, 815);
+    caps(g, `${value} DAYS TO GO`, cx, 900, 36, LACE, 0.34);
+  } else if (value === 1) {
+    g.font = script(126);
+    g.fillStyle = PAPER;
+    g.textAlign = "center";
+    g.fillText("one more sleep", cx, 780);
+    caps(g, "TOMORROW WE SAY I DO", cx, 875, 29, LACE, 0.3);
+  } else if (value === 0) {
+    g.font = script(160);
+    g.fillStyle = PAPER;
+    g.textAlign = "center";
+    g.fillText("today ♡", cx, 805);
+    caps(g, "WE SAY I DO", cx, 890, 34, LACE, 0.34);
+  } else if (value !== null) {
+    g.font = script(150);
+    g.fillStyle = PAPER;
+    g.textAlign = "center";
+    g.fillText("forever ♡", cx, 805);
+    caps(g, "JUST MARRIED", cx, 890, 34, LACE, 0.34);
+  } else {
+    g.save();
+    g.strokeStyle = "rgba(252,250,245,0.45)";
+    g.lineWidth = 2.5;
+    g.setLineDash([12, 14]);
+    g.beginPath();
+    g.arc(cx, 760, 150, 0, Math.PI * 2);
+    g.stroke();
+    g.restore();
+    g.font = script(108);
+    g.fillStyle = PAPER;
+    g.textAlign = "center";
+    g.fillText("♡", cx, 795);
+    caps(g, "COUNTING EVERY MOMENT", cx, 930, 28, LACE, 0.3);
+  }
+
+  postChrome(g, ctx, true);
+  return [canvas];
+}
+
 /* ── Highlight covers (square 1:1; Instagram crops to a circle) ── */
 
 const HIGHLIGHTS: { label: string; glyph: string }[] = [
@@ -933,6 +994,7 @@ export const SOCIAL_TEMPLATES: SocialTemplate[] = [
   { id: "post-attire", title: "Feed · Dress Code Palette", category: "Feed posts", format: "post", blurb: "The guest swatches in one 4:5 post.", render: attirePost },
   { id: "post-photo-frame", title: "Feed · Photo Frame (add your picture)", category: "Feed posts", format: "post", blurb: "Paper frame with a dashed 4:5 window — drop your own photo in.", render: photoFramePost },
   { id: "post-announcement", title: "Feed · Wedding Announcement", category: "Feed posts", format: "post", blurb: "Wine 4:5 post with names and date.", render: announcementPost },
+  { id: "post-countdown", title: "Feed · Countdown", category: "Feed posts", format: "post", blurb: "A wine-and-paper editorial countdown that follows the Automatic / Custom number control above.", render: countdownFeedPost },
   { id: "highlight-covers", title: "Highlight Covers (set of 8)", category: "Highlight covers", format: "cover", blurb: "Programme, Dress Code, Venue, Questions, RSVP, Entourage, Gifts, Moments — square, circle-safe.", render: highlightCovers },
 ];
 
