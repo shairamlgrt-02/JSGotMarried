@@ -596,6 +596,110 @@ export async function downloadIgFrame(d: IgStoryData, options: IgFrameOptions): 
   return savePng(canvas, igFrameFilename(options));
 }
 
+const xmlEscape = (value: string) =>
+  value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+
+function svgLayer(id: string, label: string, content: string): string {
+  return `<g id="${id}" inkscape:groupmode="layer" inkscape:label="${xmlEscape(label)}">${content}</g>`;
+}
+
+/**
+ * Rebuild the transparent frame as an SVG with named Illustrator/Inkscape layers and live text.
+ * Text is deliberately kept as <text> rather than outlined, so guests can edit every word;
+ * Pinyon Script, Cormorant Garamond and Jost should be installed for the closest match.
+ */
+export function renderIgFrameSvg(d: IgStoryData, options: IgFrameOptions): string {
+  const color = IG_FRAME_COLORS[options.color].hex;
+  const scale = options.layout === "corner" ? 0.62 : 1;
+  const margin = 110;
+  const layers: string[] = [];
+  let y = 0;
+
+  if (options.elements.monogram) {
+    const cy = y + 86;
+    const initials = xmlEscape(coupleInitials(d.couple));
+    layers.push(svgLayer("monogram-seal", "J&S monogram seal", `<circle cx="0" cy="${cy}" r="86" fill="none" stroke="${color}" stroke-width="2.4"/><text x="0" y="${cy + 7}" text-anchor="middle" dominant-baseline="middle" fill="${color}" font-family="'Pinyon Script', 'Cormorant Garamond', cursive" font-size="92.88">${initials}</text>`));
+    y += 172 + 26;
+  }
+
+  if (options.elements.names) {
+    let fontSize = 118;
+    const measure = document.createElement("canvas").getContext("2d");
+    if (measure) {
+      while (fontSize > 64) {
+        measure.font = script(fontSize);
+        if (measure.measureText(d.couple).width <= 880) break;
+        fontSize -= 2;
+      }
+    }
+    layers.push(svgLayer("couple-names", "Couple names · editable text", `<text x="0" y="${y + 104}" text-anchor="middle" fill="${color}" font-family="'Pinyon Script', 'Cormorant Garamond', cursive" font-size="${fontSize}">${xmlEscape(d.couple)}</text>`));
+    y += 104 + 30;
+  }
+
+  if (options.elements.flourish) {
+    const flourish = `<g transform="translate(0 ${y + 20}) scale(1.5)" fill="${color}" stroke="${color}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20 H70 M70 20 C84 20 88 10 98 11 C106 12 106 22 99 23 C94 24 92 18 97 17 M70 20 C80 22 84 30 92 29 M58 20 C62 14 68 13 72 15"/><path d="M4 20 H70 M70 20 C84 20 88 10 98 11 C106 12 106 22 99 23 C94 24 92 18 97 17 M70 20 C80 22 84 30 92 29 M58 20 C62 14 68 13 72 15" transform="scale(-1 1)"/><path d="M120 8 L127 20 L120 32 L113 20 Z" fill="none"/><circle cx="120" cy="20" r="2.2"/><circle cx="106" cy="20" r="1.3"/><circle cx="134" cy="20" r="1.3"/></g>`;
+    layers.push(svgLayer("flourish-divider", "Flourish divider", flourish));
+    y += 60 + 34;
+  }
+
+  if (options.elements.date) {
+    const tracking = 42 * 0.34;
+    layers.push(svgLayer("wedding-date", "Wedding date · editable text", `<text x="0" y="${y + 40}" text-anchor="middle" fill="${color}" font-family="'Cormorant Garamond', Georgia, serif" font-size="42" font-weight="600" letter-spacing="${tracking}">${xmlEscape(d.dateLabel)}</text>`));
+    y += 40 + 30;
+  }
+
+  if (options.elements.handle) {
+    layers.push(svgLayer("instagram-handle", "Instagram handle · editable text", `<text x="0" y="${y + 34}" text-anchor="middle" fill="${color}" font-family="'Cormorant Garamond', Georgia, serif" font-size="36" font-style="italic" font-weight="500">${xmlEscape(d.handle)}</text>`));
+    y += 34 + 26;
+  }
+
+  if (options.elements.hashtags && d.hashtag) {
+    layers.push(svgLayer("primary-hashtag", "Primary hashtag · editable text", `<text x="0" y="${y + 38}" text-anchor="middle" fill="${color}" font-family="'Cormorant Garamond', Georgia, serif" font-size="40" font-weight="600">${xmlEscape(d.hashtag)}</text>`));
+    y += 38 + 8;
+    if (d.extraHashtags.length) {
+      layers.push(svgLayer("secondary-hashtags", "Other hashtags · editable text", `<text x="0" y="${y + 30}" text-anchor="middle" fill="${color}" font-family="Jost, Arial, sans-serif" font-size="28">${xmlEscape(d.extraHashtags.join("  ·  "))}</text>`));
+      y += 30;
+    }
+    y += 24;
+  }
+
+  const height = Math.max(1, y);
+  let cx: number;
+  let topY: number;
+  if (options.layout === "corner") {
+    const halfWidth = (880 / 2) * scale;
+    cx = options.side === "right" ? STORY_W - margin - halfWidth : margin + halfWidth;
+    topY = 150;
+  } else {
+    cx = STORY_W / 2;
+    topY = options.layout === "top" ? 200 : options.layout === "bottom" ? STORY_H - 200 - height : (STORY_H - height) / 2;
+  }
+
+  const transform = `translate(${cx} ${topY}) scale(${scale})`;
+  const topLevelLayers = layers.map((layer) => layer.replace("<g ", `<g transform="${transform}" `)).join("\n");
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="${STORY_W}" height="${STORY_H}" viewBox="0 0 ${STORY_W} ${STORY_H}" role="img" aria-labelledby="title description">\n<title id="title">Wedding story frame · ${xmlEscape(d.couple)}</title>\n<desc id="description">Transparent 1080 by 1920 story overlay. Each named group is a separate editable layer; text remains live text.</desc>\n${topLevelLayers}\n</svg>\n`;
+}
+
+export function igFrameSvgFilename(options: IgFrameOptions): string {
+  const corner = options.layout === "corner" ? `-${options.side}` : "";
+  return `ig-frame-${options.layout}${corner}-${options.color}-layered.svg`;
+}
+
+/** Download a transparent, layered SVG that opens directly in Illustrator. */
+export async function downloadIgFrameSvg(d: IgStoryData, options: IgFrameOptions): Promise<boolean> {
+  await loadIgFonts();
+  const blob = new Blob([renderIgFrameSvg(d, options)], { type: "image/svg+xml;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = igFrameSvgFilename(options);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 5000);
+  return true;
+}
+
 /* ───────────────────────── public API ───────────────────────── */
 
 export function renderIgStory(id: IgStoryId, data: IgStoryData): HTMLCanvasElement {

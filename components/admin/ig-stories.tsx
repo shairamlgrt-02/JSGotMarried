@@ -10,6 +10,7 @@ import {
   IG_STORY_IDS,
   IG_STORY_META,
   downloadIgFrame,
+  downloadIgFrameSvg,
   downloadIgStory,
   igFramePreviewDataUrl,
   igStoryDataFromInfo,
@@ -95,7 +96,7 @@ export function IgStories({ embedded = false }: { embedded?: boolean }) {
   // stories are generated assets — the source of truth stays in Details, and Reset restores it.
   const [data, setData] = useState<IgStoryData | null>(null);
   const [fontsReady, setFontsReady] = useState(false);
-  const [busy, setBusy] = useState<IgStoryId | "all" | "qr" | "frame" | null>(null);
+  const [busy, setBusy] = useState<IgStoryId | "all" | "qr" | "frame" | "frame-svg" | null>(null);
   const [flash, setFlash] = useState("");
 
   /* ── transparent story frames ── */
@@ -111,6 +112,17 @@ export function IgStories({ embedded = false }: { embedded?: boolean }) {
     try {
       const ok = await downloadIgFrame(data, frame);
       tell(ok ? "Transparent frame saved — overlay it on any photo in Instagram ✓" : "Your browser blocked the download — try again.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const downloadFrameSvg = async () => {
+    if (!data) return;
+    setBusy("frame-svg");
+    try {
+      const ok = await downloadIgFrameSvg(data, frame);
+      tell(ok ? "Layered SVG saved — open it in Illustrator to edit the text and groups ✓" : "Your browser blocked the download — try again.");
     } finally {
       setBusy(null);
     }
@@ -190,8 +202,8 @@ export function IgStories({ embedded = false }: { embedded?: boolean }) {
           </PageHead>
           <p className="text-sm text-ink/60 max-w-3xl -mt-3">
             Three on-brand story cards drawn straight from your binder details — names, date, handle and hashtags fill themselves in —
-            plus <b>transparent frame PNGs</b>: just your lettering and ornaments, no background, to lay on top of your own photos in
-            Instagram&apos;s story editor. For the bingo &amp; prompt cards, add Instagram&apos;s own <b>Add Yours</b> sticker on top so
+            plus <b>transparent story frames</b> in PNG and layered SVG formats. Open the SVG in Illustrator to edit each named
+            group and its live text. For the bingo &amp; prompt cards, add Instagram&apos;s own <b>Add Yours</b> sticker on top so
             your guests can join in.
           </p>
         </>
@@ -216,9 +228,10 @@ export function IgStories({ embedded = false }: { embedded?: boolean }) {
 
       <Card title="Transparent story frames (overlay on your own photos)">
         <p className="text-sm text-ink/60 mb-5">
-          No background card — just your names, date, monogram, flourish, handle and hashtags in the wedding lettering, exported as a{" "}
-          <b>transparent 1080 × 1920 PNG</b>. Add it on top of any photo inside Instagram&apos;s story editor (sticker → add from
-          photos, or paste), and only your mark shows. The wording below follows the editable fields in the next card.
+          No background card — just your names, date, monogram, flourish, handle and hashtags. Download a <b>layered SVG for
+          Illustrator</b>: each element has its own named group, and the words remain editable text. Or save the transparent PNG
+          to place directly over a photo in Instagram. For the closest type match in Illustrator, install Pinyon Script,
+          Cormorant Garamond and Jost. The wording follows the editable fields in the next card.
         </p>
         <div className="grid md:grid-cols-[300px_1fr] gap-7 items-start">
           <div>
@@ -237,9 +250,14 @@ export function IgStories({ embedded = false }: { embedded?: boolean }) {
                 </button>
               ))}
             </div>
-            <Btn variant="dark" className="mt-3 w-full" onClick={() => void downloadFrame()} disabled={busy !== null}>
-              {busy === "frame" ? "Saving…" : "Download transparent PNG"}
-            </Btn>
+            <div className="mt-3 grid gap-2">
+              <Btn variant="dark" className="w-full" onClick={() => void downloadFrameSvg()} disabled={busy !== null}>
+                {busy === "frame-svg" ? "Saving SVG…" : "Download layered SVG for Illustrator"}
+              </Btn>
+              <Btn variant="ghost" className="w-full" onClick={() => void downloadFrame()} disabled={busy !== null}>
+                {busy === "frame" ? "Saving PNG…" : "Download transparent PNG"}
+              </Btn>
+            </div>
           </div>
 
           <div className="space-y-5">
