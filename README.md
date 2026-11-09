@@ -82,7 +82,7 @@ seeded before this wording, press **Content → FAQ → Refresh wording** once t
 
 ### The programme card
 A second downloadable PNG, a sister to the invitation keepsake, offered under the **Program**
-section (**Download the programme card**) and again beside the keepsake after a guest replies
+section (**Download the updated programme card**) and again beside the keepsake after a guest replies
 *yes*. It is drawn in the guest's own browser (`lib/program-card.ts`, no server, no upload) and is
 about the *day* rather than the guest, so it leads with the correct arrival flow:
 
@@ -90,7 +90,7 @@ about the *day* rather than the guest, so it leads with the correct arrival flow
 2. the **venue plan and wayfinding notes** — Dome Tent majlis on the right of the main gate entrance, plus the separate parking directions;
 3. the **order of the day** — the ceremony, Sip & Fellowship / Welcome Toast from 6:00 PM and the reception beginning at 7:00 PM. The reception programme details are intentionally left for later.
 
-The admin binder also has a **Wedding Team Guide** tab (`/admin#team-guide`) with the shared day-of timeline, downloadable timeline and role-card CSVs, a print / save-as-PDF view, and fillable role/reminder cards for bridesmaids, groomsmen, coordinators and other team members. Each card starts with the confirmed shared call time and meeting place; names, assignments, preparation, bring-lists and reminders remain blank until confirmed.
+The admin binder also has a **Wedding Team Guide** tab (`/admin#team-guide`) with the shared day-of timeline, a downloadable **updated programme PNG** to attach to WhatsApp messages, downloadable timeline and role-card CSVs, a print / save-as-PDF view, and fillable role/reminder cards for bridesmaids, groomsmen, coordinators and other team members. The Compose / Templates tab includes separate manual-send schedule-change messages for the wedding team and 6:00 PM guests. Each role card starts with the confirmed shared call time and meeting place; names, assignments, preparation, bring-lists and reminders remain blank until confirmed.
 
 The card is a **9:16 portrait — 1500 × 2667, a phone screen, a story** — so it is seen whole and
 never scrolled. Every fact is said once and the card uses its width wherever two things belong side

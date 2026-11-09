@@ -350,9 +350,9 @@ function ProgramCardOffer({ data }: { data: ProgramCardData }) {
   return (
     <div className="mt-7 flex flex-col items-center text-center sm:mt-9" aria-live="polite">
       <motion.button type="button" whileTap={{ scale: 0.97 }} disabled={status === "working"} onClick={save}
-        aria-label="Download the programme card as a PNG image"
+        aria-label="Download the updated programme card as a PNG image"
         className="micro tracking-[0.12em] bg-wine text-lace rounded-full px-7 py-3.5 shadow-[0_8px_20px_-6px_rgba(110,31,46,.48)] hover:bg-mocha transition-colors disabled:opacity-60">
-        {status === "working" ? "Drawing your card…" : status === "done" ? "Programme card saved ✓" : status === "error" ? "Could not save · try again" : "Download the programme card"}
+        {status === "working" ? "Drawing your card…" : status === "done" ? "Updated programme card saved ✓" : status === "error" ? "Could not save · try again" : "Download the updated programme card"}
       </motion.button>
       <p className="micro text-taupe/80 mt-2.5 max-w-md tracking-[0.08em] text-balance">
         Who arrives when, where to go when you get there, a small map of the venue and the order of the day — in one picture for your phone.
@@ -901,7 +901,7 @@ function KeepsakeOffer({ onBuild, onBuildProgram }: { onBuild: () => Promise<unk
           <motion.button type="button" whileTap={{ scale: 0.97 }} disabled={program === "working"}
             onClick={async () => { setProgram("working"); await onBuildProgram().catch(() => {}); setProgram("done"); }}
             className="micro rounded-full border border-wine/40 px-7 py-3.5 text-wine transition-colors hover:border-wine hover:bg-wine hover:text-lace disabled:opacity-60">
-            {program === "working" ? "Drawing the programme…" : program === "done" ? "Programme card saved ✓" : "Save the programme card too"}
+            {program === "working" ? "Drawing the programme…" : program === "done" ? "Updated programme card saved ✓" : "Save the updated programme card too"}
           </motion.button>
           <p className="micro text-taupe/80 mt-2.5 tracking-[0.14em] text-balance">who arrives when, where to go & a small map of the venue</p>
         </div>

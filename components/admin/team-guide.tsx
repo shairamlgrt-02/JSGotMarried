@@ -1,6 +1,8 @@
 "use client";
+import { useState } from "react";
 import { useTable } from "@/lib/hooks";
 import { uid } from "@/lib/db";
+import { downloadProgramCard } from "@/lib/program-card";
 import {
   ALL_WELCOME_FROM,
   CEREMONY_AT,
@@ -8,6 +10,7 @@ import {
   MAJLIS_LOCATION,
   RECEPTION_AT,
   WELCOME_EVENT_NAME,
+  WEDDING_PROGRAM_STOPS,
 } from "@/lib/program";
 import type { TeamCard, TeamCardCategory } from "@/lib/types";
 import { Btn, Card, EditText, PageHead, Select, download, toCsv } from "./ui";
@@ -54,8 +57,25 @@ const EMPTY_TEMPLATES = CATEGORIES.map(({ value }) => ({ ...blankCard(value), id
 
 export function TeamGuide() {
   const { rows: infoRows } = useTable("wedding_info");
+  const { rows: attireRows } = useTable("attire");
   const teamCards = useTable("team_cards", false);
+  const [programCardStatus, setProgramCardStatus] = useState<"idle" | "working" | "done" | "error">("idle");
   const info = infoRows[0];
+  const dressNote = (attireRows.find((row) => row.group === "guests")?.notes || "").split("—")[0].replace(/\.?\s*$/, "").trim();
+  const cardData = {
+    groom: info?.groom || "Jeger", bride: info?.bride || "Shaira",
+    dateISO: info?.date || "2026-11-11T16:30:00+03:00",
+    venue: info?.venue_name || "The Heaven", address: info?.venue_address || "Damistan, Kingdom of Bahrain",
+    program: WEDDING_PROGRAM_STOPS,
+    dressNote: dressNote || "Black tie — details live in the attire guide",
+    hashtags: info?.hashtags || ["#JSGotMarried", "#JSSayIDo", "#JSWishComeTrue"],
+  };
+  const downloadUpdatedProgramCard = async () => {
+    if (programCardStatus === "working") return;
+    setProgramCardStatus("working");
+    const ok = await downloadProgramCard(cardData).catch(() => false);
+    setProgramCardStatus(ok ? "done" : "error");
+  };
   const weddingDate = info?.date
     ? new Date(info.date).toLocaleDateString("en-GB", {
         weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Bahrain",
@@ -89,15 +109,19 @@ export function TeamGuide() {
       <div className="no-print">
         <PageHead kicker="The confirmed day-of flow" title="Wedding team guide.">
           <div className="flex flex-wrap gap-2">
+            <Btn onClick={downloadUpdatedProgramCard} disabled={programCardStatus === "working"}>
+              {programCardStatus === "working" ? "Drawing updated card…" : programCardStatus === "done" ? "Updated card downloaded ✓" : "Download updated programme card (.png)"}
+            </Btn>
             <Btn onClick={downloadTimeline}>Download timeline (.csv)</Btn>
             <Btn variant="ghost" onClick={downloadCardSheet}>Download role-card sheet (.csv)</Btn>
             <Btn variant="ghost" onClick={() => window.print()}>Print / save as PDF</Btn>
           </div>
         </PageHead>
+        {programCardStatus === "error" && <p className="mb-4 text-sm text-burgundy">The updated card could not be saved. Please try again from a browser that allows downloads.</p>}
         <Card className="mb-5 border border-wine/15 bg-lace/60 p-5">
           <p className="font-serif text-xl text-wine">{weddingDate} · The Heaven, Damistan</p>
           <p className="mt-2 text-sm text-ink/70">
-            Please use the same arrival flow below when briefing the team. Individual role assignments, preparation and bring-lists stay blank until confirmed.
+            Download the updated PNG above and attach it manually to the schedule-change WhatsApp messages. Please use the same arrival flow below when briefing the team. Individual role assignments, preparation and bring-lists stay blank until confirmed.
           </p>
         </Card>
       </div>

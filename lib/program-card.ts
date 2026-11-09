@@ -199,7 +199,7 @@ function draw(g: CanvasRenderingContext2D, d: ProgramCardData, height: number, a
   const breath = air / 5;
 
   let y = HEAD + breath;
-  caps(g, "J & S · the programme", CX, y, 26, TAUPE, 0.34);
+  caps(g, "Updated wedding-day timings", CX, y, 26, TAUPE, 0.34);
   y += 40;
   text(g, `${d.groom} & ${d.bride}`, CX, y + 70, script(96), WINE);
   y += 124;
@@ -255,7 +255,7 @@ export async function downloadProgramCard(d: ProgramCardData) {
   try {
     const c = renderProgramCard(d);
     if (!c) return false;
-    return await savePng(c, `programme-${d.groom.toLowerCase()}-${d.bride.toLowerCase()}-11.11.2026.png`);
+    return await savePng(c, `updated-programme-${d.groom.toLowerCase()}-${d.bride.toLowerCase()}-11.11.2026.png`);
   } catch {
     return false;
   }
