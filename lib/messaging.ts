@@ -878,18 +878,16 @@ Love,
     label: "Schedule update",
     hint: "Send manually to the wedding team. Download the updated programme PNG from the Wedding Team Guide and attach it to this WhatsApp message before sending.",
     categories: [],
-    body: `Hi {first_name}! 🤍
+    body: `Hi {first_name},
 
-We have an update to our wedding-day timings. Please disregard any earlier schedule and use the *updated programme card attached* to this message.
+Our wedding schedule has changed. Please ignore earlier timings and use the updated programme card attached.
 
-🕓 *4:00 PM* — entourage and wedding team: please go straight to ${MAJLIS_LOCATION}. The majlis becomes available at 4:00 PM, and your coordinators will meet you there.
-🔒 *4:30 PM* — the private, closed-door ceremony begins.
-🥂 *6:00 PM* — all other guests arrive at the Dome Tent majlis for Sip & Fellowship / the welcome toast.
-🎉 *7:00 PM* — the reception begins in the hall.
+Team arrival: *4:00 PM* at the Dome Tent majlis, to the right of the main gate entrance. The majlis opens at 4:00 PM.
+Closed-door ceremony: *4:30 PM*.
+Other guests arrive: *6:00 PM*.
+Reception: *7:00 PM* in the hall.
 
-Please save the attached card and refer to it instead of any earlier version. Thank you for being part of our day! ❤️
-
-With love,
+Please arrive at 4:00 PM. Thank you,
 {couple_names}`,
   },
   {
@@ -898,11 +896,11 @@ With love,
     label: "Schedule update",
     hint: "For invited guests arriving for the 6:00 PM welcome, not guests attending the closed-door ceremony. Select recipients manually, then attach the updated programme PNG downloaded from the Wedding Team Guide.",
     categories: [],
-    body: `Hi {first_name}! 🤍
+    body: `Hi {first_name},
 
-We have an update to our wedding-day timings, so please disregard any earlier schedule. Please join us from *6:00 PM* at the *Dome Tent majlis, to the right of the main gate entrance*, for Sip & Fellowship and the welcome toast. The reception begins in the hall at *7:00 PM*.
+Our wedding schedule has changed. Please ignore earlier timings and use the updated programme card attached.
 
-I’m attaching the *updated programme card* with the new timings and venue directions. Please save it and use it instead of any earlier version. We can’t wait to celebrate with you! ❤️
+Please join us at *6:00 PM* at the Dome Tent majlis, to the right of the main gate entrance, for Sip & Fellowship and the welcome toast. The reception begins in the hall at *7:00 PM*.
 
 With love,
 {couple_names}`,
