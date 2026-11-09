@@ -303,6 +303,7 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
   message_templates: [],
   messages: [],
   bridesmaid_cards: [],
+  team_cards: [],
 
   // The starter wish list for the public /gifts page — the couple edits every line in the
   // every guest starts with everything open. Notes are warm and simple, without shopping

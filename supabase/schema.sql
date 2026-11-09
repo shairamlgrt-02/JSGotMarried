@@ -104,6 +104,13 @@ alter table bridesmaid_cards add column if not exists call_time text default '';
 alter table bridesmaid_cards add column if not exists meet_at text default '';
 alter table bridesmaid_cards add column if not exists prepare text default '';
 alter table bridesmaid_cards add column if not exists bring text default '';
+-- Reusable day-of role/reminder cards for bridesmaids, groomsmen, coordinators and other team members.
+-- Personal assignments stay blank until the couple confirms them; private to the binder.
+create table if not exists team_cards (
+  id text primary key default gen_random_uuid()::text,
+  category text not null default 'other', name text default '', role_title text default '',
+  call_time text default '', meet_at text default '', prepare text default '', bring text default '', reminder text default ''
+);
 -- Messaging module (binder → Compose / Templates / Tracker): reusable templates and the sent-message log.
 create table if not exists message_templates (
   id text primary key default gen_random_uuid()::text,
