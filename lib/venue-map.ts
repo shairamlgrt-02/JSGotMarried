@@ -1,4 +1,4 @@
-import { ALL_WELCOME_FROM, ENTOURAGE_CALL_TIME, HALL_CLOSED_FROM, HALL_CLOSED_UNTIL, RECEPTION_AT, type ArrivalWindow } from "./program";
+import { ALL_WELCOME_FROM, CEREMONY_AT, ENTOURAGE_CALL_TIME, HALL_CLOSED_FROM, HALL_CLOSED_UNTIL, type ArrivalWindow } from "./program";
 import { EDGE, LACE, MOCHA, PAPER, TAUPE, WINE, caps, capsWidth, pin, roundRect, serif, text } from "./card-draw";
 
 /**
@@ -7,8 +7,8 @@ import { EDGE, LACE, MOCHA, PAPER, TAUPE, WINE, caps, capsWidth, pin, roundRect,
  * arrival notes send a guest to, numbered to match the legend printed under the map.
  *
  * The one flow on the plan: from the gate, straight to the majlis — the hall is The Heaven's to
- * clean and prepare until 4:00 PM, so everybody (entourage included) gathers at the majlis first,
- * and the whole party walks into the hall together just before the procession.
+ * clean and prepare until 4:00 PM. The Dome Tent majlis, to the right of the main gate entrance,
+ * opens for the wedding party then; the closed-door ceremony begins at 4:30 PM.
  *
  * Parking is deliberately NOT drawn: it is not in the grounds (the open yard beside the path is
  * just the courtyard) but in a separate area, and The Heaven's team tell each car where to go when
@@ -25,9 +25,9 @@ export const MAP_H = 440;
 
 /** The two arrival notes written onto the plan itself — one on the hall, one on the majlis. */
 export const MAP_NOTE_HALL = [`Closed ${HALL_CLOSED_FROM} – ${HALL_CLOSED_UNTIL} · being prepared`];
-export const MAP_NOTE_MAJLIS = ["Everyone gathers at the majlis first", `Entourage ${ENTOURAGE_CALL_TIME} · Guests ${ALL_WELCOME_FROM}`];
+export const MAP_NOTE_MAJLIS = ["Dome Tent · right of main gate", `Team ${ENTOURAGE_CALL_TIME} · Guests ${ALL_WELCOME_FROM}`];
 /** How a guest gets from the majlis into the hall — the line along the majlis-to-hall arrow. */
-export const MAP_NOTE_WALK_IN = "just before 4:00 PM · all together";
+export const MAP_NOTE_WALK_IN = `closed-door ceremony · ${CEREMONY_AT}`;
 export const MAP_NOTE_ENTOURAGE = MAP_NOTE_HALL;
 export const MAP_NOTE_GUESTS = MAP_NOTE_MAJLIS;
 /**
@@ -45,7 +45,7 @@ export const PARKING_NOTE: ArrivalWindow = {
 /** The legend under the map — the same numbers as the pins, in the order a guest meets them. */
 export const VENUE_MAP_LEGEND: { n: number; place: string }[] = [
   { n: 1, place: "The entrance" },
-  { n: 2, place: "The majlis" },
+  { n: 2, place: "Dome Tent majlis" },
   { n: 3, place: "The hall" },
 ];
 
@@ -188,8 +188,8 @@ export function drawVenueMap(g: Ctx, x: number, y: number, w: number, h: number)
     roundRect(g, cx - 10, lounge - 5, 20, 10, 5); g.fill();
   }
   g.beginPath(); g.ellipse(majlis.x + majlis.w / 2, lounge, 22, 10, 0, 0, Math.PI * 2); g.fillStyle = "#E9DCCB"; g.fill();
-  caps(g, "the majlis", majlis.x + majlis.w / 2, majlis.y + majlis.h - 24, 16, WINE, 0.26);
-  text(g, "briefing · snacks · welcome toast & photos", majlis.x + majlis.w / 2, majlis.y + majlis.h - 8, serif(11.5, "i400"), MOCHA);
+  caps(g, "Dome Tent majlis", majlis.x + majlis.w / 2, majlis.y + majlis.h - 24, 16, WINE, 0.26);
+  text(g, "4 PM briefing · 6 PM Sip & Fellowship", majlis.x + majlis.w / 2, majlis.y + majlis.h - 8, serif(11.5, "i400"), MOCHA);
 
   // ── the courtyard — an open paved yard across the path from the majlis (not the parking) ──
   const yard = { x: 30, y: 262, w: 206, h: 112 };
@@ -212,8 +212,8 @@ export function drawVenueMap(g: Ctx, x: number, y: number, w: number, h: number)
   const noteW = MAP_W - 18 - noteL;
   caps(g, "entrance", noteL, gate.y - 35, 13, WINE, 0.26, "left");
   MAP_NOTE_PARKING.forEach((line, i) => note(g, line, noteL, gate.y - 20 + i * 13.5, noteW));
-  // the path: in from the gate, straight up the courtyard side, then a step right into the majlis —
-  // everyone gathers there first, because the hall is closed while it is being prepared
+  // the path: in from the gate, straight up the courtyard side, then a step right into the Dome Tent majlis —
+  // the wedding party arrives there at 4:00 PM; other guests join from 6:00 PM
   const step = majlis.y + 64;
   dashedLine(g, [[gate.x, gate.y - 10], [gate.x, step]]);
   dashedLine(g, [[gate.x, step], [majlis.x - 14, step]]);

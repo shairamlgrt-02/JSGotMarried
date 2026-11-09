@@ -10,6 +10,7 @@
 import { INK, MOCHA, TAUPE, WINE, caps, capsWidth, diamondRule, drawLines, loadCardFonts, paper, savePng, script, serif, text, wrapLines } from "./card-draw";
 import { inkOf, parseHex, shade } from "./jewels";
 import type { BridesmaidCard, GemCut } from "./types";
+import { ENTOURAGE_CALL_TIME, MAJLIS_LOCATION } from "./program";
 
 /** A4 portrait at 300 dpi. */
 export const CARD_W = 2480;
@@ -343,7 +344,7 @@ function pass(g: Ctx, c: BridesmaidCard, f: number, air: number[], dry: boolean)
   /* ── 3. her role ── */
   start = y;
   y += air[2];
-  const role = c.role_title.trim() || c.mission.trim() || c.duties.trim() || c.tagline.trim() || c.pro_tip.trim();
+  const role = c.role_title.trim() || c.mission.trim() || c.duties.trim() || c.tagline.trim() || c.pro_tip.trim() || c.call_time?.trim() || c.meet_at?.trim() || c.prepare?.trim() || c.bring?.trim();
   if (role) {
     y += 56;
     if (!dry) diamondRule(g, CX, y, 220);
@@ -394,6 +395,48 @@ function pass(g: Ctx, c: BridesmaidCard, f: number, air: number[], dry: boolean)
           drawLines(g, lines, LEFT + 44, y, body, INK, lead, "left");
         }
         y += (lines.length - 1) * lead + (i < duties.length - 1 ? lead + 4 : 0);
+      });
+    }
+    const callTime = (c.call_time ?? ENTOURAGE_CALL_TIME).trim();
+    const meetAt = (c.meet_at ?? MAJLIS_LOCATION).trim();
+    if (callTime || meetAt) {
+      y += 46;
+      if (!dry) caps(g, "Call time & meet-up", LEFT, y, 20, tone, 0.34, "left");
+      const details = [callTime && `Arrive: ${callTime}`, meetAt && `Meet at: ${meetAt}`].filter(Boolean).join(" · ");
+      const font = serif(px(28), "400");
+      const lines = wrapLines(g, details, font, MEASURE);
+      y += 20 + px(28);
+      if (!dry) drawLines(g, lines, LEFT, y, font, INK, lead, "left");
+      y += (lines.length - 1) * lead;
+    }
+    const prepare = bulletLines(c.prepare ?? "");
+    if (prepare.length) {
+      y += 46;
+      if (!dry) caps(g, "What to prepare", LEFT, y, 20, tone, 0.34, "left");
+      y += 20 + px(28);
+      prepare.forEach((item, i) => {
+        const lines = wrapLines(g, item, body, MEASURE - 44);
+        if (!dry) {
+          g.save(); g.translate(LEFT + 9, y - px(9)); g.rotate(Math.PI / 4);
+          g.fillStyle = tone; g.fillRect(-5, -5, 10, 10); g.restore();
+          drawLines(g, lines, LEFT + 44, y, body, INK, lead, "left");
+        }
+        y += (lines.length - 1) * lead + (i < prepare.length - 1 ? lead + 4 : 0);
+      });
+    }
+    const bring = bulletLines(c.bring ?? "");
+    if (bring.length) {
+      y += 46;
+      if (!dry) caps(g, "What to bring", LEFT, y, 20, tone, 0.34, "left");
+      y += 20 + px(28);
+      bring.forEach((item, i) => {
+        const lines = wrapLines(g, item, body, MEASURE - 44);
+        if (!dry) {
+          g.save(); g.translate(LEFT + 9, y - px(9)); g.rotate(Math.PI / 4);
+          g.fillStyle = tone; g.fillRect(-5, -5, 10, 10); g.restore();
+          drawLines(g, lines, LEFT + 44, y, body, INK, lead, "left");
+        }
+        y += (lines.length - 1) * lead + (i < bring.length - 1 ? lead + 4 : 0);
       });
     }
     if (c.pro_tip.trim()) {

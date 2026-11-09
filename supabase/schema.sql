@@ -92,12 +92,25 @@ create table if not exists bridesmaid_cards (
   kicker text default '', greeting text default '', subline text default '', embodies text default '', verse text default '',
   note text default '',
   role_kicker text default '', role_title text default '', tagline text default '', mission text default '',
-  duties text default '', pro_tip text default '',
+  duties text default '', call_time text default '', meet_at text default '',
+  prepare text default '', bring text default '', pro_tip text default '',
   closing text default '', footer text default '',
   "order" int default 0
 );
 -- the line of Scripture under the jewel ("She is far more precious than jewels" — Proverbs 31:10)
 alter table bridesmaid_cards add column if not exists verse text default '';
+-- day-of arrival, preparation and bring-list details on individual entourage cards
+alter table bridesmaid_cards add column if not exists call_time text default '';
+alter table bridesmaid_cards add column if not exists meet_at text default '';
+alter table bridesmaid_cards add column if not exists prepare text default '';
+alter table bridesmaid_cards add column if not exists bring text default '';
+-- Reusable day-of role/reminder cards for bridesmaids, groomsmen, coordinators and other team members.
+-- Personal assignments stay blank until the couple confirms them; private to the binder.
+create table if not exists team_cards (
+  id text primary key default gen_random_uuid()::text,
+  category text not null default 'other', name text default '', role_title text default '',
+  call_time text default '', meet_at text default '', prepare text default '', bring text default '', reminder text default ''
+);
 -- Messaging module (binder → Compose / Templates / Tracker): reusable templates and the sent-message log.
 create table if not exists message_templates (
   id text primary key default gen_random_uuid()::text,

@@ -70,7 +70,7 @@ export const DEFAULT_BINGO_TILES = [
   "My Fit Check",
   "POV From My Seat",
   "The Couple",
-  "Cocktail Bites",
+  "Welcome Toast",
   "Tearjerker Moment",
   "After-Party",
 ];

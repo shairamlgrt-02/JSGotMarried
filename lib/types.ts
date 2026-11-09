@@ -299,6 +299,14 @@ export type BridesmaidCard = {
   mission: string;
   /** "The duties" — one per line. */
   duties: string;
+  /** Shared wedding-party call time, editable for this person. */
+  call_time?: string;
+  /** Exact meeting point for this person. */
+  meet_at?: string;
+  /** Preparation instructions, one per line. */
+  prepare?: string;
+  /** What to bring, one item per line. */
+  bring?: string;
   /** "Pro tip" — one line; leave empty to print none. */
   pro_tip: string;
   /** The script sign-off — "With all my love, Shaira". */
@@ -306,6 +314,20 @@ export type BridesmaidCard = {
   /** The capitals under the sign-off — "J & S · 11.11.2026". */
   footer: string;
   order: number;
+};
+
+export type TeamCardCategory = "bridesmaid" | "groomsman" | "coordinator" | "other";
+/** A reusable, fillable day-of task/reminder card for any wedding-team member. */
+export type TeamCard = {
+  id: string;
+  category: TeamCardCategory;
+  name: string;
+  role_title: string;
+  call_time: string;
+  meet_at: string;
+  prepare: string;
+  bring: string;
+  reminder: string;
 };
 
 export type Faq = { id: string; question: string; answer: string; order: number };
@@ -386,10 +408,11 @@ export type TableMap = {
   message_templates: MessageTemplate;
   messages: MessageLog;
   bridesmaid_cards: BridesmaidCard;
+  team_cards: TeamCard;
   gift_items: GiftItem;
 };
 export type TableName = keyof TableMap;
-export const TABLES: TableName[] = ["wedding_info", "schedule", "budget", "guests", "vendors", "checklist", "attire", "entourage", "faq", "story", "message_templates", "messages", "bridesmaid_cards", "gift_items"];
+export const TABLES: TableName[] = ["wedding_info", "schedule", "budget", "guests", "vendors", "checklist", "attire", "entourage", "faq", "story", "message_templates", "messages", "bridesmaid_cards", "team_cards", "gift_items"];
 /** Tables the public site may read without logging in. */
 export const PUBLIC_TABLES: TableName[] = ["wedding_info", "schedule", "attire", "entourage", "faq", "story"];
 

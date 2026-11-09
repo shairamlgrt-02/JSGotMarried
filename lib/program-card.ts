@@ -1,5 +1,5 @@
 import { EDGE, LACE, MOCHA, PAPER, TAUPE, WINE, caps, diamondRule, drawLines, fit, loadCardFonts, paper, pin, roundRect, savePng, script, serif, text, wrap, wrapLines } from "./card-draw";
-import { ARRIVAL_NOTES, GUEST_ARRIVAL_GUIDE, PROGRAM_HEADLINE, PROGRAM_HEADLINE_DETAIL, type ProgramStop } from "./program";
+import { ALL_WELCOME_FROM, ARRIVAL_NOTES, ENTOURAGE_CALL_TIME, GUEST_ARRIVAL_GUIDE, MAJLIS_LOCATION, PROGRAM_HEADLINE, PROGRAM_HEADLINE_DETAIL, type ProgramStop } from "./program";
 import { MAP_H, MAP_W, PARKING_NOTE, VENUE_MAP_LEGEND, drawVenueMap } from "./venue-map";
 
 /**
@@ -7,13 +7,12 @@ import { MAP_H, MAP_W, PARKING_NOTE, VENUE_MAP_LEGEND, drawVenueMap } from "./ve
  * the moment they ask for it (no server, no upload), a sister to the invitation keepsake.
  *
  * Where the keepsake is about *them* (their seats, their code), this card is about *the day*, and it
- * leads with the one thing guests keep getting wrong: nobody has to be there at 4:00 PM. In order:
+ * leads with who arrives when and where: wedding party at 4:00 PM; all other guests at 6:00 PM. In order:
  *   1. one panel to read first — the headline, the ceremony in two sentences, and under a hairline
- *      the two notes side by side: the entourage & wedding team (3:30, reserved seats, wait for the
- *      cue) and every other guest (5:30 at the majlis, reception at 7:00);
- *   2. the plan of the venue with its one-line legend, and beside it the wayfinding notes — where to
- *      go if you arrive at another hour (early for the ceremony, or while it is under way) and where
- *      the cars go — so "the majlis" and "the hall" are places, not words;
+ *      the two notes side by side: the entourage & wedding team (4:00 at the Dome Tent majlis) and every
+ *      other guest (6:00 at the majlis, reception at 7:00);
+ *   2. the plan of the venue with its one-line legend, and beside it the wayfinding notes — where the
+ *      wedding party and other guests should go, plus where the cars go — so the place names are clear;
  *   3. the order of the day — the facts as short tags beside the stops, the warm lines under the
  *      two hours that hold the evening — the dress code in one line, and the couple's sign-off.
  *
@@ -147,7 +146,7 @@ function drawMap(g: CanvasRenderingContext2D, y: number, venue: string) {
   const colW = W - x - colL;
   let cy = y + 24;
   cy = drawLines(g, ["Arriving at another hour?", "Here's where to go"], colL, cy, serif(28, "i500"), WINE, 35, "left");
-  cy = wrap(g, `everyone begins at the majlis — the hall rests until 4:00 PM while it is cleaned & prepared`, colL, cy + 34, serif(22, "i400"), TAUPE, 28, colW, "left");
+  cy = wrap(g, `Wedding party ${ENTOURAGE_CALL_TIME}; all other guests ${ALL_WELCOME_FROM}. Go to ${MAJLIS_LOCATION}.`, colL, cy + 34, serif(22, "i400"), TAUPE, 28, colW, "left");
   cy += 54;
   const rows = [...GUEST_ARRIVAL_GUIDE, PARKING_NOTE];
   rows.forEach((row, i) => {
@@ -200,7 +199,7 @@ function draw(g: CanvasRenderingContext2D, d: ProgramCardData, height: number, a
   const breath = air / 5;
 
   let y = HEAD + breath;
-  caps(g, "J & S · the programme", CX, y, 26, TAUPE, 0.34);
+  caps(g, "Updated wedding-day timings", CX, y, 26, TAUPE, 0.34);
   y += 40;
   text(g, `${d.groom} & ${d.bride}`, CX, y + 70, script(96), WINE);
   y += 124;
@@ -256,7 +255,7 @@ export async function downloadProgramCard(d: ProgramCardData) {
   try {
     const c = renderProgramCard(d);
     if (!c) return false;
-    return await savePng(c, `programme-${d.groom.toLowerCase()}-${d.bride.toLowerCase()}-11.11.2026.png`);
+    return await savePng(c, `updated-programme-${d.groom.toLowerCase()}-${d.bride.toLowerCase()}-11.11.2026.png`);
   } catch {
     return false;
   }

@@ -6,6 +6,7 @@ import { uid } from "@/lib/db";
 import { useTable } from "@/lib/hooks";
 import { BRIDESMAID_STONES, DEFAULT_VERSE, HONOR_STONE, ROLES, STONES, findRole, findStone, inkOf, missionFor, newBridesmaidCard, parseHex, renamed, roleById, roleLines, stoneById, stoneLines, stoneOfRole, type CardContext, type Role, type Stone } from "@/lib/jewels";
 import { shortDate } from "@/lib/guests";
+import { ENTOURAGE_CALL_TIME, MAJLIS_LOCATION } from "@/lib/program";
 import { GEM_CUTS, type BridesmaidCard, type EntourageMember, type GemCut, type WeddingInfo } from "@/lib/types";
 import { Btn, Card, EditText, PageHead, Select } from "./ui";
 
@@ -107,7 +108,7 @@ export function BridesmaidCards() {
       <p className="text-sm text-ink/70 max-w-3xl mb-6">
         One A4 card for each of the girls: <em>thank you for saying yes</em>, in her own jewel and its colour, a line on what that colour says of
         her, <em>“she is far more precious than jewels”</em> (Proverbs 31:10), a note from you, and her role on the day — a title, a motto, her
-        mission, the duties and a pro tip. <b>Garnet</b> is for the maid of honor, the matron of honor and your sister-in-law; the four bridesmaids
+        mission, the duties, her call time and meet-up point, what to prepare and what to bring. <b>Garnet</b> is for the maid of honor, the matron of honor and your sister-in-law; the four bridesmaids
         wear Turquoise, Citrine, Sapphire or Ruby. Jewels and roles are picked separately, so three Garnets can each have a different job;
         <b>every line is yours to change</b> afterwards. Downloads print at 300 dpi, exactly A4.
       </p>
@@ -287,6 +288,23 @@ function Editor({ card, ctx, onSave, onDelete }: { card: BridesmaidCard; ctx: Ca
             </Field>
             <Field label="Pro tip" hint="Leave empty to print none." className="md:col-span-2">
               <EditText value={card.pro_tip} onSave={(v) => set({ pro_tip: v })} className="font-serif italic text-lg" />
+            </Field>
+          </div>
+        </Card>
+
+        <Card title="Wedding-day logistics">
+          <div className="grid md:grid-cols-2 gap-4">
+            <Field label="Her call time" hint="Defaults to the shared 4:00 PM team arrival; change it if her role needs a different time.">
+              <EditText value={card.call_time ?? ENTOURAGE_CALL_TIME} onSave={(v) => set({ call_time: v })} className="font-serif text-lg" />
+            </Field>
+            <Field label="Where to meet" hint="Defaults to the Dome Tent majlis on the right of the main gate entrance.">
+              <EditText value={card.meet_at ?? MAJLIS_LOCATION} onSave={(v) => set({ meet_at: v })} className="font-serif text-lg" />
+            </Field>
+            <Field label="What to prepare" hint="One item or preparation note per line." className="md:col-span-2">
+              <EditText value={card.prepare ?? ""} multiline rows={3} onSave={(v) => set({ prepare: v })} className="text-sm leading-relaxed" />
+            </Field>
+            <Field label="What to bring" hint="One item per line — each becomes a bullet on her card." className="md:col-span-2">
+              <EditText value={card.bring ?? ""} multiline rows={3} onSave={(v) => set({ bring: v })} className="text-sm leading-relaxed" />
             </Field>
           </div>
         </Card>

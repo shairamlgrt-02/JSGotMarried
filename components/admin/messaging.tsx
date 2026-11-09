@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTable } from "@/lib/hooks";
+import { downloadProgramCard } from "@/lib/program-card";
+import { WEDDING_PROGRAM_STOPS } from "@/lib/program";
 import {
   MESSAGE_CATEGORIES,
   MESSAGE_STATUS,
@@ -381,10 +383,12 @@ export function ComposeTab({ go }: { go?: (tab: string) => void }) {
   const { rows: vendors, save: saveVendor } = useTable("vendors");
   const { rows: guests, save: saveGuest } = useTable("guests", false);
   const { rows: infoRows } = useTable("wedding_info");
+  const { rows: attireRows } = useTable("attire");
   const info = infoRows[0];
   const origin = typeof window !== "undefined" ? window.location.origin : "";
 
   const [selectedCats, setSelectedCats] = useState<string[]>([]);
+  const [programCardStatus, setProgramCardStatus] = useState<"idle" | "working" | "done" | "error">("idle");
   const [selectedTemplate, setSelectedTemplate] = useState<MessageTemplate | null>(null);
   const [customCampaignId, setCustomCampaignId] = useState<string>(() => `custom_${genMessageId()}`);
   const [campaignLabel, setCampaignLabel] = useState("");
@@ -401,6 +405,20 @@ export function ComposeTab({ go }: { go?: (tab: string) => void }) {
   const flash = (t: string) => {
     setFlashMsg(t);
     setTimeout(() => setFlashMsg(""), 5000);
+  };
+  const downloadUpdatedProgrammeCard = async () => {
+    if (programCardStatus === "working" || !info) return;
+    setProgramCardStatus("working");
+    const dressNote = (attireRows.find((row) => row.group === "guests")?.notes || "").split("—")[0].replace(/\.?\s*$/, "").trim();
+    const ok = await downloadProgramCard({
+      groom: info.groom, bride: info.bride, dateISO: info.date,
+      venue: info.venue_name, address: info.venue_address,
+      program: WEDDING_PROGRAM_STOPS,
+      dressNote: dressNote || "Black tie — details live in the attire guide",
+      hashtags: info.hashtags,
+    }).catch(() => false);
+    setProgramCardStatus(ok ? "done" : "error");
+    flash(ok ? "Updated programme card downloaded. Attach the PNG manually in WhatsApp." : "Could not download the card — please try again.");
   };
   const markCopied = (key: string) => {
     setCopiedKey(key);
@@ -849,6 +867,9 @@ export function ComposeTab({ go }: { go?: (tab: string) => void }) {
         >
           ↻ Refresh opens
         </Btn>
+        <Btn variant="ghost" onClick={downloadUpdatedProgrammeCard} disabled={!info || programCardStatus === "working"}>
+          {programCardStatus === "working" ? "Drawing updated card…" : programCardStatus === "done" ? "Updated card downloaded ✓" : "Download updated card (.png)"}
+        </Btn>
         {enrichedRows.length > 0 && (
           <Btn variant="ghost" onClick={exportComposeCsv}>Export CSV</Btn>
         )}
@@ -860,7 +881,7 @@ export function ComposeTab({ go }: { go?: (tab: string) => void }) {
         Pick a template or write your own message, choose who it goes to, then send row by row — just like{" "}
         <b>Invite Codes</b>: <b>copy message</b>, <b>copy link</b> or <b>send ↗</b> on WhatsApp automatically marks
         that household <i>sent</i> and gives them a tracked personal link so you see the moment they <i>open</i> it
-        and when they <i>reply</i>.
+        and when they <i>reply</i>. For schedule updates, download the updated PNG above and attach it manually in WhatsApp before sending; the message composer does not attach files automatically.
       </p>
 
       {flashMsg && <div className="text-sm bg-moss/10 text-moss rounded-xl px-4 py-3">{flashMsg}</div>}

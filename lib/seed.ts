@@ -8,7 +8,7 @@ const SONG_URL = "https://bqdjucurmpophnafchwi.supabase.co/storage/v1/object/sig
 export const SEED: { [K in TableName]: TableMap[K][] } = {
   wedding_info: [{
     id: "main",
-    date: "2026-11-11T16:00:00+03:00",
+    date: "2026-11-11T16:30:00+03:00",
     bride: "Shaira",
     groom: "Jeger",
     venue_name: "The Heaven",
@@ -40,9 +40,9 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     benefitpay_iban: "BH69BIBB00100003377119",
   }],
   schedule: [
-    { id: "s1", time: "4:00 – 5:00 PM", title: "The Ceremony", detail: "An *intimate ceremony*, shared with our families, entourage and a few honoured guests. If your heart wants to witness us say “I do”, you are *warmly welcome to join* — open seating is available around our reserved rows.", order: 1 },
-    { id: "s2", time: "5:00 – 7:00 PM", title: "Cocktail & Mingling Hour", detail: "*Everyone is welcome from 5 PM!* Snacks, refreshments, *photo moments* and little activities at the *majlis*, just outside the hall. This is where we’ll come find you — to hug, laugh and take pictures together.", order: 2 },
-    { id: "s3", time: "7:00 PM onwards", title: "The Reception", detail: "Doors open for the celebration — *dinner*, our *film on the big screen*, *games and giveaways*, and dancing until the very end.", order: 3 },
+    { id: "s1", time: "4:30 PM", title: "Closed-Door Wedding Ceremony", detail: "A private, closed-door ceremony for our wedding party and invited ceremony guests.", order: 1 },
+    { id: "s2", time: "6:00 – 7:00 PM", title: "Sip & Fellowship · Welcome Toast", detail: "All other guests are warmly welcome from 6:00 PM at the Dome Tent majlis, to the right of the main gate entrance, for sips, fellowship, a welcome toast and photos.", order: 2 },
+    { id: "s3", time: "7:00 PM onwards", title: "The Reception", detail: "The reception celebration begins in the hall at 7:00 PM.", order: 3 },
   ],
 
   /**
@@ -113,7 +113,7 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     ["Print scratch cards for reception game", "medium", "2026-10-28"],
     ["Source market giveaway items", "medium", "2026-10-28"],
     ["Seating plan", "high", "2026-11-02"],
-    ["Order cocktail-hour street food", "medium", "2026-10-30"],
+    ["Order Sip & Fellowship refreshments", "medium", "2026-10-30"],
     ["Test projector + screen at venue", "medium", "2026-11-05"],
     ["Prepare vows", "high", "2026-11-05"],
     ["Final vendor payments", "critical", "2026-11-08"],
@@ -149,15 +149,15 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     ["Venue & Catering", "Catering — confirm and pay", "critical", "2026-10-30", "Couple", "Final headcount in hand first (RSVP closes Oct 25); receipt filed with the payment envelopes.", ""],
     ["Venue & Catering", "Wedding cake — to order", "high", "2026-11-01", "Couple", "Design, size vs. headcount, topper, delivery time and who receives it.", ""],
     ["Venue & Catering", "Wedding cake / sparkling wine", "critical", "2026-10-23", "Couple", "To order.", ""],
-    ["Venue & Catering", "Cocktail-hour street food (pass-around)", "medium", "2026-10-30", "Gracie", "Donuts; confirm quantity, delivery time and serving trays.", ""],
+    ["Venue & Catering", "Sip & Fellowship refreshments (pass-around)", "medium", "2026-10-30", "Gracie", "Donuts; confirm quantity, delivery time and serving trays.", ""],
     ["Venue & Catering", "Coffee & tea station", "medium", "2026-10-30", "Tita Lorle", "Coffee & tea, sugar, milk — assign this role on the Guest Roles tab so reminders reach her.", ""],
     ["Venue & Catering", "Serveware (snacks area)", "medium", "2026-10-30", "Marilyn", "Coffee cups, drinking glasses, stirrers, forks, small plates.", ""],
     ["Venue & Catering", "Serveware (cake & wine table)", "medium", "2026-10-30", "Marilyn", "Cake plates, cake knife, 2 forks, 2 wine glasses.", ""],
     ["Venue & Catering", "Tissue & table napkins", "medium", "2026-10-30", "Marilyn", "Boxes & table napkin.", ""],
     ["Venue & Catering", "Wine glasses — rental", "high", "2026-10-30", "Couple", "Confirm rental at Al Wasmiva (20 BD); delivery, count +10% spares, return plan.", ""],
     ["Venue & Catering", "Buffet menu & quantities locked", "critical", "2026-10-30", "Couple", "Final dishes, servings per pan, lechon confirmed in writing at The Heaven meeting.", ""],
-    ["Venue & Catering", "Vendor & staff entry at 4:00 PM", "critical", "2026-11-08", "Couple & Coordinator", "The hall is closed 2:00–4:00 PM for The Heaven's cleaning — cake, decor and sound teams enter WITH everyone at 4:00; brief each vendor personally.", ""],
-    ["Venue & Catering", "Majlis refreshments for the 3:30 briefing", "high", "2026-11-08", "Gracie", "Snacks, water and juice at the majlis for the entourage briefing (hall is closed 2–4 PM); assign a server.", ""],
+    ["Venue & Catering", "Confirm vendor access and setup timing", "critical", "2026-11-08", "Couple & Coordinator", "The Dome Tent majlis is available from 4:00 PM for the wedding party. Confirm separate hall/vendor access and setup timings directly with The Heaven; do not assume vendor entry is the same as entourage arrival.", ""],
+    ["Venue & Catering", "Majlis refreshments for the 4:00 PM briefing", "high", "2026-11-08", "Gracie", "Snacks, water and juice at the Dome Tent majlis for the entourage and wedding-team briefing from 4:00 PM; assign a server.", ""],
     ["Venue & Catering", "Cake delivery & placement", "high", "2026-11-09", "Couple", "Delivery time, who receives it, where it sits (clear of the cross backdrop), cake table styled.", ""],
     ["Venue & Catering", "Sparkling wine chilled & toast glasses", "high", "2026-11-10", "Couple", "Chill by 4 PM; 2 glasses on the cake table (Marilyn's serveware) + the rest for the toasts.", ""],
     ["Venue & Catering", "Coffee & tea supplies box", "medium", "2026-11-08", "Tita Lorle", "Coffee, tea, sugar, milk, cups, stirrers, small plates, napkins — one labelled box per station.", ""],
@@ -170,9 +170,9 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     ["Ceremony Team", "Wedding singer — to confirm", "high", "2026-10-23", "Couple", "Ceremony songs; check against the musician's set.", ""],
     ["Ceremony Team", "Musician — to confirm; keyboard needed", "critical", "2026-10-23", "Couple", "Keyboard, mic stand and power point at the venue.", ""],
     ["Ceremony Team", "Reception playlist DJ — to confirm; laptop needed", "critical", "2026-10-23", "Jeg", "Laptop + aux cable as backup to the band.", ""],
-    ["Ceremony Team", "Meet Pastor Deon: order of service", "critical", "2026-10-30", "Couple", "Bring the paperwork, ceremony outline, music cues, entourage names & pronunciations; walk through the 4:00 PM entrance together.", ""],
+    ["Ceremony Team", "Meet Pastor Deon: order of service", "critical", "2026-10-30", "Couple", "Bring the paperwork, ceremony outline, music cues, entourage names & pronunciations; walk through the 4:30 PM ceremony start and closed-door procedure together.", ""],
     ["Ceremony Team", "MC script & rundown to Carlo", "high", "2026-11-08", "Jeg", "One-pager: sequence, transitions, games, thanking sponsors; set the mic-check time.", ""],
-    ["Ceremony Team", "Ushers' briefing card", "medium", "2026-11-08", "Marilyn", "Who seats whom, reserved rows, walk-ins at 5:30, souvenir-table handover.", ""],
+    ["Ceremony Team", "Ushers' briefing card", "medium", "2026-11-08", "Marilyn", "Who seats whom, reserved rows, the 4:30 PM closed-door ceremony, 6:00 PM majlis arrivals and souvenir-table handover.", ""],
     ["Ceremony Team", "Singer & musician song list", "high", "2026-11-03", "Couple", "Ceremony + reception songs, lyrics and keys shared; keyboard, mic stands and sound-check slot confirmed.", ""],
     ["Ceremony Team", "Procession order cards for coordinators", "medium", "2026-11-08", "Coordinator", "Who walks when and with whom, pacing, where each pair stands at the front.", ""],
     // ── Attire & Beauty ──
@@ -224,7 +224,7 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     ["Sound System", "Sound system provider", "critical", "2026-10-23", "Jeg", "Kuya Marvin (check availability & charges) or church sound system.", ""],
     ["Sound System", "Sound equipment", "high", "2026-11-08", "Jeg", "Microphones (4 pcs), speakers, mixers, socket extension.", ""],
     ["Sound System", "Kuya Marvin: availability, charges, gear list", "critical", "2026-10-25", "Jeg", "4 mics (2 handheld + lapels if possible), speakers, mixer, extension cords; church system as backup.", ""],
-    ["Sound System", "Sound check schedule", "high", "2026-11-10", "Jeg", "A slot once everyone walks in at 4:00 (or at the majlis); who runs playback (phone + laptop + aux).", ""],
+    ["Sound System", "Sound check schedule", "high", "2026-11-10", "Jeg", "Confirm a sound-check slot with the coordinator and venue; the entourage briefing is at 4:00 PM and the ceremony begins at 4:30 PM.", ""],
     ["Sound System", "Projector & screen playback test", "high", "2026-11-09", "Jeg", "Love-story film + livestream feed tested; HDMI, adapters and a taped-down power strip.", ""],
     // ── Souvenirs ──
     ["Souvenirs", "Souvenirs", "critical", "2026-10-23", "Rhema", "Need to order ASAP to avoid delays.", ""],
@@ -237,7 +237,7 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     ["Programs & Speeches", "Speech / toast list", "high", "2026-10-27", "Couple & Coordinator", "List of who will make a speech/toast; inform the list.", ""],
     ["Programs & Speeches", "Parents' speech", "medium", "2026-11-01", "Coordinator", "Parents to prepare.", ""],
     ["Programs & Speeches", "Couple vows", "high", "2026-11-06", "Couple", "Prepare vows.", ""],
-    ["Programs & Speeches", "Rehearsal with entourage", "high", "2026-11-10", "Coordinator", "Select date and confirm with entourage — walk the 3:30 majlis briefing and the 4:00 walk-in while you're at it.", ""],
+    ["Programs & Speeches", "Rehearsal with entourage", "high", "2026-11-10", "Coordinator", "Select date and confirm with entourage — walk the 4:00 PM Dome Tent majlis arrival and 4:30 PM closed-door ceremony start while you're at it.", ""],
     ["Programs & Speeches", "Ceremony program", "high", "2026-11-05", "Coordinator", "", ""],
     ["Programs & Speeches", "Reception program", "high", "2026-11-05", "Coordinator", "", ""],
     ["Programs & Speeches", "Speech & toast time limits", "high", "2026-10-27", "Couple & Coordinator", "Tell each speaker 2–3 minutes max; give the MC the running order.", ""],
@@ -251,7 +251,7 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
     ["Wedding Day", "Transport & call times", "high", "2026-11-08", "Jeg", "Who drives whom, departure times; parking is the separate area (The Heaven's team point the way at the gate).", ""],
     ["Wedding Day", "Phone charging station", "medium", "2026-11-10", "Marilyn", "Power bank + cables at the majlis for guests; our own chargers labelled in the emergency kit.", ""],
     ["Wedding Day", "Weather plan B", "medium", "2026-11-08", "Coordinator", "If it rains: is the majlis covered? Umbrellas, towels, plastic sleeves for anything outdoors.", ""],
-    ["Wedding Day", "The 4:00 PM walk-in marshals", "critical", "2026-11-08", "Coordinator", "Coordinators line everyone up at the majlis by 3:50 and walk the whole party into the hall together; assign who signals it.", ""],
+    ["Wedding Day", "4:30 PM ceremony-door coordination", "critical", "2026-11-08", "Coordinator", "Meet the entourage and wedding team at the Dome Tent majlis at 4:00 PM; confirm ceremony entry order and ensure the closed doors procedure is clear before the 4:30 PM start.", ""],
     ["Wedding Day", "Little ones' quiet basket", "medium", "2026-11-10", "Shai", "Non-messy snacks and a quiet activity for the ring bearer & flower girl during the briefing.", ""],
     ["Wedding Day", "Final pack check: emergency kit", "high", "2026-11-10", "Shai", "Add safety pins, blotting paper, spare earrings, meds, sewing kit, heel tips, phone batteries, tissue, stain stick.", ""],
     ] as [string, string, Priority, string, string, string, string][]).map(
@@ -291,18 +291,19 @@ export const SEED: { [K in TableName]: TableMap[K][] } = {
   ],
 
   faq: [
-    { id: "f0", question: "Can I watch the ceremony?", answer: "Please do — it would mean the world. We chose to keep our 4 PM ceremony intimate, with our families, our entourage and a few honoured guests — and if your heart wishes to be there as we say “I do”, you are more than welcome to join us. The hall is being cleaned and prepared until 4:00 PM, so please come straight to the majlis, just outside the hall, before 4:00 PM: our coordinators will gather everyone there, snacks and refreshments are served, and a few minutes before the procession we will all walk into the hall together — the doors close the moment it begins. Reserved rows are for our families and entourage, with open seats around them. From 5:30 PM everyone is welcome — join us for the Welcome Toast & Snacks, then the reception at 7:00 PM.", order: 0 },
+    { id: "f0", question: "Can I attend the ceremony?", answer: "The ceremony begins at 4:30 PM and is closed-door for the wedding party and invited ceremony guests only. If you are part of the wedding party or have been invited to the ceremony, arrive at 4:00 PM and go straight to the Dome Tent majlis, to the right of the main gate entrance; the coordinators will meet you there. All other guests are warmly welcome from 6:00 PM at the Dome Tent majlis for Sip & Fellowship and the welcome toast. The reception begins at 7:00 PM.", order: 0 },
     { id: "f1", question: "Can I bring a plus one?", answer: "Your invitation lists your seats. The RSVP lets you choose 1 or 2 pax only if we've reserved two for you.", order: 1 },
     { id: "f2", question: "What should I wear?", answer: "Black tie, in glossy greens and warm shining browns. Greens: emerald, laurel, jade, scarab, olive, peridot. Warm browns: coffee, smoky topaz, bronze, dark honey, caramel, toffee — every shade is swatched in the Dress Code section above. Kindly avoid black, white and burgundy, which are reserved for our families and entourage. Do bring the shine: satin, velvet, silk, fine suit wool and liquid poly are all welcome, while tulle, chiffon and anything fully matte are best left at home.", order: 2 },
     { id: "f3", question: "Are kids welcome?", answer: "We adore your little ones — they are welcome to join the reception whenever your invitation says so. The ceremony itself is an adults-only celebration, unless they are part of our entourage: our flower girl and ring bearer hold the front row.", order: 3 },
-    { id: "f4", question: "Is there parking?", answer: "Yes — though not in the courtyard: parking is in a separate area, and The Heaven's team will tell you where to park when you arrive at the gate. Then walk straight to the majlis — it is where everyone is gathered.", order: 4 },
+    { id: "f4", question: "Is there parking?", answer: "Yes — parking is in a separate area, not in the courtyard. The Heaven's team will direct you at the gate. At your arrival time, head to the Dome Tent majlis to the right of the main gate entrance.", order: 4 },
     { id: "f5", question: "Can I post photos?", answer: "Please! Tag @shaiandjeg and use #JSGotMarried — #JSSayIDo and #JSWishComeTrue work beautifully too. We only ask for an unplugged ceremony.", order: 5 },
-    { id: "f6", question: "Where do I go when I arrive?", answer: "Straight to the majlis — the welcome lounge just outside the hall. The hall itself rests from 2:00 to 4:00 PM while The Heaven's team clean and prepare it, so nobody enters until 4:00. Our coordinators will meet you at the majlis, the entourage is briefed there, and snacks and refreshments are served from the moment you arrive. A few minutes before 4:00 PM we all walk into the hall together for the ceremony — and from 5:30 PM the majlis hosts the Welcome Toast & Snacks until the reception at 7:00 PM.", order: 6 },
-    { id: "f7", question: "Will the ceremony be livestreamed?", answer: "Yes. The livestream will be available to watch in the majlis and on YouTube. We’ll share the YouTube link as soon as it’s available.", order: 7 },
+    { id: "f6", question: "Where do I go when I arrive?", answer: "Entourage and wedding team: arrive at 4:00 PM and go straight to the Dome Tent majlis, to the right of the main gate entrance, for your coordinator briefing. The closed-door ceremony begins at 4:30 PM. All other guests: please join us from 6:00 PM at the Dome Tent majlis for Sip & Fellowship and the welcome toast. The reception begins in the hall at 7:00 PM.", order: 6 },
+    { id: "f7", question: "Will the ceremony be livestreamed?", answer: "The ceremony is a private, closed-door event at 4:30 PM. It will be streamed on YouTube for anyone who cannot attend; we will share the link when it is ready. The in-person welcome at the Dome Tent majlis begins at 6:00 PM.", order: 7 },
   ],
   message_templates: [],
   messages: [],
   bridesmaid_cards: [],
+  team_cards: [],
 
   // The starter wish list for the public /gifts page — the couple edits every line in the
   // every guest starts with everything open. Notes are warm and simple, without shopping
