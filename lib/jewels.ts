@@ -1,4 +1,5 @@
 import type { BridesmaidCard, GemCut } from "./types";
+import { ENTOURAGE_CALL_TIME, MAJLIS_LOCATION } from "./program";
 
 /**
  * The bridesmaids' jewels, and the roles a bridesmaid can be given on the day.
@@ -305,6 +306,10 @@ export function newBridesmaidCard(id: string, name: string, stone: Stone, role: 
     subline: sublineFor(name),
     verse: DEFAULT_VERSE,
     note: `${salutationFor(name)}\n\nThank you for saying yes to standing beside me. Of all the people in my life, you are one of the few I could not imagine this day without — and now I don't have to.\n\nI gave each of my girls a jewel, because that is how I see you: rare, bright and lasting. But a jewel is only a picture — you are far more precious to me than any of them: steady when I wobble, honest when I need it, and always on my side. I cannot wait to turn around and find you there.`,
+    call_time: ENTOURAGE_CALL_TIME,
+    meet_at: MAJLIS_LOCATION,
+    prepare: "",
+    bring: "",
     role_kicker: "Her role on the day",
     closing: `With all my love, ${ctx.bride || "the bride"}`,
     footer: [ctx.initials, ctx.date].filter(Boolean).join(" · "),

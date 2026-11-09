@@ -9,13 +9,14 @@ import { TemplatesTab, ComposeTab, TrackerTab } from "@/components/admin/messagi
 import { RolesTab } from "@/components/admin/roles";
 import { SocialStudio } from "@/components/admin/social-studio";
 import { GiftRegistry } from "@/components/admin/gifts";
+import { TeamGuide } from "@/components/admin/team-guide";
 
 const TABS = [
   ["overview", "Overview", "◐"], ["details", "Details", "✎"], ["schedule", "Schedule", "◷"], ["checklist", "Checklist", "☑"],
   ["budget", "Budget", "◎"], ["invites", "Invite Codes", "✦"], ["guests", "Guests & RSVP", "♡"], ["roles", "Guest Roles", "❁"], ["audio", "Audio Guestbook", "☎"],
   ["messaging-compose", "📨 Compose", "✉"], ["messaging-templates", "📋 Templates", "▤"], ["messaging-tracker", "📊 Tracker", "◈"],
   ["vendors", "Vendors", "◇"], ["attire", "Attire & Colors", "◉"], ["bridesmaids", "Bridesmaid Cards", "✿"],
-  ["gifts", "Gift List", "🎁"], ["ig-stories", "Social Studio", "📱"],
+  ["gifts", "Gift List", "🎁"], ["ig-stories", "Social Studio", "📱"], ["team-guide", "Wedding Team Guide", "◷"],
   ["content", "Content", "▣"], ["settings", "Settings", "⚙"],
 ] as const;
 type Tab = (typeof TABS)[number][0];
@@ -24,22 +25,18 @@ export default function Admin() {
   const [tab, setTab] = useState<Tab>("overview");
   const [mode, setMode] = useState("…");
   const [menu, setMenu] = useState(false);
-  const [printReady, setPrintReady] = useState(false);
   useEffect(() => {
     getMode().then(setMode);
     const h = location.hash.slice(1) as Tab;
     if (TABS.some((t) => t[0] === h)) setTab(h);
-    const onBeforePrint = () => setPrintReady(true);
-    window.addEventListener("beforeprint", onBeforePrint);
-    return () => window.removeEventListener("beforeprint", onBeforePrint);
   }, []);
   const go = (t: string) => { setTab(t as Tab); setMenu(false); history.replaceState(null, "", `#${t}`); window.scrollTo({ top: 0 }); };
 
   return (
     <>
-      <div className="relative z-[1] min-h-screen bg-oat text-ink md:flex print:hidden">
+      <div className={`relative z-[1] min-h-screen bg-oat text-ink md:flex ${tab === "team-guide" ? "" : "print:hidden"}`}>
         {/* Sidebar */}
-        <aside className={`fixed md:sticky top-0 z-40 h-screen w-72 shrink-0 bg-ivory border-r border-taupe/20 flex flex-col transition-transform duration-500 ease-lux ${menu ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}>
+        <aside className={`fixed md:sticky top-0 z-40 h-screen w-72 shrink-0 bg-ivory border-r border-taupe/20 flex flex-col transition-transform duration-500 ease-lux print:hidden ${menu ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}>
           <div className="p-6 flex items-center gap-3 border-b border-taupe/20">
             <div className="w-11 h-11 rounded-full border border-wine/40 grid place-items-center"><span className="script text-2xl text-wine">JS</span></div>
             <div><div className="font-serif text-xl leading-none">The Binder</div><div className="label !text-[9px] text-taupe mt-1">Wedding OS · 11.11.2026</div></div>
@@ -62,7 +59,7 @@ export default function Admin() {
 
         {/* Content */}
         <main className="flex-1 min-w-0 relative">
-          <div className="md:hidden sticky top-0 z-20 bg-ivory/90 backdrop-blur flex items-center justify-between px-5 py-4 border-b border-taupe/20">
+          <div className="md:hidden sticky top-0 z-20 bg-ivory/90 backdrop-blur flex items-center justify-between px-5 py-4 border-b border-taupe/20 print:hidden">
             <button onClick={() => setMenu(true)} className="text-2xl">☰</button>
             <span className="font-serif text-xl">{TABS.find((t) => t[0] === tab)?.[1]}</span>
             <span className="script text-wine text-xl">JS</span>
@@ -87,13 +84,14 @@ export default function Admin() {
               {tab === "bridesmaids" && <BridesmaidCards />}
               {tab === "gifts" && <GiftRegistry />}
               {tab === "ig-stories" && <SocialStudio />}
+              {tab === "team-guide" && <TeamGuide />}
               {tab === "content" && <Content />}
               {tab === "settings" && <Settings mode={mode} onPrint={() => window.print()} go={go} />}
             </motion.div>
           </AnimatePresence>
         </main>
       </div>
-      {(tab === "settings" || printReady) && <PrintBinder />}
+      {tab === "settings" && <PrintBinder />}
     </>
   );
 }

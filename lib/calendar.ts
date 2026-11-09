@@ -1,4 +1,4 @@
-import { ALL_WELCOME_FROM } from "./program";
+import { ALL_WELCOME_FROM, CEREMONY_AT, ENTOURAGE_CALL_TIME, MAJLIS_LOCATION, RECEPTION_AT, SEND_OFF_AT, WELCOME_EVENT_NAME } from "./program";
 import type { WeddingInfo } from "./types";
 
 /**
@@ -19,9 +19,6 @@ import type { WeddingInfo } from "./types";
 
 /** Bahrain runs on Arabian Standard Time all year (UTC+3, no daylight saving). */
 export const WEDDING_TZ = "Asia/Bahrain";
-
-/** How long the calendar block runs: the ceremony through to the send-off, not a note on a napkin. */
-const CELEBRATION_HOURS = 6;
 
 /** The reminder a guest finds already set on the event — one day before, changeable in their app. */
 const REMINDER = "-P1D";
@@ -49,19 +46,35 @@ export const eventMonth = (iso: string) =>
 export const eventTimeWords = (iso: string) =>
   new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: WEDDING_TZ });
 
+/** Build a Bahrain-local timestamp for a same-day schedule time (Bahrain is UTC+3, no DST). */
+function eventAtBahrainTime(day: Date, label: string): Date {
+  const [clock, period] = label.trim().split(/\s+/);
+  const [rawHour, rawMinute = "0"] = clock.split(":");
+  let hour = Number(rawHour) % 12;
+  if (period?.toUpperCase() === "PM") hour += 12;
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: WEDDING_TZ, year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(day);
+  const part = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  return new Date(Date.UTC(part("year"), part("month") - 1, part("day"), hour - 3, Number(rawMinute)));
+}
+
 /** One event for the couple's day, built from the invitation itself. */
 export function weddingEvent(info: WeddingInfo, inviteUrl = ""): WeddingEvent {
-  const start = new Date(info.date);
-  const end = new Date(start.getTime() + CELEBRATION_HOURS * 3600_000);
+  const eventDay = new Date(info.date);
+  // The guest calendar is for the general arrival, not the private ceremony or wedding-team call.
+  const start = eventAtBahrainTime(eventDay, ALL_WELCOME_FROM);
+  const end = eventAtBahrainTime(eventDay, SEND_OFF_AT);
   const where = [info.venue_name, info.venue_address].filter((v) => v && v.trim()).join(", ");
   const couple = `${info.groom} & ${info.bride}`;
   // the closed doors: the ceremony's one rule, told where a guest plans their arrival
-  const ceremonyAt = eventTimeWords(info.date);
+  const ceremonyAt = CEREMONY_AT;
   const lines = [
     `${couple} are getting married — ${eventDateLong(info.date)}.`,
     "",
-    `The ceremony begins at ${ceremonyAt}${where ? ` at ${where}` : ""}, and we celebrate into the evening.`,
-    `Wish to witness the vows? The hall is being prepared until ${ceremonyAt}, so please come straight to the majlis just outside it — our coordinators will gather everyone there, and we all walk into the hall together (the doors close as the procession begins). Everyone is welcome from ${ALL_WELCOME_FROM} for the Welcome Toast & Snacks, then the reception.`,
+    `The private, closed-door ceremony begins at ${ceremonyAt}.`,
+    `Entourage & wedding team: arrive at ${ENTOURAGE_CALL_TIME} and go straight to ${MAJLIS_LOCATION} for your coordinator briefing.`,
+    `All other guests: please arrive from ${ALL_WELCOME_FROM} at ${MAJLIS_LOCATION} for ${WELCOME_EVENT_NAME}. The reception begins at ${RECEPTION_AT}.`,
   ];
   if (info.venue_map_link) lines.push(`Directions: ${info.venue_map_link}`);
   if (inviteUrl) lines.push(`Your invitation: ${inviteUrl}`);

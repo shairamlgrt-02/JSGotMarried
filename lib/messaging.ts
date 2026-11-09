@@ -2,6 +2,7 @@ import type { Attending, Guest, WeddingInfo, EntourageMember, Vendor, MessageLog
 import { GUEST_TAGS, GUEST_TAG_IDS, guestTagIcon, guestTagLabel, parseGuestTags } from "./types";
 import { DAY_ROLE_IDS, DAY_ROLES, dayRoleIcon, dayRoleLabel } from "./roles";
 import { cleanCode } from "./guests";
+import { ALL_WELCOME_FROM, CEREMONY_AT, ENTOURAGE_CALL_TIME, MAJLIS_LOCATION, RECEPTION_AT, WELCOME_EVENT_NAME } from "./program";
 
 /* ─── Short tracking IDs & tracked links ─── */
 const MSG_ID_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
@@ -551,11 +552,9 @@ export function applyMergeTags(
 /**
  * The couple's letters, written once in the code so nobody has to start from a blank box: the
  * RSVP chase (a gentle reminder, then the kind-but-firm final call before the deadline), the
- * thank-yous (one general, plus separate letters for the wedding team's 3:30 PM call time and
- * the guests' 5:30 PM majlis arrival, each carrying the adults-only ceremony and livestream
- * notes), dress-code reassurance for guests, the replies for after the deadline
- * (fill-in-your-details, missed-RSVP livestream and the final guest-list-closed note), and the
- * day-of role briefing. The binder's Templates tab
+ * thank-yous (one general, plus separate notes for the wedding team's 4:00 PM arrival and
+ * the guests' 6:00 PM Dome Tent majlis welcome), dress-code reassurance for guests, the replies
+ * for after the deadline, and the day-of role briefing. The binder's Templates tab
  * lists them with one-click "add to my templates" buttons — added copies are ordinary templates,
  * free to edit or delete.
  *
@@ -629,7 +628,7 @@ Your personal invitation link holds everything: the programme, the dress code, t
 
 {invitation_link}
 
-One small thing to remember: the hall is being prepared until 4:00 PM, so everyone gathers at the majlis just outside it first — come a little early, have snacks with us there, and we'll all walk into the hall together. From 5:30 PM, everyone is welcome for the Welcome Toast & Snacks before the reception.
+A quick timing note: our ceremony is a private, closed-door event at ${CEREMONY_AT}. All other guests are warmly welcome from ${ALL_WELCOME_FROM} at ${MAJLIS_LOCATION} for ${WELCOME_EVENT_NAME}. The reception begins at ${RECEPTION_AT}.
 
 We can't wait to celebrate with you! ❤️
 
@@ -638,58 +637,58 @@ With love,
   },
   {
     id: "preset_thank_yes_wedding_team",
-    name: "RSVP · Thank You, Wedding Team (3:30 PM Call Time)",
+    name: "RSVP · Thank You, Wedding Team (4:00 PM Call Time)",
     label: "Thank you",
-    hint: "For the entourage & wedding team who said yes — 3:30 PM call time, doors close 4:00 PM, late friends join the majlis livestream, plus the adults-only ceremony note for their children.",
+    hint: "For the entourage & wedding team — arrive at 4:00 PM at the Dome Tent majlis, with the closed-door ceremony beginning at 4:30 PM.",
     categories: [],
     body: `Hi {first_name}! 🥰
 
 Thank you for saying YES — not only to celebrating with us, but to standing beside us as part of our wedding team. It means the absolute world to us, and {seats} are saved with so much love.
 
-Here is how our wedding day on {wedding_date} will flow for you:
+Here is the timing for our wedding day on {wedding_date}:
 
-*🕞 3:30 PM — your call time at the majlis*
-Please come straight to the majlis, just outside the hall. Our coordinators will meet and brief you there, with snacks and refreshments waiting.
+*🕓 ${ENTOURAGE_CALL_TIME} — entourage & wedding-team arrival*
+Please go straight to ${MAJLIS_LOCATION}. The majlis becomes available at 4:00 PM, and your coordinators will meet you there for the briefing.
 
-*🚪 The doors close at 4:00 PM*
-A few minutes before 4:00 PM we will all walk into the hall together, and the doors close the moment the procession begins — so please make sure to arrive *earlier than 4:00 PM*. If anything ever delays you and you arrive after the doors close, you are still completely welcome to settle in at the majlis and watch the entire ceremony with us there on the livestream, refreshments in hand.
+*🔒 ${CEREMONY_AT} — closed-door ceremony*
+The ceremony is private and begins at 4:30 PM. Please arrive promptly and follow your coordinator's instructions.
 
-*👶 A gentle note about little ones*
-Our ceremony is an adults-only, closed-door moment. Unless your children are taking part in the wedding ceremony itself, they are very welcome to stay at the majlis and watch along on the livestream, with refreshments served there too — and we cannot wait to hug them at the reception later!
+*🥂 ${ALL_WELCOME_FROM} — Sip & Fellowship*
+All other guests are welcome at the Dome Tent majlis for fellowship, a welcome toast and photos.
 
-*🥂 After the ceremony*
-Once the vows and photos are done, we will come and join you at the majlis for the welcome toast, snacks, chats and pictures. Then at *7:00 PM*, everyone walks into the hall together and the reception begins! 🎉
+*🎉 ${RECEPTION_AT} — reception*
+The reception begins in the hall at 7:00 PM.
 
 Your personal invitation has the full programme, dress code, venue and map:
 {invitation_link}
 
-We truly could not do this without you. Thank you for loving us this well. ❤️
+We truly could not do this without you. Your individual role, preparation notes and bring-list will follow in a separate team card once finalised. Thank you for loving us this well. ❤️
 
 With love,
 {couple_names}`,
   },
   {
     id: "preset_thank_yes_guests",
-    name: "RSVP · Thank You for Your Yes (5:30 PM Majlis · 7 PM Hall)",
+    name: "RSVP · Thank You for Your Yes (6:00 PM Majlis · 7 PM Reception)",
     label: "Thank you",
-    hint: "For confirmed guests — 5:30 PM at the majlis with welcome toasts & snacks, ceremony on the livestream, little ones welcome from the reception, and everyone enters the hall together at 7:00 PM.",
+    hint: "For confirmed guests not attending the closed-door ceremony — 6:00 PM at the Dome Tent majlis for Sip & Fellowship and the welcome toast; reception at 7:00 PM.",
     categories: ["confirmed_yes"],
     body: `Hi {first_name}! 🥰
 
 Thank you for confirming — your {seats} are officially saved, and reading your yes made us so happy! We cannot wait to celebrate with you on {wedding_date}.
 
-A few lovely details so you know exactly how the day flows:
+A little note on timing so you know exactly when to join us:
 
-*🕠 5:30 PM — welcome to the majlis*
-Please join us at the majlis, just outside the hall, for welcome toasts, snacks and photos. Our ceremony is a small, adults-only, closed-door moment — but you will not miss a thing: it will be shown on the livestream at the majlis, with snacks and refreshments served as you watch.
+*🔒 ${CEREMONY_AT} — private, closed-door ceremony*
+The ceremony is for our wedding party and invited ceremony guests only.
 
-*👶 Children are welcome at the reception!*
-Because the ceremony itself is adults-only and behind closed doors, we would love your little ones to join us from the reception onwards. Until then, they can watch the ceremony beside you at the majlis on the livestream, with refreshments ready for them too.
+*🥂 ${ALL_WELCOME_FROM} — Sip & Fellowship / Welcome Toast*
+If you are not attending the ceremony, please join us from 6:00 PM at ${MAJLIS_LOCATION} for sips, fellowship, a welcome toast and photos.
 
-*🥂 After the ceremony*
-As soon as the vows are done, we will come and find you at the majlis for the welcome toast, snacks, chats and pictures. Then at *7:00 PM*, all of our guests will walk into the hall together — and the wedding celebrations begin! 🎉
+*🎉 ${RECEPTION_AT} — reception*
+The reception begins in the hall at 7:00 PM.
 
-Your personal invitation holds the full programme, dress code, venue and map:
+Your personal invitation holds the dress code, venue and map:
 {invitation_link}
 
 See you very soon — with all our love,
@@ -738,15 +737,15 @@ With love,
   },
   {
     id: "preset_rsvp_missed_livestream",
-    name: "RSVP · Missed the Deadline? Join via Livestream",
-    label: "Livestream",
-    hint: "A loving reply for guests whose RSVP arrived too late — the list is locked, but they are welcome at the majlis to watch the ceremony on the livestream with refreshments.",
+    name: "RSVP · Missed the Deadline? Join for Sip & Fellowship",
+    label: "Guest welcome",
+    hint: "A loving reply for guests whose RSVP arrived too late — no reception seat can be reserved, but they can still join the 6:00 PM Sip & Fellowship welcome at the Dome Tent majlis.",
     categories: [],
     body: `Hi {first_name}! 🤍
 
 We are writing with so much love. We noticed your RSVP did not reach us before the deadline, and our final guest list and seating are now locked in, so we are sadly unable to reserve a seat for you at the reception. We truly wish things were different.
 
-The lovely part is that you can still be right there with us: our wedding ceremony will be shown on the livestream at the majlis, where you are warmly welcome to watch along with refreshments — it will feel like you are in the room as we say "I do". 🥹
+The ceremony is a private, closed-door moment at ${CEREMONY_AT}. Although we cannot reserve a reception seat, we would still be happy to welcome you from ${ALL_WELCOME_FROM} at ${MAJLIS_LOCATION} for ${WELCOME_EVENT_NAME}, the welcome toast and fellowship. 🥹
 
 Thank you for the love and support you have shown us, from near or far. We would love to find a time for coffee soon after the wedding!
 
@@ -850,7 +849,7 @@ With love,
     id: "preset_broadcast_1_week",
     name: "Broadcast · 1 Week To Go (Map · Arrival Times)",
     label: "Broadcast",
-    hint: "The week-of broadcast — the Google Maps pin, the 3:30 PM wedding-team call time and the 5:30 PM majlis arrival for everyone else, with the full schedule on the invitation site.",
+    hint: "The week-of broadcast — the map, 4:00 PM wedding-team call time, 4:30 PM closed-door ceremony, 6:00 PM guest welcome and 7:00 PM reception.",
     categories: ["confirmed_yes"],
     body: `Hi {first_name}! 🤍
 
@@ -859,9 +858,11 @@ One week to go — we are down to the final countdown, and our hearts are so ful
 📍 *Finding us* — the Google Maps pin for {wedding_venue}:
 {venue_map_link}
 
-🕞 *When to arrive*
-· Our entourage & wedding team: please be at the *majlis by 3:30 PM* for your briefing — the ceremony doors close at *4:00 PM*.
-· All other guests: join us at the *majlis from 5:30 PM* for welcome toasts and snacks; after the ceremony we will join you there, and at *7:00 PM* everyone walks into the hall together for the reception.
+🕓 *When to arrive*
+· Entourage & wedding team: arrive at the *Dome Tent majlis at ${ENTOURAGE_CALL_TIME}* — it is to the right of the main gate entrance. Your coordinators will meet you there.
+· The private, closed-door ceremony begins at *${CEREMONY_AT}*.
+· All other guests: join us at the *Dome Tent majlis from ${ALL_WELCOME_FROM}* for *${WELCOME_EVENT_NAME}*.
+· The reception begins in the hall at *${RECEPTION_AT}*.
 
 The full programme, dress code and venue details live on your invitation:
 {invitation_link}
@@ -870,6 +871,22 @@ Any questions at all, just reply here. One week! 🎉
 
 Love,
 {couple_names}`,
+  },
+  {
+    id: "preset_dayof_team_arrival",
+    name: "Day-of Reminder · Entourage & Wedding Team (4:00 PM)",
+    label: "Day-of reminder",
+    hint: "Send to the entourage and wedding team only. Arrive at 4:00 PM at the Dome Tent majlis, right of the main gate; closed-door ceremony begins at 4:30 PM.",
+    categories: [],
+    body: `Hi {first_name}! 🤍 A quick reminder for today: please arrive at *${ENTOURAGE_CALL_TIME}* and go straight to ${MAJLIS_LOCATION}. Your coordinators will meet you at the Dome Tent majlis. The private, closed-door ceremony begins at *${CEREMONY_AT}*, so please be on time. The reception begins at *${RECEPTION_AT}*. Thank you for being part of our day!\n\nWith love,\n{couple_names}`,
+  },
+  {
+    id: "preset_dayof_guest_arrival",
+    name: "Day-of Reminder · Guest Welcome (6:00 PM)",
+    label: "Day-of reminder",
+    hint: "Use for invited guests who are not attending the closed-door ceremony. Please select recipients manually.",
+    categories: [],
+    body: `Hi {first_name}! 🤍 We can't wait to see you today. Please join us from *${ALL_WELCOME_FROM}* at ${MAJLIS_LOCATION} for *${WELCOME_EVENT_NAME}* — sips, fellowship, a welcome toast and photos. The reception begins in the hall at *${RECEPTION_AT}*.\n\nWith love,\n{couple_names}`,
   },
   {
     id: "preset_broadcast_1_day",
@@ -885,7 +902,7 @@ One tiny favour as you get ready: take ALL the photos and videos, and tag us so 
 📸 Instagram: {instagram}
 🏷️ Hashtag: {hashtag}
 
-Stories, reels, dance-floor clips — we want them all. See you at the majlis tomorrow!
+Stories, reels, dance-floor clips — we want them all. Wedding party: see you at the Dome Tent majlis at ${ENTOURAGE_CALL_TIME}; all other guests, we will see you from ${ALL_WELCOME_FROM}.
 
 With all our excitement,
 {couple_names}`,
@@ -918,7 +935,9 @@ Forever grateful,
 
 As we prepare for our wedding on {wedding_date}, there's one small role close to our hearts that we'd love to entrust to you: *{role}*.
 
-You'd be such a big help to us — the day truly wouldn't run as smoothly without you. Our coordinators will brief you on all the details before the day. No heavy lifting, we promise — just your kind presence and a willing hand. 😊
+You'd be such a big help to us — the day truly wouldn't run as smoothly without you. The main schedule is: private, closed-door ceremony at ${CEREMONY_AT}; Sip & Fellowship / Welcome Toast from ${ALL_WELCOME_FROM}; reception from ${RECEPTION_AT}.
+
+We are preparing a personal role card with your exact duties, call time, meeting point, what to prepare and what to bring. Your coordinator will confirm those details with you before the day.
 
 Can we count you in? Just reply here to let us know.
 

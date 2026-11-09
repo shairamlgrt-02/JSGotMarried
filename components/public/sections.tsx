@@ -8,7 +8,7 @@ import { useCountdown } from "@/lib/hooks";
 import { downloadKeepsake } from "@/lib/keepsake";
 import { downloadFaqCard, type FaqCardData } from "@/lib/faq-card";
 import { downloadProgramCard, type ProgramCardData } from "@/lib/program-card";
-import { ALL_WELCOME_FROM, ARRIVAL_NOTES, CEREMONY_DOORS_CLOSE, WEDDING_PROGRAM_HIGHLIGHTS, WEDDING_PROGRAM_STOPS } from "@/lib/program";
+import { ALL_WELCOME_FROM, ARRIVAL_NOTES, WEDDING_PROGRAM_HIGHLIGHTS, WEDDING_PROGRAM_STOPS } from "@/lib/program";
 import type { Attire, EntourageMember, Faq, StoryChapter, WeddingInfo } from "@/lib/types";
 import AddToCalendar from "./AddToCalendar";
 import { BAKED_COVER, fullDate } from "./Envelope";
@@ -295,7 +295,7 @@ export function ElevenEleven({ info, code = "", sealed = false }: { info: Weddin
 }
 
 /* ─────────── THE DAY ─────────── */
-/** Small line-art icons for the fixed six-stop program timeline. */
+/** Small line-art icons for the fixed five-stop program timeline. */
 function ProgramIcon({ title }: { title: string }) {
   const t = title.toLowerCase();
   const common = { fill: "none", stroke: "currentColor", strokeWidth: 1.5, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
@@ -337,7 +337,7 @@ export function programCardData(info: WeddingInfo, dressNote: string): ProgramCa
 
 /**
  * The "Download the programme card" offer — one tap draws the day-in-short PNG in the guest's own
- * browser: you don't need to be there at 4:00, who arrives when, where to go, the map, the order of the day.
+ * browser: the 4:00 PM wedding-team arrival, the 4:30 PM closed-door ceremony, 6:00 PM guest welcome, map and order of the day.
  */
 function ProgramCardOffer({ data }: { data: ProgramCardData }) {
   const [status, setStatus] = useState<"idle" | "working" | "done" | "error">("idle");
@@ -361,7 +361,7 @@ function ProgramCardOffer({ data }: { data: ProgramCardData }) {
   );
 }
 
-/** One fixed, six-stop timeline; the mobile view fits without a horizontal swipe. */
+/** One fixed, five-stop timeline; the mobile view fits without a horizontal swipe. */
 export function Schedule({ info, dressNote }: { info: WeddingInfo; dressNote: string }) {
   const reduceMotion = useReducedMotion();
   return (
@@ -382,7 +382,7 @@ export function Schedule({ info, dressNote }: { info: WeddingInfo; dressNote: st
           )}
           {WEDDING_PROGRAM_STOPS.map((stop, i) => {
             const titleAbove = i % 2 === 0;
-            // the title, plus the one thing to remember about this stop ("Doors close at 4:00 PM")
+            // the title, plus the one thing to remember about this stop ("Doors close at 4:30 PM")
             const label = (
               <div className="min-w-0">
                 <h3 className="break-words font-serif text-[10px] leading-[1.05] text-mocha text-balance sm:text-xs md:text-sm">{stop.title}</h3>
@@ -470,7 +470,7 @@ export function Schedule({ info, dressNote }: { info: WeddingInfo; dressNote: st
             ))}
           </div>
           <p className="mt-3 text-center font-serif text-xs italic text-wine/85 sm:text-sm text-balance">
-            Not in the entourage? You don&apos;t need to be there at {CEREMONY_DOORS_CLOSE} — we expect you at {ALL_WELCOME_FROM}. The card below has the full detail.
+            Not attending the closed-door ceremony? Please join us at {ALL_WELCOME_FROM} for Sip &amp; Fellowship at the Dome Tent majlis. The card below has the full details.
           </p>
         </Reveal>
 
@@ -897,7 +897,7 @@ function KeepsakeOffer({ onBuild, onBuildProgram }: { onBuild: () => Promise<unk
       <p className="micro text-taupe/80 mt-3 tracking-[0.14em] text-balance">your seats, the order of the day, the venue & the dress code — in one picture for your phone</p>
       {onBuildProgram && (
         <div className="mt-5">
-          {/* the sister card: the day's logistics — you don't need to be there at 4:00, who arrives when, the map */}
+          {/* The companion card: arrival times, directions and order of the day. */}
           <motion.button type="button" whileTap={{ scale: 0.97 }} disabled={program === "working"}
             onClick={async () => { setProgram("working"); await onBuildProgram().catch(() => {}); setProgram("done"); }}
             className="micro rounded-full border border-wine/40 px-7 py-3.5 text-wine transition-colors hover:border-wine hover:bg-wine hover:text-lace disabled:opacity-60">

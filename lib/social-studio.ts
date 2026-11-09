@@ -34,9 +34,11 @@ import { STORY_W, STORY_H, loadIgFonts } from "./ig-stories";
 import {
   ALL_WELCOME_FROM,
   ARRIVAL_NOTES,
-  CEREMONY_DOORS_CLOSE,
+  CEREMONY_AT,
   ENTOURAGE_CALL_TIME,
+  MAJLIS_LOCATION,
   RECEPTION_AT,
+  WELCOME_EVENT_NAME,
   WEDDING_PROGRAM_STOPS,
 } from "./program";
 import type { Attire, Faq, WeddingInfo } from "./types";
@@ -458,7 +460,7 @@ function programmeSeries(ctx: SocialContext): HTMLCanvasElement[] {
     g.font = sans(24, 400);
     g.fillStyle = TAUPE;
     g.textAlign = "center";
-    g.fillText(`Doors close at ${CEREMONY_DOORS_CLOSE} · reception from ${RECEPTION_AT}`, cx, y + 10);
+    g.fillText(`Closed-door ceremony ${CEREMONY_AT} · reception from ${RECEPTION_AT}`, cx, y + 10);
     socialFooter(g, ctx, false);
     pages.push(canvas);
   }
@@ -628,11 +630,10 @@ function instructionsSeries(ctx: SocialContext): HTMLCanvasElement[] {
     paper(g, STORY_W, STORY_H);
     paperHeader(g, ctx, "Know Before You Go");
     const bullets = [
-      `Everyone gathers at the majlis first — the hall is prepared until ${CEREMONY_DOORS_CLOSE}.`,
-      `Wedding team: please be at the majlis by ${ENTOURAGE_CALL_TIME} for your briefing.`,
-      `Doors close at ${CEREMONY_DOORS_CLOSE}. Running late? Watch the livestream at the majlis with refreshments.`,
-      "The ceremony is adults-only and behind closed doors — little ones are welcome from the reception, and can watch along at the majlis.",
-      `After the ceremony we join you at the majlis, and at ${RECEPTION_AT} everyone walks into the hall together.`,
+      `Entourage & wedding team: arrive at ${ENTOURAGE_CALL_TIME} and go straight to ${MAJLIS_LOCATION}.`,
+      `The closed-door ceremony begins at ${CEREMONY_AT}; please arrive on time.`,
+      `All other guests: join us at ${ALL_WELCOME_FROM} at the Dome Tent majlis for ${WELCOME_EVENT_NAME}.`,
+      `The reception begins in the hall at ${RECEPTION_AT}.`,
     ];
     let y = 540;
     bullets.forEach((b) => {
@@ -982,12 +983,12 @@ export const SOCIAL_TEMPLATES: SocialTemplate[] = [
   { id: "programme-series", title: "The Programme (3 stories)", category: "Programme", format: "story", blurb: "Cover, the full timeline, and who arrives when.", render: programmeSeries },
   { id: "attire-series", title: "What to Wear (2–3 stories)", category: "Attire", format: "story", blurb: "Cover with the dress note, the guest palette, and reserved family shades.", render: attireSeries },
   { id: "faq-series", title: "Questions Answered (1 + FAQs)", category: "FAQ", format: "story", blurb: "A cover plus one story per FAQ straight from your binder (first eight).", render: faqSeries },
-  { id: "instructions-series", title: "Know Before You Go (2 stories)", category: "Instructions", format: "story", blurb: "Arrival rules, livestream, little ones — plus the tag & upload QR page.", render: instructionsSeries },
-  { id: "rem-doors", title: "Reminder · Doors Close 4 PM", category: "Reminders", format: "story", blurb: "The 3:30 wedding-team call time and the 4 PM door close.", render: wineReminder("A gentle timing reminder", [`Doors close at ${CEREMONY_DOORS_CLOSE}`], [`Wedding team: majlis by ${ENTOURAGE_CALL_TIME}`, "After 4 PM, catch the livestream at the majlis with refreshments."]) },
-  { id: "rem-majlis", title: "Reminder · 5:30 at the Majlis", category: "Reminders", format: "story", blurb: "Guest arrival: welcome toasts, snacks, then the 7 PM reception.", render: wineReminder("We can't wait to see you", [`${ALL_WELCOME_FROM} at the majlis`], ["Welcome toasts, snacks and photos", `Everyone enters the hall together at ${RECEPTION_AT}`]) },
+  { id: "instructions-series", title: "Know Before You Go (2 stories)", category: "Instructions", format: "story", blurb: "4:00 PM team arrival, 4:30 PM closed-door ceremony, 6:00 PM guest welcome — plus the tag & upload QR page.", render: instructionsSeries },
+  { id: "rem-doors", title: "Reminder · Wedding Team 4 PM", category: "Reminders", format: "story", blurb: "The 4 PM Dome Tent majlis arrival and 4:30 PM closed-door ceremony.", render: wineReminder("Wedding party & team", [`Arrive ${ENTOURAGE_CALL_TIME}`], [`Go straight to ${MAJLIS_LOCATION}`, `Closed-door ceremony begins ${CEREMONY_AT}`]) },
+  { id: "rem-majlis", title: "Reminder · 6 PM Sip & Fellowship", category: "Reminders", format: "story", blurb: "All other guests arrive at the Dome Tent majlis at 6 PM; reception begins at 7 PM.", render: wineReminder("We can't wait to see you", [`${ALL_WELCOME_FROM} at the Dome Tent majlis`], ["Sip & Fellowship · welcome toast", `Reception begins at ${RECEPTION_AT}`]) },
   { id: "rem-tomorrow", title: "Reminder · Tomorrow!", category: "Reminders", format: "story", blurb: "The-eve hype story with the tag reminder.", render: wineReminder("One more sleep", ["Tomorrow!"], ["Take all the photos and tag us", "See you at the majlis ♡"]) },
   { id: "rem-tag", title: "Reminder · Tag Us", category: "Reminders", format: "story", blurb: "Handle and hashtag call-to-action for the day.", render: wineReminder("One tiny favour", ["Tag every moment"], ["Stories, reels, dance-floor clips — we want them all"]) },
-  { id: "rem-kids", title: "Reminder · Adults-Only Ceremony", category: "Reminders", format: "story", blurb: "The closed-door ceremony note; little ones join from the reception.", render: wineReminder("A note about little ones", ["Adults-only ceremony"], ["Children are so welcome at the reception — and can watch the ceremony on the majlis livestream with refreshments."]) },
+  { id: "rem-kids", title: "Reminder · Adults-Only Ceremony", category: "Reminders", format: "story", blurb: "The closed-door ceremony note; little ones join from the reception.", render: wineReminder("A note about little ones", ["Adults-only, closed-door ceremony"], ["Children are so welcome at the reception — the livestream link will be shared online."]) },
   { id: "rem-upload", title: "Reminder · Upload Your Photos", category: "Reminders", format: "story", blurb: "QR code story inviting guests to the /upload group chat and separate Stories uploader (1 GB Stories limit).", render: (ctx) => [uploadQrStory(ctx)] },
   { id: "post-save-date", title: "Feed · Save the Date", category: "Feed posts", format: "post", blurb: "4:5 portrait announcement for the grid.", render: saveTheDatePost },
   { id: "post-programme", title: "Feed · Programme", category: "Feed posts", format: "post", blurb: "The day at a glance in 4:5 portrait.", render: programmePost },

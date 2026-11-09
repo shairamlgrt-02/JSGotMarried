@@ -299,6 +299,14 @@ export type BridesmaidCard = {
   mission: string;
   /** "The duties" — one per line. */
   duties: string;
+  /** Shared wedding-party call time, editable for this person. */
+  call_time?: string;
+  /** Exact meeting point for this person. */
+  meet_at?: string;
+  /** Preparation instructions, one per line. */
+  prepare?: string;
+  /** What to bring, one item per line. */
+  bring?: string;
   /** "Pro tip" — one line; leave empty to print none. */
   pro_tip: string;
   /** The script sign-off — "With all my love, Shaira". */
