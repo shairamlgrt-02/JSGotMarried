@@ -71,6 +71,14 @@ const LEGACY_TAG_ID: Record<string, string> = {
  * times, and nothing is lost if the binder is mid-edit when it runs.
  */
 const MIGRATIONS: Partial<Record<TableName, (row: Record<string, unknown>) => Record<string, unknown> | null>> = {
+  message_templates: (row) => {
+    const name = typeof row.name === "string" ? row.name.trim() : "";
+    const categories = typeof row.categories === "string" ? row.categories.trim() : "";
+    if (name === "Schedule Update · Entourage & Wedding Team (4:00 PM)" && !categories) {
+      return { categories: "guest_entourage_other" };
+    }
+    return null;
+  },
   guests: (row) => {
     const old = typeof row.category === "string" ? row.category.trim() : "";
     if (!old || parseGuestTags(row.tags as string | null | undefined).length) return null;
