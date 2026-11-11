@@ -44,32 +44,192 @@ function DownloadableKeepsakes({ info }: { info: WeddingInfo }) {
 }
 
 type ShotItem = { time: string; heading: string; detail: string; priority?: string };
+type TimelineItem = { time: string; heading: string; bullets: string[]; flag?: string };
+
+/** A fast, bullet-first handoff for the crew; the full creative brief remains below it. */
+const photoVideoTimeline: TimelineItem[] = [
+  {
+    time: "12:30–1:00 PM",
+    heading: "P/V arrival, setup + details",
+    flag: "12:30 IDEAL · 1:00 LATEST",
+    bullets: [
+      "Ask the team to arrive at 1:00 PM at the latest; 12:30 gives time for setup and detail shots. A 2:00 PM arrival misses most prep and vow-writing.",
+      "Room wide shots, dress/suit, rings, shoes, flowers, invitation and handwritten vows; check audio and light.",
+    ],
+  },
+  {
+    time: "1:00–2:00 PM",
+    heading: "Natural prep + vow-writing BTS",
+    bullets: [
+      "Bride: mum and sisters helping, bridesmaids and family chatting, laughing and getting ready. Groom: groomsmen and family in their room.",
+      "Film each of you writing or rereading vows; hands, pages and natural pauses. Ask one or two relaxed questions; no scripted answers or staged emotion.",
+      "Split photo/video coverage between rooms. If prep is already finished, capture real final moments and details—do not recreate them.",
+    ],
+  },
+  {
+    time: "2:00–2:20 PM",
+    heading: "Bride’s first looks · garden by bridal suite",
+    bullets: [
+      "Bridesmaids first; reset; family separately. Stay on the entrance, genuine reactions, hugs and comments.",
+      "After each candid reveal, take one natural group portrait with that group.",
+    ],
+  },
+  {
+    time: "2:20–2:35 PM",
+    heading: "Groom with family + groomsmen",
+    bullets: [
+      "Capture their first reactions in the groom’s room, warm comments, greetings and a relaxed group portrait.",
+    ],
+  },
+  {
+    time: "2:35–3:00 PM",
+    heading: "Couple’s private first look, prayer + vows",
+    flag: "PRIORITY MOMENT",
+    bullets: [
+      "A quiet garden spot: genuine first reaction, prayer together, personal words and private vows before the ceremony.",
+      "Use discreet close-ups and clean audio; give the moment space and do not ask for a repeat.",
+    ],
+  },
+  {
+    time: "3:00–3:15 PM",
+    heading: "Wedding party + motion-blur scene",
+    bullets: [
+      "A few joyful portraits with bridesmaids and groomsmen together.",
+      "Keep the couple still and sharp while the party walks past; get one slow-shutter blur and one clean frame, plus a moving video pass.",
+    ],
+  },
+  {
+    time: "3:15–3:30 PM",
+    heading: "Family portraits + room reactions",
+    bullets: [
+      "Shaira’s family, Jeger’s family, then one combined family/party portrait. Have groups ready; keep posing quick and warm.",
+      "Capture a few real comments about how you look in each room before everyone moves.",
+    ],
+  },
+  {
+    time: "3:30–4:30 PM",
+    heading: "Guest arrival, venue details + entourage briefing",
+    flag: "COORDINATE THE OVERLAP",
+    bullets: [
+      "The ceremony PDF lists guest arrival from 3:30–4:00 PM. Ask the coordinator to hold guests in the Majlis until empty-room photos are done, or photograph the hall before guests arrive.",
+      "Split coverage: one shooter on arrivals/venue; another on the 4:00 PM entourage briefing and short, optional guest messages in the Dome Tent Majlis.",
+      "Keep interviews natural and brief; do not delay the ceremony call.",
+    ],
+  },
+  {
+    time: "By 4:15 PM",
+    heading: "Livestream ready for the 4:30 ceremony",
+    flag: "DEDICATED STREAM OPERATOR",
+    bullets: [
+      "Livestream operator arrives by 3:30–3:45 PM; finish framing, sound and connection checks by 4:00 PM.",
+      "Open the stream / waiting screen by 4:15 PM so remote guests can tune in. Keep the locked wide camera and cables clear of the aisle.",
+    ],
+  },
+  {
+    time: "4:30 PM onward",
+    heading: "Ceremony · follow the printed programme",
+    flag: "WORSHIP · PRAY-OVER · RING BLESSING · FOOT WASHING",
+    bullets: [
+      "Welcome and instrumental; procession: best man → groom’s mother → groom → principal sponsors → groomsmen → bridesmaids → Bible bearer → matron → maid → bride’s parents → flower girl → bride.",
+      "Prologue → opening prayer → praise & worship → wedding message. Prioritise the couple worshipping and the congregation joining.",
+      "Pray-over and wedding charge → Communion → Bible ceremony → ring blessings → washing of feet → cord. Capture faces, hands, rings and the reverent wide view; groom washes the bride’s feet first.",
+      "Vows (groom first) → I Do → ring exchange → unity candle → marriage declaration/kiss/presentation → final benediction → victory worship → celebratory march.",
+    ],
+  },
+  {
+    time: "After the ceremony",
+    heading: "Family groups + Heaven Door exit",
+    bullets: [
+      "If the coordinator can pause the flow: family and wedding-party photos first, then the couple’s exit through the Heaven door with flowers/confetti.",
+      "If the recessional must happen immediately, capture the exit first and gather the groups straight after, before guests leave for the Majlis.",
+    ],
+  },
+  {
+    time: "After ceremony–6:30 PM",
+    heading: "Couple portraits + Majlis guest moments",
+    bullets: [
+      "Couple: wide venue view, stairs, bridal entrance door, garden, gentle run and a short dance; Victorian-inspired, romantic and lively, not overly posed.",
+      "While you are away: Majlis snacks, guest portraits and short messages/interviews about the couple. Keep one shooter with guests.",
+    ],
+  },
+  {
+    time: "6:30–7:10 PM",
+    heading: "Reception arrival, welcome mirror + seating",
+    flag: "CONFIRM ARRIVAL TIME",
+    bullets: [
+      "Reception PDF: guest arrival 6:30–7:00 PM; seating 7:00–7:10 PM. This differs from the 7:00 PM guest-entry note—confirm the final cue with the coordinator.",
+      "If dry, take individual/group portraits at the welcome mirror before seating; agree on an indoor rain backup. Follow the hall-entry cue; guests may wait in the Majlis/Tent.",
+    ],
+  },
+  {
+    time: "7:10–7:40 PM",
+    heading: "Reception welcome, entrances + dances",
+    bullets: [
+      "7:10 welcome → 7:15 groomsmen → 7:20 bridesmaids → 7:25 couple entrance. Capture each entrance and guest reactions.",
+      "Insert your music-video presentation immediately before the listed 7:30 PM first dance; confirm its length with the MC and shift later cues if needed.",
+      "Listed: first dance 7:30–7:35; father–daughter dance 7:35–7:40. Capture movement, reactions and one full-room view.",
+    ],
+  },
+  {
+    time: "7:40–8:19 PM",
+    heading: "Speeches, cake + meal blessing",
+    bullets: [
+      "7:40–7:47 Matron → 7:47–7:54 Maid → 7:54–8:04 Best Man → 8:04–8:14 cake/toast → 8:14–8:19 meal blessing.",
+      "Record clean speech audio; cut to the couple, laughter and family reactions. Photograph the cake before it is cut.",
+    ],
+  },
+  {
+    time: "8:19–9:04 PM",
+    heading: "Dinner, table portraits + DIY keepsakes",
+    bullets: [
+      "Table 1 first, then photos with the remaining tables in order. Capture guests making keychains and charms, helping each other and showing finished keepsakes.",
+      "Photobooth runs 8:00–10:00 PM; assign a dedicated operator so the main P/V team does not miss programme moments.",
+    ],
+  },
+  {
+    time: "After dinner → 9:04 PM",
+    heading: "Unlisted game, then Prosperity / money dance",
+    flag: "ADD GAME TO MC CUE SHEET",
+    bullets: [
+      "The game/activity is not in the reception PDF. Confirm its name and slot with the MC; insert it after dinner and move the dance cue if needed.",
+      "The PDF lists a 9:04–9:14 PM Prosperity Dance to “Dilaw”; confirm this is the money dance you mean.",
+    ],
+  },
+  {
+    time: "9:14 PM onward",
+    heading: "Performances, blessings + open dance floor",
+    bullets: [
+      "9:14–9:34 performances → 9:34–9:49 parent blessings → 9:49 bouquet → 9:54 thank-you → 10:00 prayer; capture faces and reactions.",
+      "10:05 transition; 10:15 open dance floor. Flexible guest speeches may be inserted—keep cameras ready for candid dancing.",
+    ],
+  },
+];
+
 const prepShots: ShotItem[] = [
-  { time: "12:30–1:15 PM", heading: "P/V arrival and quiet details", detail: "Recommended earlier arrival: ask the team to be camera-ready by 12:30–1:00 PM, rather than arriving at 2:00 PM. Capture the rooms, window light, dress and suit details, rings, shoes, bouquet, invitation, handwritten vows and natural room activity before the formal prep is finished.", priority: "PLEASE ARRIVE EARLIER" },
-  { time: "1:00–1:30 PM", heading: "Vow-writing BTS · both rooms", detail: "Film Shaira and Jeger writing or rereading their vows separately. Stay documentary: natural room sound, hands writing, pauses and small reactions; ask each person one or two gentle questions while they write or just after. Avoid staging tears, scripted answers or a dramatic monologue. A second shooter is needed to cover both rooms at once." },
-  { time: "1:30–2:00 PM", heading: "Getting-ready atmosphere", detail: "Candid bridesmaid and groomsmen interactions, family checking in, Shaira's mum and sisters helping her, and the same warmth with Jeger's family. Beauty touch-ups, fastening a button, adjusting a veil or tie, laughter and small gestures. Keep it relaxed and let people talk naturally." },
-  { time: "2:00–2:20 PM", heading: "Dress and final details", detail: "Shaira gets into the dress with mum/sisters' help if that timing works; veil, fastening, shoes and a calm breath. Jeger's final jacket, tie, boutonniere and family moment. Capture real reactions; do not hold the couple in a pose for every detail." },
-  { time: "2:20–2:40 PM", heading: "Bride's first look · garden by bridal suite", detail: "First invite bridesmaids only, then reset and bring in Shaira's family separately. Keep the camera on the entrance, their first expressions, embraces and comments about how she looks. Leave a little time for one graceful group portrait after each natural reaction." },
-  { time: "2:40–3:00 PM", heading: "Groom's family first-look reactions", detail: "Jeger with his family in his room; record their first expressions, greetings and honest comments about his look. Get a small group portrait after the candid exchange. Keep family and bridal-party moments separate as requested." },
-  { time: "3:00–3:20 PM", heading: "Couple's private first look, prayer and vows", detail: "First look in the garden, away from the ceremony crowd. Give them a quiet moment to see one another, pray together, say what they want to say and read their personal vows. Use a long lens for the first reaction, then respectful close-ups of hands and faces; do not interrupt the prayer or make them repeat it." , priority: "MOST IMPORTANT" },
-  { time: "3:20–3:40 PM", heading: "Bridal party together + motion-blur pass-by", detail: "A few joyful, editorial portraits of the couple with bridesmaids and groomsmen together. Then make the requested busy frame: keep the couple still and sharp in one spot while the party walks past the lens. Ask the photographer for a slow shutter / motion-blur take and a clean sharp version too; video can capture a natural pass-through as a moving shot." },
-  { time: "3:40–4:00 PM", heading: "Family portraits and room reactions", detail: "Shaira with her own family; Jeger with his own family; then one full family / party combination if time allows. Get genuine family remarks and affectionate reactions in each room before moving out. Coordinator should call the next group so this stays calm and on time." },
+  { time: "12:30–1:00 PM", heading: "P/V arrival and quiet details", detail: "Ask the team to arrive at 12:30 PM if possible (1:00 PM latest), not 2:00 PM. Capture the rooms, window light, dress and suit, rings, shoes, bouquet, invitation and handwritten vows; check audio and light before filming begins.", priority: "RECOMMENDED CALL TIME" },
+  { time: "1:00–2:00 PM", heading: "Vow-writing BTS + natural prep", detail: "Film Shaira and Jeger writing or rereading vows naturally in their separate rooms: hands, pages, pauses and small reactions. Ask one or two gentle questions, not scripted lines. Also capture Shaira's mum and sisters helping, bridesmaids and family interacting, and Jeger's family and groomsmen. Split coverage between rooms; do not recreate getting-ready moments that have already happened." },
+  { time: "2:00–2:20 PM", heading: "Bride's first looks · garden by bridal suite", detail: "Invite bridesmaids first, then reset and bring in Shaira's family separately. Capture the entrance, genuine expressions, embraces and comments, followed by one graceful group portrait with each group." },
+  { time: "2:20–2:35 PM", heading: "Groom with family + groomsmen", detail: "Capture Jeger's first reactions with his family and groomsmen in his room: greetings, comments, laughter and a relaxed group portrait. Keep the moment separate from the bride's first looks." },
+  { time: "2:35–3:00 PM", heading: "Couple's private first look, prayer and vows", detail: "Meet in a quiet garden spot. Capture the genuine first reaction, prayer together, personal words and private vows. Use discreet close-ups and clean audio; do not interrupt or ask them to repeat the moment.", priority: "MOST IMPORTANT" },
+  { time: "3:00–3:15 PM", heading: "Bridal party together + motion-blur pass-by", detail: "Get a few joyful portraits of the couple with bridesmaids and groomsmen. Then keep the couple still and sharp while the party walks past; take one slow-shutter blur and one clean frame. Video can capture a natural moving pass-through." },
+  { time: "3:15–3:30 PM", heading: "Family portraits + room reactions", detail: "Shaira with her family, Jeger with his family, then one combined family/party portrait. Have groups ready and keep posing warm and quick. Capture a few genuine comments about how you look before everyone moves; the ceremony programme lists guest arrival from 3:30 PM." },
 ];
 const ceremonyShots: ShotItem[] = [
-  { time: "4:00–4:15 PM", heading: "Venue ready + livestream setup", detail: "Photograph the ceremony room, altar/cross, aisle, chairs, flowers, rings, Bible, communion, cord, candle and foot-washing items before guests enter. Livestream crew has gear, audio, framing and connection checked by 4:00; start a stable private/unlisted stream and have it live by 4:15 so remote family can tune in before the 4:30 start. Keep tripods and cables out of the aisle and photographer's sightlines.", priority: "LIVESTREAM LIVE BY 4:15" },
-  { time: "4:00–4:30 PM", heading: "Entourage briefing + guest voices", detail: "A few candid frames at the Dome Tent majlis while entourage receives instructions. Record short, optional guest messages for the couple in a quiet corner; keep each answer natural and brief. Capture room ambience, greetings and refreshments without delaying the ceremony call." },
-  { time: "4:30 PM", heading: "Welcome, instrumental and procession", detail: "Wide establishing shot of guests and room, host welcome, instrumental cue, then each procession entrance in order from the ceremony programme: best man; groom's mother; groom; principal sponsors; groomsmen; bridesmaids; Bible bearer; matron of honour; maid of honour; bride's parents; flower girl; bride. Capture each entrance, reactions from both sides and the bride's full aisle arrival. Keep a locked wide angle for the stream." },
-  { time: "After procession", heading: "Prologue, opening prayer and praise & worship", detail: "Host's prologue and invitation to worship; opening prayer; worship song led by Mr. & Mrs. Deon Aguilar. Prioritise the couple worshipping, congregation joining in, musicians and quiet expressions. Use respectful wide and close shots; no flash or movement that distracts from worship." },
-  { time: "Message + blessing", heading: "Wedding message and pray-over", detail: "Pastor Benny's message, then parents, principal sponsors and entourage gathering to pray over the couple. Capture the full circle in a wide frame, individual hands/expressions and the couple's faces. Keep sound clean for video and record the prayer without staging repetitions.", priority: "MOST IMPORTANT" },
-  { time: "Rites", heading: "Charge, communion, Bible and ring blessing", detail: "Wedding charge; Holy Communion; Bible ceremony with the couple holding the Bible and making their promise; sponsors, groomsmen and bridesmaids praying over the rings. Keep a clear view of hands, symbols and faces. The programme's detailed script places ring blessing around Communion, so follow the officiant's live cue if order varies." },
-  { time: "Rites", heading: "Washing of feet + cord", detail: "For foot washing, capture the couple serving one another (groom washes bride first), water and towel details, their expressions and the reverent room. Then the cord ceremony and the couple tying the knots. Hold a respectful distance and allow quiet; this is a key story moment.", priority: "MOST IMPORTANT" },
-  { time: "Vows + rings", heading: "Personal vows, I Do and exchange of rings", detail: "Face-to-face, hands held, groom's vows first and bride second; each I Do; Karl hands the rings to the pastor; ring placement and spoken promises. Use stable close-ups of hands and reactions, plus a clean wide shot with both families. Record the vow audio clearly; never block the livestream camera." },
-  { time: "Marriage declared", heading: "Kiss, presentation, benediction and exit", detail: "Marriage declaration; first kiss; couple presented as newlyweds; final benediction; victory worship song; celebratory march and recessional. If the officiant/coordinator can pause the flow, take the requested wedding-party and family group portraits first, then the couple's full-width exit through the Heaven door. If the printed recessional must happen immediately, capture that exit first and take the group portraits straight after before everyone moves to the majlis." },
+  { time: "3:30–4:00 PM", heading: "Ceremony guest arrivals + seating", detail: "The ceremony PDF lists guest arrival from 3:30–4:00 PM. Capture greetings and the room filling. This overlaps the planned 4:00 PM empty-room photos; ask the coordinator to hold guests in the Majlis until details are finished, or photograph the room before guest entry. Split coverage if possible.", priority: "CONFIRM WITH COORDINATOR" },
+  { time: "4:00–4:15 PM", heading: "Venue details + livestream check", detail: "Capture the altar/cross, aisle, chairs, flowers, rings, Bible, Communion, cord, candle and foot-washing setup. A dedicated livestream operator should arrive by 3:30–3:45 PM, test framing/audio/connection by 4:00 and open the stream or waiting screen by 4:15. Keep the locked wide shot and cables out of the aisle.", priority: "LIVESTREAM LIVE BY 4:15" },
+  { time: "4:00–4:30 PM", heading: "Entourage briefing + guest voices", detail: "Take candid frames at the Dome Tent Majlis while the entourage receives instructions. If time allows, record short, optional guest messages in a quiet corner. Split this with venue/arrival coverage; do not delay the ceremony call." },
+  { time: "4:30 PM", heading: "Welcome, instrumental and procession", detail: "Get a wide room view, host welcome and instrumental cue. Procession order: best man; groom's mother; groom; principal sponsors; groomsmen; bridesmaids; Bible bearer; matron of honour; maid of honour; bride's parents; flower girl; bride. Capture each entrance, both sides' reactions and the full aisle arrival. Keep a locked wide angle for the livestream." },
+  { time: "After procession", heading: "Prologue, opening prayer + praise & worship", detail: "Follow the host's prologue, Pastor Deon Aguilar's opening prayer, then the worship song led by Mr. & Mrs. Deon Aguilar. Prioritise the couple worshipping and the congregation joining; also capture musicians and quiet expressions. No flash or movement that distracts." },
+  { time: "Message + pray-over", heading: "Wedding message, prayer circle + charge", detail: "Pastor Benny's message, then parents, principal sponsors and entourage praying over the couple, followed by the wedding charge. Capture one full-circle wide, hands and expressions, and the couple's faces. Record clean audio and do not stage a repeat.", priority: "MOST IMPORTANT" },
+  { time: "Ceremony rites", heading: "Communion, Bible + ring blessings", detail: "Follow the printed overview: Holy Communion → Bible ceremony → ring blessings. Capture the couple with the Bible and their promise; then the entourage praying over the rings, with a clear view of hands, faces and symbols. Follow the officiant's live cue if the detailed script shifts the order.", priority: "MOST IMPORTANT" },
+  { time: "Ceremony rites", heading: "Washing of feet + cord", detail: "Capture the couple serving one another (groom washes the bride first), the water/towel details and their expressions; then the cord and the couple tying the knots. Hold a respectful distance and preserve the quiet reverence.", priority: "MOST IMPORTANT" },
+  { time: "Vows + rings", heading: "Personal vows, I Do, rings + unity candle", detail: "Face-to-face, hands held: groom's vows first, then bride's; each I Do; exchange of rings; then the unity candle. Frame hands and faces, plus a clean wide view with both families. Record vow audio clearly and never block the livestream camera." },
+  { time: "Ceremony close", heading: "Declaration, kiss, benediction + march", detail: "Marriage declaration and presentation, first kiss, final benediction, victory worship song and celebratory march. If the coordinator can pause the flow, take family/wedding-party photos first, then the Heaven door exit. If the recessional must be immediate, film the exit first and gather groups straight after before guests move to the Majlis." },
 ];
 const fellowshipShots: ShotItem[] = [
-  { time: "After ceremony–7:00 PM", heading: "Majlis fellowship + couple portraits", detail: "While guests have snacks and portraits/interviews at the Dome Tent majlis, use the venue for a short, varied couple session: whole-room establishing composition; staircase; bridal entrance door; garden; gentle walking and one playful run through the garden; a brief dance; details that feel like a romantic Victorian editorial. Mix elegant stills with movement and laughter—avoid making every frame solemn or heavily posed. Keep an eye on heat, footwear and the reception call." },
-  { time: "6:00–7:00 PM", heading: "Guest portraits and interview sound bites", detail: "At the majlis: candid greetings, snack/fellowship details, individual and small-group guest portraits, plus short optional messages about the couple. Get names if useful, clean audio, and a mixture of generations. Confirm with the coordinator who is calling guests so portrait/interview queues do not delay hall seating." },
-  { time: "Before seating", heading: "Welcome-mirror arrivals", detail: "If weather permits, take individual or group guest portraits by the welcome-sign mirror before guests are seated. Have a rain/indoor backup marked. The supplied reception programme says hall arrival 6:30–7:00 and seating 7:00–7:10; confirm with the coordinator how this fits the couple's requested 7:00 PM guest entrance." },
+  { time: "After ceremony–6:30 PM", heading: "Majlis fellowship + couple portraits", detail: "While guests have snacks and portraits/interviews at the Dome Tent Majlis, use the venue for a short couple session: a whole-room view, staircase, bridal entrance door, garden, gentle run and a brief dance. Mix Victorian-inspired editorial frames with movement and laughter; avoid making every image solemn or heavily posed. Return in time for the reception call." },
+  { time: "After ceremony–6:30 PM", heading: "Guest portraits + interview sound bites", detail: "At the Majlis: candid greetings, snacks, individual/small-group guest portraits and short optional messages about the couple. Keep audio clean and answers natural. Assign a shooter to guests while the couple is photographed; do not let interviews delay hall seating." },
+  { time: "6:30–7:10 PM", heading: "Welcome-mirror arrivals + seating", detail: "The reception PDF lists guest arrival 6:30–7:00 PM and seating 7:00–7:10 PM (the couple's note says 7:00 PM entry). Confirm the final cue. If weather permits, photograph guests individually or in groups by the welcome-sign mirror before seating; agree on an indoor rain backup and follow the coordinator's hall-entry instruction." },
 ];
 const receptionShots: ShotItem[] = [
   { time: "6:30–7:10 PM", heading: "Hall arrival and seating", detail: "The supplied master programme has guests arriving at the hall 6:30–7:00, then seating 7:00–7:10. Capture the styled empty hall first, welcome mirror, table settings, guests arriving and finding seats. At 6:30, bridesmaids/groomsmen may enter to freshen up, per the programme." },
@@ -91,6 +251,40 @@ function ShotCard({ item }: { item: ShotItem }) {
   </article>;
 }
 
+function PhotoVideoTimeline({ info }: { info: WeddingInfo }) {
+  return <article className="print-guide mx-auto max-w-5xl rounded-2xl border border-wine/15 bg-[#fbf8f0] p-5 shadow-sm md:p-9">
+    <header className="border-b border-wine/20 pb-5">
+      <p className="label text-wine">PHOTO + VIDEO · QUICK HAND-OFF</p>
+      <h1 className="display mt-2 text-4xl md:text-5xl">The day, at a glance.</h1>
+      <p className="mt-3 text-sm text-ink/70">{info.bride} &amp; {info.groom} · {fmtDate(info.date)} · {info.venue_name}, {info.venue_address}</p>
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
+        <div className="rounded-xl bg-white p-3"><p className="label text-wine">CALL TIME</p><p className="mt-1 text-sm">Ask for <b>12:30 PM</b> if possible; <b>1:00 PM latest</b>. 2:00 PM is too late for prep and vow-writing.</p></div>
+        <div className="rounded-xl bg-white p-3"><p className="label text-wine">PHOTO FEEL</p><p className="mt-1 text-sm">Natural, candid, joyful. Add a few flattering, Pinterest-worthy portraits—no over-posing or heavy glam.</p></div>
+        <div className="rounded-xl bg-white p-3"><p className="label text-wine">COVERAGE</p><p className="mt-1 text-sm">Split bride/groom prep and Majlis/venue moments. Use a separate livestream operator and photobooth attendant.</p></div>
+      </div>
+    </header>
+    <ol className="mt-5 space-y-3">
+      {photoVideoTimeline.map((item) => <li key={`${item.time}-${item.heading}`}>
+        <article className="break-inside-avoid rounded-xl border border-wine/15 bg-white/80 p-4 md:grid md:grid-cols-[145px_minmax(0,1fr)] md:gap-5">
+          <time className="label !text-[11px] text-wine">{item.time}</time>
+          <div className="mt-2 min-w-0 md:mt-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="font-serif text-xl leading-tight text-ink">{item.heading}</h2>
+              {item.flag && <span className="label !text-[9px] rounded-full bg-wine/10 px-2.5 py-1 text-wine">{item.flag}</span>}
+            </div>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-relaxed text-ink/75">
+              {item.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}
+            </ul>
+          </div>
+        </article>
+      </li>)}
+    </ol>
+    <footer className="mt-5 border-t border-wine/20 pt-4 text-xs leading-relaxed text-ink/65">
+      <b>Confirm with the coordinator / MC:</b> ceremony guests are listed from 3:30 PM, the hall is expected ready around 4:00 PM, reception arrivals are listed from 6:30 PM (not 7:00 PM), and the music-video and game slots need adding to the final run-of-show.
+    </footer>
+  </article>;
+}
+
 function PhotoVideoGuide({ info }: { info: WeddingInfo }) {
   const sections = [
     { title: "Prep, vows & first looks", note: "The requested tone is documentary first, with a few polished portraits: warm, candid, faith-filled, joyful and unforced—not a full day of solemn poses or heavy glam retouching.", items: prepShots },
@@ -107,7 +301,7 @@ function PhotoVideoGuide({ info }: { info: WeddingInfo }) {
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           <div className="rounded-xl bg-white p-3"><div className="label text-wine">THE FEEL</div><p className="mt-1 text-sm">Candid, lively, romantic and faith-centred; natural moments with a few timeless editorial portraits.</p></div>
           <div className="rounded-xl bg-white p-3"><div className="label text-wine">ARRIVAL REQUEST</div><p className="mt-1 text-sm">Please arrive around <b>12:30–1:00 PM</b>, not 2:00 PM, if possible. Prep is mostly finished by 2 and we want vow-writing BTS and genuine getting-ready moments.</p></div>
-          <div className="rounded-xl bg-white p-3"><div className="label text-wine">COVERAGE NOTE</div><p className="mt-1 text-sm">A second shooter is strongly recommended for simultaneous bride/groom prep, ceremony coverage, and the 8–10 PM booth overlap.</p></div>
+          <div className="rounded-xl bg-white p-3"><div className="label text-wine">COVERAGE NOTE</div><p className="mt-1 text-sm">Use a separate livestream operator. A second shooter helps cover simultaneous prep, Majlis guests and the 8–10 PM photobooth.</p></div>
         </div>
       </div>
       <div className="space-y-7">
@@ -117,7 +311,7 @@ function PhotoVideoGuide({ info }: { info: WeddingInfo }) {
         </section>)}
       </div>
       <footer className="mt-7 border-t border-wine/20 pt-4 text-xs leading-relaxed text-ink/60">
-        <b>Before wedding day:</b> confirm the 12:30–1:00 PM call time, the second shooter, camera/lighting plan for the garden and rooms, audio capture for vows/prayers/speeches, livestream access and test, music-video slot before first dance, game/activity cue, rain backup for mirror portraits, and who is the family-photo wrangler. Ask for a mix of documentary moments, flattering movement-led portraits and a few classic family groupings.
+        <b>Before wedding day:</b> confirm the 12:30 PM preferred / 1:00 PM latest P/V call time, second shooter and separate livestream operator; resolve the ceremony guest-arrival 3:30 PM vs empty-hall photos at 4:00 PM; confirm reception arrivals at 6:30 PM vs the requested 7:00 PM entry; add the music video and game to the MC cue sheet; and name a family-photo wrangler. Keep the look candid and movement-led, with a few classic family and Victorian-inspired portraits.
       </footer>
     </div>
   </div>;
@@ -215,7 +409,7 @@ function SeatingPlanner() {
 export function WeddingPhotosTab() {
   const { rows } = useTable("wedding_info");
   const info = rows[0] as WeddingInfo | undefined;
-  const [printGuide, setPrintGuide] = useState(false);
+  const [view, setView] = useState<"home" | "timeline" | "full">("home");
   const print = () => {
     document.body.classList.add("printing-photo-guide");
     const cleanup = () => document.body.classList.remove("printing-photo-guide");
@@ -224,10 +418,21 @@ export function WeddingPhotosTab() {
   };
   if (!info) return <div className="p-8 text-sm text-ink/60">Wedding details are loading…</div>;
   return <>
-    {!printGuide && <PageHead kicker="The Binder · keepsakes & creative brief" title="Make the moments yours."><Btn variant="dark" onClick={() => setPrintGuide(true)}>Open printable shot list</Btn></PageHead>}
-    {!printGuide && <DownloadableKeepsakes info={info} />}
-    {printGuide && <div className="no-print mb-4 flex items-center justify-between gap-3"><p className="text-sm text-ink/60">Print or choose “Save as PDF” in your browser’s print dialog to share this brief with your photographer / videographer.</p><div className="flex gap-2"><Btn variant="ghost" onClick={() => setPrintGuide(false)}>Back to keepsakes</Btn><Btn onClick={print}>Print / save PDF</Btn></div></div>}
-    {printGuide && <PhotoVideoGuide info={info} />}
+    {view === "home" && <PageHead kicker="The Binder · photo & video" title="Make the moments yours.">
+      <Btn variant="dark" onClick={() => setView("timeline")}>Open quick timeline</Btn>
+      <Btn variant="ghost" onClick={() => setView("full")}>Open full P/V guide</Btn>
+    </PageHead>}
+    {view === "home" && <DownloadableKeepsakes info={info} />}
+    {view !== "home" && <div className="no-print mb-4 flex flex-wrap items-center justify-between gap-3">
+      <p className="text-sm text-ink/60">{view === "timeline" ? "A concise, time-blocked hand-off for your photo/video team." : "The detailed creative brief and shot guidance."} Print or save this view as a PDF to share.</p>
+      <div className="flex flex-wrap gap-2">
+        <Btn variant="ghost" onClick={() => setView("home")}>Back to keepsakes</Btn>
+        <Btn variant="ghost" onClick={() => setView(view === "timeline" ? "full" : "timeline")}>{view === "timeline" ? "Open full P/V guide" : "View quick timeline"}</Btn>
+        <Btn onClick={print}>Print / save PDF</Btn>
+      </div>
+    </div>}
+    {view === "timeline" && <PhotoVideoTimeline info={info} />}
+    {view === "full" && <PhotoVideoGuide info={info} />}
   </>;
 }
 
