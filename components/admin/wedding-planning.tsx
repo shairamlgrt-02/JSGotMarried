@@ -84,6 +84,58 @@ const receptionShots: ShotItem[] = [
   { time: "8:00–10:00 PM", heading: "Three-frame photobooth", detail: "Photobooth runs 8:00–10:00 PM, overlapping dinner and the programme. Assign a dedicated booth operator or second photographer; the main photographer should not be asked to miss the scheduled reception moments. Capture a few behind-the-scenes booth interactions and the couple's own strip." },
 ];
 
+type TimelineBlock = { time: string; heading: string; photos: string[]; video: string[]; note?: string };
+const QUICK_TIMELINE: TimelineBlock[] = [
+  { time: "12:30–1:00 PM", heading: "P/V arrival · details", photos: ["Dress, suit, rings, shoes, bouquet, invitation", "Room light and candid prep details"], video: ["Room atmosphere and natural sound", "Detail clips; no staged action"], note: "Ask them to arrive before 2 PM; makeup/prep is mostly done by then." },
+  { time: "1:00–1:30 PM", heading: "Write the vows", photos: ["Hands writing; thoughtful pauses", "Natural reaction, not a posed cry"], video: ["Quiet BTS in each room", "Ask 1–2 gentle, unscripted questions"], note: "Two shooters needed to cover Shaira and Jeger at once." },
+  { time: "1:30–2:00 PM", heading: "Candid getting ready", photos: ["Mum and sisters helping Shaira", "Bridesmaids and groomsmen together", "Family talking, laughing, checking in"], video: ["Natural conversations and small gestures", "Touch-ups, buttoning jackets, veil/tie" ] },
+  { time: "2:00–2:20 PM", heading: "Final-ready details", photos: ["Dress/veil/shoes with mum or sisters", "Jeger's jacket, tie and boutonniere"], video: ["Getting-ready movement and reactions", "Keep prompts light; let moments happen" ] },
+  { time: "2:20–2:40 PM", heading: "Bride's first looks · garden", photos: ["Bridesmaids first; family separately", "Entrance, reactions, hugs", "One relaxed group portrait each"], video: ["First reactions and natural comments", "Garden ambience" ] },
+  { time: "2:40–3:00 PM", heading: "Jeger's family first look", photos: ["Family sees Jeger in his room", "Hugs and one small family portrait"], video: ["Unprompted comments and greetings", "Short candid room scene" ] },
+  { time: "3:00–3:20 PM", heading: "Couple first look · prayer · vows", photos: ["First reaction from a little distance", "Hands, embraces, quiet portrait"], video: ["Let them pray and read vows privately", "Do not interrupt or ask for a repeat"], note: "Top-priority private moment." },
+  { time: "3:20–3:40 PM", heading: "Joint bridal party", photos: ["Couple with bridesmaids and groomsmen", "Still couple; party walks past for blur", "One sharp version too"], video: ["Natural pass-through / moving shot", "Short candid laughter and walking" ] },
+  { time: "3:40–4:00 PM", heading: "Family portraits + reactions", photos: ["Shaira with her family", "Jeger with his family", "Natural room comments; quick full group"], video: ["Family reactions and affectionate remarks", "Short room moments" ] },
+  { time: "4:00–4:15 PM", heading: "Venue details + livestream", photos: ["Empty hall, aisle, altar, flowers", "Rings, Bible, communion, cord, candle, foot-washing items"], video: ["Livestream framing/audio check", "Stream live by 4:15 PM"], note: "Keep camera, tripod and cables out of the aisle." },
+  { time: "4:00–4:30 PM", heading: "Majlis briefing + guest messages", photos: ["Entourage briefing candids", "Quick group / greeting shots"], video: ["Short guest wishes for the couple", "Clean audio; keep answers natural"], note: "Parallel coverage needs a second shooter; stop in time for ceremony." },
+  { time: "4:30 PM onward", heading: "Ceremony · follow live cues", photos: ["Procession and bride's entrance", "Worship, prayers over the couple and rings", "Communion/Bible; washing of feet; cord", "Vows, rings, kiss and family reactions"], video: ["Locked wide livestream + clean audio", "Capture every rite in programme order", "Group photos, then Heaven-door exit if timing allows" ] },
+  { time: "After ceremony–7:00 PM", heading: "Couple portraits + majlis", photos: ["Whole venue, staircase, bridal door", "Garden walk/run, short dance", "Victorian-inspired portraits, natural movement"], video: ["Wide venue reveal, walking and dancing", "Majlis guests: snacks, portraits, interviews"], note: "Couple portraits and guest coverage happen at the same time." },
+  { time: "6:30–7:10 PM", heading: "Welcome mirror + hall seating", photos: ["Guest portraits at mirror if weather allows", "Styled hall, table details, arrivals"], video: ["Guest greetings and room atmosphere"], note: "Programme says hall arrivals 6:30–7:00; your note says 7:00. Confirm with coordinator." },
+  { time: "7:10–7:30 PM", heading: "Welcome + entrances", photos: ["Groomsmen, bridesmaids, then couple", "Wide shot plus guest reactions"], video: ["Entrance walk-ins and applause", "Keep entrance path clear" ] },
+  { time: "Before first dance", heading: "Music-video presentation", photos: ["Couple and screen in one frame", "Family watching and reacting"], video: ["Record presentation and audience reactions"], note: "Add an exact slot before the first dance to the MC run-sheet." },
+  { time: "7:30–8:19 PM", heading: "Dances, speeches, cake + blessing", photos: ["First dance; father–daughter dance", "Three speeches; cake cut and toast", "Meal blessing and family reactions"], video: ["Clean audio for speeches and blessing", "Full dances, cake/toast and reactions" ] },
+  { time: "8:00–10:00 PM", heading: "Photobooth · parallel", photos: ["Couple's own strip; fun guest groups"], video: ["A few booth BTS clips"], note: "Assign a booth operator/second shooter; this overlaps the reception." },
+  { time: "8:19–9:04 PM", heading: "Dinner + DIY keepsakes", photos: ["Table 1 with couple, then table order", "Guests making keychains and charms", "Hands, finished souvenirs, natural smiles"], video: ["Table reactions and DIY activity", "Guest song requests / dinner ambience" ] },
+  { time: "After dinner · before 9:04", heading: "Game / activity", photos: ["Players, props, reactions, result"], video: ["Instructions and full activity"], note: "Not timed in the supplied programme—confirm cue and duration with MC." },
+  { time: "9:04–9:14 PM", heading: "Prosperity / money dance", photos: ["Couple with guests joining", "Wide dance-floor energy and close moments"], video: ["Full-band “Dilaw” and dance", "Keep a wide angle plus reactions" ] },
+  { time: "9:14 PM onward", heading: "Performances + close", photos: ["Performances and parent blessings", "Bouquet toss, thank-you, family reactions", "Closing prayer and open dance"], video: ["Record speeches, performances and prayer", "Open-floor start and joyful dancing" ] },
+];
+
+function PhotoVideoTimeline({ info }: { info: WeddingInfo }) {
+  return <div className="print-guide rounded-2xl border border-wine/15 bg-[#fbf8f0] p-4 md:p-7">
+    <div className="mb-4 border-b border-wine/20 pb-4">
+      <div className="label text-wine">PHOTO + VIDEO · QUICK TIMELINE</div>
+      <h2 className="display mt-2 text-3xl md:text-4xl">{info.bride} &amp; {info.groom} · {fmtDate(info.date)}</h2>
+      <p className="mt-2 text-sm text-ink/65">The short version for the day. Check each cue with the coordinator; ceremony and portrait timings may shift.</p>
+      <div className="mt-3 flex flex-wrap gap-2 text-xs">
+        <span className="rounded-full bg-wine/10 px-3 py-1.5 text-wine"><b>Recommended P/V call:</b> 12:30–1:00 PM</span>
+        <span className="rounded-full bg-wine/10 px-3 py-1.5 text-wine"><b>Livestream:</b> live by 4:15 PM</span>
+        <span className="rounded-full bg-wine/10 px-3 py-1.5 text-wine"><b>Style:</b> candid first, a few editorial portraits</span>
+      </div>
+    </div>
+    <div className="mb-2 hidden grid-cols-[145px_1fr_1fr] gap-3 px-3 md:grid">
+      <span className="label !text-[9px] text-ink/40">TIME</span><span className="label !text-[9px] text-ink/40">PHOTO</span><span className="label !text-[9px] text-ink/40">VIDEO / SCENE</span>
+    </div>
+    <ol className="space-y-2">
+      {QUICK_TIMELINE.map((block) => <li key={block.time + block.heading} className="break-inside-avoid rounded-xl border border-ink/5 bg-white/85 p-3 md:grid md:grid-cols-[145px_1fr_1fr] md:gap-3 md:px-4">
+        <div><div className="label !text-[10px] text-wine">{block.time}</div><h3 className="mt-1 font-serif text-lg leading-tight text-ink">{block.heading}</h3></div>
+        <div className="mt-2 md:mt-0"><div className="label !text-[9px] text-ink/40 md:hidden">PHOTO</div><ul className="mt-1 list-disc space-y-0.5 pl-4 text-xs leading-snug text-ink/75">{block.photos.map((item) => <li key={item}>{item}</li>)}</ul></div>
+        <div className="mt-2 md:mt-0"><div className="label !text-[9px] text-ink/40 md:hidden">VIDEO / SCENE</div><ul className="mt-1 list-disc space-y-0.5 pl-4 text-xs leading-snug text-ink/75">{block.video.map((item) => <li key={item}>{item}</li>)}</ul>{block.note && <p className="mt-1.5 rounded-md bg-wine/5 px-2 py-1 text-[10px] leading-snug text-wine">{block.note}</p>}</div>
+      </li>)}
+    </ol>
+    <p className="mt-4 border-t border-wine/15 pt-3 text-[11px] text-ink/55"><b>Coverage:</b> second shooter recommended for simultaneous vow-writing, 4:00 PM majlis/venue coverage, and the photobooth during reception. Photobooth operator should be separate from the main event shooter.</p>
+  </div>;
+}
+
 function ShotCard({ item }: { item: ShotItem }) {
   return <article className="break-inside-avoid rounded-xl border border-wine/15 bg-white/75 p-4 md:p-5">
     <div className="flex flex-wrap items-center gap-2 mb-2"><span className="label !text-[10px] text-wine">{item.time}</span>{item.priority && <span className="label !text-[9px] rounded-full bg-wine/10 px-2.5 py-1 text-wine">{item.priority}</span>}</div>
@@ -215,7 +267,7 @@ function SeatingPlanner() {
 export function WeddingPhotosTab() {
   const { rows } = useTable("wedding_info");
   const info = rows[0] as WeddingInfo | undefined;
-  const [printGuide, setPrintGuide] = useState(false);
+  const [showDetailed, setShowDetailed] = useState(false);
   const print = () => {
     document.body.classList.add("printing-photo-guide");
     const cleanup = () => document.body.classList.remove("printing-photo-guide");
@@ -224,10 +276,13 @@ export function WeddingPhotosTab() {
   };
   if (!info) return <div className="p-8 text-sm text-ink/60">Wedding details are loading…</div>;
   return <>
-    {!printGuide && <PageHead kicker="The Binder · keepsakes & creative brief" title="Make the moments yours."><Btn variant="dark" onClick={() => setPrintGuide(true)}>Open printable shot list</Btn></PageHead>}
-    {!printGuide && <DownloadableKeepsakes info={info} />}
-    {printGuide && <div className="no-print mb-4 flex items-center justify-between gap-3"><p className="text-sm text-ink/60">Print or choose “Save as PDF” in your browser’s print dialog to share this brief with your photographer / videographer.</p><div className="flex gap-2"><Btn variant="ghost" onClick={() => setPrintGuide(false)}>Back to keepsakes</Btn><Btn onClick={print}>Print / save PDF</Btn></div></div>}
-    {printGuide && <PhotoVideoGuide info={info} />}
+    <PageHead kicker="The Binder · keepsakes & photo plan" title="Make the moments yours.">
+      <Btn variant="ghost" onClick={() => setShowDetailed((shown) => !shown)}>{showDetailed ? "Show quick timeline" : "Open detailed guide"}</Btn>
+      <Btn variant="dark" onClick={print}>Print / save this plan as PDF</Btn>
+    </PageHead>
+    <div className="no-print mb-5 max-w-3xl text-sm text-ink/60">The quick timeline is the day-of version: short time blocks, photo ideas and video scenes. The detailed brief is there when you want more context.</div>
+    <div className="mb-6"><DownloadableKeepsakes info={info} /></div>
+    {showDetailed ? <PhotoVideoGuide info={info} /> : <PhotoVideoTimeline info={info} />}
   </>;
 }
 
