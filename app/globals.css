@@ -51,6 +51,13 @@ html.lenis, html.lenis body { height: auto; }
   .no-print { display: none !important; }
   body { background: white !important; color: black !important; }
   .paper-bg::before { display: none; }
+  body.printing-photo-guide * { visibility: hidden !important; }
+  body.printing-photo-guide .print-guide,
+  body.printing-photo-guide .print-guide * { visibility: visible !important; }
+  body.printing-photo-guide .print-guide { position: absolute !important; inset: 0 !important; width: 100% !important; }
+  body.printing-photo-guide .print-guide article,
+  body.printing-photo-guide .print-guide section { break-inside: avoid; }
+  body.printing-photo-guide .print-guide section { break-inside: auto; }
 }
 
 @keyframes flicker {

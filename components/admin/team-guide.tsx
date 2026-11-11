@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useTable } from "@/lib/hooks";
 import { uid } from "@/lib/db";
 import { downloadProgramCard } from "@/lib/program-card";
+import { downloadTeamCard } from "@/lib/team-card";
 import {
   ALL_WELCOME_FROM,
   CEREMONY_AT,
@@ -60,6 +61,8 @@ export function TeamGuide() {
   const { rows: attireRows } = useTable("attire");
   const teamCards = useTable("team_cards", false);
   const [programCardStatus, setProgramCardStatus] = useState<"idle" | "working" | "done" | "error">("idle");
+  const [downloadingCardId, setDownloadingCardId] = useState("");
+  const [cardDownloadStatus, setCardDownloadStatus] = useState<Record<string, "done" | "error">>({});
   const info = infoRows[0];
   const dressNote = (attireRows.find((row) => row.group === "guests")?.notes || "").split("—")[0].replace(/\.?\s*$/, "").trim();
   const cardData = {
@@ -102,6 +105,12 @@ export function TeamGuide() {
 
   const addCard = (category: TeamCardCategory) => teamCards.save(blankCard(category));
   const updateCard = (card: TeamCard, patch: Partial<TeamCard>) => teamCards.save({ ...card, ...patch });
+  const saveTeamCardPng = async (card: TeamCard) => {
+    setDownloadingCardId(card.id);
+    const ok = await downloadTeamCard(card);
+    setCardDownloadStatus((current) => ({ ...current, [card.id]: ok ? "done" : "error" }));
+    setDownloadingCardId("");
+  };
   const cardsForPrint = teamCards.rows.length ? teamCards.rows : EMPTY_TEMPLATES;
 
   return (
@@ -149,8 +158,8 @@ export function TeamGuide() {
           ))}
         </ol>
         <footer className="mt-5 border-t border-wine/25 pt-4 text-center">
-          <p className="font-serif text-lg italic text-wine">Individual task, preparation and bring-list cards to follow.</p>
-          <p className="mt-1 text-xs text-taupe">Please confirm your assigned role and any personal call time with the coordinator.</p>
+          <p className="font-serif text-lg italic text-wine">Fillable individual role and reminder cards are below.</p>
+          <p className="mt-1 text-xs text-taupe">Download each card as a PNG after its confirmed details are filled in.</p>
         </footer>
       </article>
 
@@ -167,7 +176,12 @@ export function TeamGuide() {
                 <div key={card.id} className="rounded-xl border border-taupe/25 bg-lace/35 p-4">
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                     <Select value={card.category} options={CATEGORIES} onChange={(category) => updateCard(card, { category })} />
-                    <Btn variant="danger" onClick={() => teamCards.del(card.id)}>Remove card</Btn>
+                    <div className="flex flex-wrap gap-2">
+                      <Btn variant="ghost" disabled={downloadingCardId === card.id} onClick={() => void saveTeamCardPng(card)}>
+                        {downloadingCardId === card.id ? "Drawing card…" : cardDownloadStatus[card.id] === "done" ? "Download again ✓" : cardDownloadStatus[card.id] === "error" ? "Try download again" : "Download card (.png)"}
+                      </Btn>
+                      <Btn variant="danger" onClick={() => teamCards.del(card.id)}>Remove card</Btn>
+                    </div>
                   </div>
                   <div className="grid gap-3 md:grid-cols-2">
                     <label className="text-xs text-taupe">Team member name<EditText value={card.name} placeholder="Fill in when confirmed" onSave={(name) => updateCard(card, { name })} className="mt-1 bg-white/70" /></label>

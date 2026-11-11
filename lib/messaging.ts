@@ -134,6 +134,8 @@ export interface MessageCategory {
   source: RecipientSource;
   /** For entourage: the role value. For vendor: the type string. For guest_tag: the tag id. */
   filter: string;
+  /** Optional exclusions for a composite guest-tag group (e.g. entourage, excluding bridesmaids/groomsmen). */
+  exclude?: string[];
 }
 
 /**
@@ -183,6 +185,8 @@ export const DAY_ROLE_CATEGORIES: MessageCategory[] = DAY_ROLE_IDS.map((roleId) 
 export const MESSAGE_CATEGORIES: MessageCategory[] = [
   // ── Guest tags (guests.tags) — a household can carry several, and appears in each one ──
   ...GUEST_TAG_CATEGORIES,
+  // The schedule-change note for the wider entourage excludes the two groups receiving their own briefing.
+  { id: "guest_entourage_other", label: "Entourage · not Bridesmaids/Groomsmen", icon: "✿", source: "guest_tag", filter: "entourage", exclude: ["bridesmaids", "groomsmen"] },
   UNGTAGGED_CATEGORY,
   // ── RSVP status (auto-resolved from the guests table) ──
   { id: "pending_rsvp",     label: "Pending RSVP",        icon: "⏳", source: "pending_rsvp", filter: "" },
@@ -364,7 +368,8 @@ export function resolveRecipients(
         // untagged bucket: households with no tag at all.
         filtered = guests.filter((g) => {
           const tags = parseGuestTags(g.tags);
-          return cat.filter ? tags.includes(cat.filter) : tags.length === 0;
+          if (!cat.filter) return tags.length === 0;
+          return tags.includes(cat.filter) && !(cat.exclude ?? []).some((excluded) => tags.includes(excluded));
         });
       }
 
@@ -876,8 +881,8 @@ Love,
     id: "preset_schedule_update_team",
     name: "Schedule Update · Entourage & Wedding Team (4:00 PM)",
     label: "Schedule update",
-    hint: "Send manually to the wedding team. Download the updated programme PNG from the Wedding Team Guide and attach it to this WhatsApp message before sending.",
-    categories: [],
+    hint: "For guests tagged Entourage, excluding anyone tagged Bridesmaids or Groomsmen. Select this group; download the updated programme PNG and attach it before sending.",
+    categories: ["guest_entourage_other"],
     body: `Hi {first_name},
 
 Our wedding schedule has changed. Please ignore earlier timings and use the updated programme card attached.
