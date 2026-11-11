@@ -68,6 +68,8 @@ alter table guests add column if not exists tags text default '';
 -- instead of a silently failed save.
 alter table guests add column if not exists role text default '';
 alter table guests add column if not exists role_note text default '';
+-- Seating planner (binder → Seating): one table assignment per household; pax counts toward the 10-seat limit.
+alter table guests add column if not exists table_number integer;
 -- one personal code per household: lookups by code (opening a link, the /rsvp gate) stay cheap
 create index if not exists guests_code_idx on guests (upper(code));
 

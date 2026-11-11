@@ -146,6 +146,7 @@ export async function POST(req: NextRequest, { params }: { params: { table: stri
         { col: "plus_one_tags", label: "plus-one tags", ddl: "ALTER TABLE public.guests ADD COLUMN IF NOT EXISTS plus_one_tags text NOT NULL DEFAULT '[]';" },
         { col: "role", label: "day-of role", ddl: "ALTER TABLE public.guests ADD COLUMN IF NOT EXISTS role text DEFAULT '';" },
         { col: "role_note", label: "role note", ddl: "ALTER TABLE public.guests ADD COLUMN IF NOT EXISTS role_note text DEFAULT '';" },
+        { col: "table_number", label: "table number", ddl: "ALTER TABLE public.guests ADD COLUMN IF NOT EXISTS table_number integer;" },
       ];
       const missing = knownColumns.filter(({ col }) => new RegExp(`\\b${col}\\b`, "i").test(finalError.message));
       if (missing.length) {

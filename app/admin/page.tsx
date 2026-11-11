@@ -10,13 +10,14 @@ import { RolesTab } from "@/components/admin/roles";
 import { SocialStudio } from "@/components/admin/social-studio";
 import { GiftRegistry } from "@/components/admin/gifts";
 import { TeamGuide } from "@/components/admin/team-guide";
+import { SeatingTab, WeddingPhotosTab } from "@/components/admin/wedding-planning";
 
 const TABS = [
   ["overview", "Overview", "◐"], ["details", "Details", "✎"], ["schedule", "Schedule", "◷"], ["checklist", "Checklist", "☑"],
   ["budget", "Budget", "◎"], ["invites", "Invite Codes", "✦"], ["guests", "Guests & RSVP", "♡"], ["roles", "Guest Roles", "❁"], ["audio", "Audio Guestbook", "☎"],
   ["messaging-compose", "📨 Compose", "✉"], ["messaging-templates", "📋 Templates", "▤"], ["messaging-tracker", "📊 Tracker", "◈"],
   ["vendors", "Vendors", "◇"], ["attire", "Attire & Colors", "◉"], ["bridesmaids", "Bridesmaid Cards", "✿"],
-  ["gifts", "Gift List", "🎁"], ["ig-stories", "Social Studio", "📱"], ["team-guide", "Wedding Team Guide", "◷"],
+  ["gifts", "Gift List", "🎁"], ["ig-stories", "Social Studio", "📱"], ["wedding-photos", "Photo & Video", "✦"], ["seating", "Seating Plan", "⌂"], ["team-guide", "Wedding Team Guide", "◷"],
   ["content", "Content", "▣"], ["settings", "Settings", "⚙"],
 ] as const;
 type Tab = (typeof TABS)[number][0];
@@ -34,7 +35,7 @@ export default function Admin() {
 
   return (
     <>
-      <div className={`relative z-[1] min-h-screen bg-oat text-ink md:flex ${tab === "team-guide" ? "" : "print:hidden"}`}>
+      <div className={`relative z-[1] min-h-screen bg-oat text-ink md:flex ${["team-guide", "wedding-photos", "seating"].includes(tab) ? "" : "print:hidden"}`}>
         {/* Sidebar */}
         <aside className={`fixed md:sticky top-0 z-40 h-screen w-72 shrink-0 bg-ivory border-r border-taupe/20 flex flex-col transition-transform duration-500 ease-lux print:hidden ${menu ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}>
           <div className="p-6 flex items-center gap-3 border-b border-taupe/20">
@@ -84,6 +85,8 @@ export default function Admin() {
               {tab === "bridesmaids" && <BridesmaidCards />}
               {tab === "gifts" && <GiftRegistry />}
               {tab === "ig-stories" && <SocialStudio />}
+              {tab === "wedding-photos" && <WeddingPhotosTab />}
+              {tab === "seating" && <SeatingTab />}
               {tab === "team-guide" && <TeamGuide />}
               {tab === "content" && <Content />}
               {tab === "settings" && <Settings mode={mode} onPrint={() => window.print()} go={go} />}

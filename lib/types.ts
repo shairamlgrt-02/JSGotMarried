@@ -78,6 +78,8 @@ export type Guest = {
   role?: string;
   /** A small note on how they'll serve it ("bring the thermos", "handles the espresso machine"). */
   role_note?: string;
+  /** Guest seating assignment in the reception hall; every table is capped at ten seats. */
+  table_number?: number | null;
 };
 
 /** The icon a custom (couple-typed) tag is shown with; presets each carry their own. */
